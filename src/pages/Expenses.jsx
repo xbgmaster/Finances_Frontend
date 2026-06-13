@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ExpensesApi, CategoriesApi, BalanceApi } from '../api/client'
+import { ExpensesApi, CategoriesApi, BalanceApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ReceiptInput from '../components/ReceiptInput'
@@ -164,8 +164,8 @@ export default function Expenses() {
                 <div className="sub">{e.categoryName} · {formatDate(e.date)}</div>
               </div>
               {e.receiptUrl && (
-                <a href={e.receiptUrl} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
-                  <img className="receipt-thumb" src={e.receiptUrl} alt="receipt" />
+                <a href={assetUrl(e.receiptUrl)} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
+                  <img className="receipt-thumb" src={assetUrl(e.receiptUrl)} alt="receipt" />
                 </a>
               )}
               <span className="amount neg">−{formatMoney(e.amount)}</span>

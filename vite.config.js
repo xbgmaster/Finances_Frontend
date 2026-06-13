@@ -8,13 +8,22 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5142',
+        //target: 'http://localhost:5143',
+        target: 'https://finances-backend-7njx.onrender.com',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:5142',
+        //target: 'http://localhost:5143',
+        target: 'https://finances-backend-7njx.onrender.com',
         changeOrigin: true,
       },
     },
+  },
+  // 'vite preview' en producción (Render): escucha en 0.0.0.0 y en el puerto
+  // que inyecta la plataforma via la variable de entorno PORT.
+  preview: {
+    host: true,
+    port: Number(process.env.PORT) || 4173,
+    allowedHosts: true,
   },
 })

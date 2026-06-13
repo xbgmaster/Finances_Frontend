@@ -1,7 +1,14 @@
 import axios from 'axios'
 
-// Usa el proxy de Vite (/api -> http://localhost:5142) configurado en vite.config.js.
-const api = axios.create({ baseURL: '/api' })
+// En dev usa el proxy de Vite (/api). En produccion (Render) usa VITE_API_URL
+// (p.ej. https://finances-backend-7njx.onrender.com/api) definido en .env.production.
+const apiUrl = import.meta.env.VITE_API_URL || '/api'
+const api = axios.create({ baseURL: apiUrl })
+
+// Origen del backend para servir archivos estaticos (recibos en /uploads).
+// En dev queda vacio (lo resuelve el proxy); en prod apunta al backend.
+export const assetBase = apiUrl.replace(/\/api\/?$/, '')
+export const assetUrl = (path) => (path && assetBase ? `${assetBase}${path}` : path)
 
 export const TOKEN_KEY = 'finances.token'
 export const USER_KEY = 'finances.user'

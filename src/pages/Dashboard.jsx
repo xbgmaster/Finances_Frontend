@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi } from '../api/client'
+import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ReceiptInput from '../components/ReceiptInput'
@@ -151,8 +151,8 @@ export default function Dashboard() {
                 </div>
               </div>
               {m.type === 'expense' && m.receiptUrl && (
-                <a href={m.receiptUrl} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
-                  <img className="receipt-thumb" src={m.receiptUrl} alt="receipt" />
+                <a href={assetUrl(m.receiptUrl)} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
+                  <img className="receipt-thumb" src={assetUrl(m.receiptUrl)} alt="receipt" />
                 </a>
               )}
               <span className={`amount ${m.type === 'income' ? 'pos' : 'neg'}`}>
