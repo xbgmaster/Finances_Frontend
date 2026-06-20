@@ -6,6 +6,7 @@ import Expenses from './pages/Expenses'
 import Projections from './pages/Projections'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Password from './pages/ForgotPassword'
 import Onboarding from './pages/Onboarding'
 import AdminDashboard from './pages/AdminDashboard'
 import { ProtectedRoute, AdminRoute } from './auth/guards'
@@ -15,6 +16,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/password" element={<Password />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/onboarding" element={<Onboarding />} />

@@ -52,6 +52,7 @@ export default function Login() {
           </button>
         </form>
         <p className="auth-switch">{t.auth.noAccount} <Link to="/register">{t.auth.signUp}</Link></p>
+        <p className="auth-switch"><Link to="/password">{t.auth.changePassword}</Link></p>
       </div>
     </div>
   )
