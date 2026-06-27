@@ -439,6 +439,10 @@ input:focus, select:focus {
   margin-bottom: 14px;
 }
 .auth-switch { margin-top: 18px; text-align: center; color: var(--text-muted); font-size: 14px; }
+
+/* Centered call-to-action (used for link-styled buttons in auth pages). */
+.auth-actions { margin-top: 28px; text-align: center; }
+.auth-actions .btn { display: inline-block; padding: 12px 32px; }
 .auth-switch a { color: #c7d2fe; font-weight: 600; }
 
 /* ===== Data table ===== */

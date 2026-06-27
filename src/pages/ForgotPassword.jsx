@@ -34,9 +34,9 @@ export default function ForgotPassword() {
         {done ? (
           <>
             <p className="hint">{t.auth.forgotSuccess}</p>
-            <Link to="/login" className="btn block" style={{ marginTop: 16, textAlign: 'center' }}>
-              {t.auth.signIn}
-            </Link>
+            <div className="auth-actions">
+              <Link to="/login" className="btn">{t.auth.signIn}</Link>
+            </div>
           </>
         ) : (
           <>
