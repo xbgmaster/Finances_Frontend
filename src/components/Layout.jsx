@@ -10,9 +10,9 @@ export default function Layout() {
 
   const links = [
     { to: '/', label: t.nav.summary, icon: '📊', end: true },
-    { to: '/categorias', label: t.nav.categories, icon: '🏷️' },
-    { to: '/gastos', label: t.nav.expenses, icon: '💸' },
-    { to: '/proyecciones', label: t.nav.projections, icon: '🤖' },
+    { to: '/categories', label: t.nav.categories, icon: '🏷️' },
+    { to: '/expenses', label: t.nav.expenses, icon: '💸' },
+    { to: '/projections', label: t.nav.projections, icon: '🤖' },
   ]
   if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: '🛡️' })
 

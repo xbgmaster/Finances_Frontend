@@ -24,9 +24,9 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="categorias" element={<Categories />} />
-          <Route path="gastos" element={<Expenses />} />
-          <Route path="proyecciones" element={<Projections />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="expenses" element={<Expenses />} />
+          <Route path="projections" element={<Projections />} />
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
           </Route>
