@@ -69,7 +69,7 @@ export default function AdminDashboard() {
         <>
           <div className="grid grid-4">
             <StatCard label={t.admin.totalUsers} value={stats.totalUsers} icon="👥" color="#6366f1" isMoney={false} />
-            <StatCard label={t.admin.activeUsers} value={stats.activeUsers} icon="✅" color="#10b981" isMoney={false} />
+            <StatCard label={t.admin.activeUsers} value={stats.activeUsers} icon="✅" color="#10b981" isMoney={false} hint={t.admin.activeUsersHint} />
             <StatCard label={t.admin.newThisMonth} value={stats.newUsersThisMonth} icon="🆕" color="#f59e0b" isMoney={false} />
             <StatCard label={t.admin.admins} value={stats.adminUsers} icon="🛡️" color="#ec4899" isMoney={false} />
           </div>
@@ -122,6 +122,7 @@ export default function AdminDashboard() {
               <th>{t.admin.colRole}</th>
               <th>{t.admin.colCountry}</th>
               <th>{t.admin.colCreated}</th>
+              <th>{t.admin.colLastLogin}</th>
               <th className="num">{t.admin.colIncome}</th>
               <th className="num">{t.admin.colExpense}</th>
               <th className="num">{t.admin.colBalance}</th>
@@ -130,10 +131,10 @@ export default function AdminDashboard() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="loading">{t.common.loading}</td></tr>
+              <tr><td colSpan={9} className="loading">{t.common.loading}</td></tr>
             )}
             {!loading && data?.items.length === 0 && (
-              <tr><td colSpan={8} className="loading">{t.admin.noUsers}</td></tr>
+              <tr><td colSpan={9} className="loading">{t.admin.noUsers}</td></tr>
             )}
             {!loading && data?.items.map((u) => (
               <tr key={u.id}>
@@ -148,6 +149,7 @@ export default function AdminDashboard() {
                 </td>
                 <td>{u.country || '—'}</td>
                 <td>{formatDate(u.createdAt)}</td>
+                <td>{u.lastLoginAt ? formatDate(u.lastLoginAt) : t.admin.neverLoggedIn}</td>
                 <td className="num pos">{formatMoney(u.totalIncome)}</td>
                 <td className="num neg">{formatMoney(u.totalExpense)}</td>
                 <td className="num">{formatMoney(u.balance)}</td>
