@@ -13,6 +13,7 @@ export default function Layout() {
     { to: '/categories', label: t.nav.categories, icon: '🏷️' },
     { to: '/expenses', label: t.nav.expenses, icon: '💸' },
     { to: '/credits', label: t.nav.credits, icon: '🏦' },
+    { to: '/budget-history', label: t.nav.budgetHistory, icon: '📅' },
     { to: '/projections', label: t.nav.projections, icon: '🤖' },
   ]
   if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: '🛡️' })

@@ -84,6 +84,7 @@ export const ExpensesApi = {
 export const BalanceApi = {
   get: () => api.get('/balance').then((r) => r.data),
   monthly: (params) => api.get('/balance/monthly', { params }).then((r) => r.data),
+  budgetHistory: (params) => api.get('/balance/budget-history', { params }).then((r) => r.data),
 }
 
 export const ProjectionApi = {

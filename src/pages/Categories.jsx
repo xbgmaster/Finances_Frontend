@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CategoriesApi } from '../api/client'
 import Modal from '../components/Modal'
 import { ICON_KEYS, iconFor, COLOR_PALETTE } from '../utils/icons'
@@ -9,6 +10,8 @@ const emptyForm = { name: '', icon: 'tag', color: '#6366f1', monthlyBudget: '' }
 
 export default function Categories() {
   const { t } = useI18n()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -25,6 +28,14 @@ export default function Categories() {
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (location.state?.openCreate) {
+      openCreate()
+      navigate(location.pathname, { replace: true, state: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   const openCreate = () => {
     setEditing(null)

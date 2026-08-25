@@ -5,6 +5,7 @@ import Categories from './pages/Categories'
 import Expenses from './pages/Expenses'
 import Credits from './pages/Credits'
 import CreditDetail from './pages/CreditDetail'
+import BudgetHistory from './pages/BudgetHistory'
 import Projections from './pages/Projections'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="credits" element={<Credits />} />
           <Route path="credits/:id" element={<CreditDetail />} />
+          <Route path="budget-history" element={<BudgetHistory />} />
           <Route path="projections" element={<Projections />} />
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />

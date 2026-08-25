@@ -347,6 +347,92 @@ input:focus, select:focus {
 
 .loading { color: var(--text-muted); padding: 40px; text-align: center; }
 
+/* ===== Info hint / tooltip ===== */
+.info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 8px; }
+
+.info-hint .dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: #c7d2fe;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+}
+
+.info-hint .bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  width: max-content;
+  max-width: 260px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 60;
+}
+
+.info-hint:hover .bubble { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== Budget cards ===== */
+.budget-card .row { align-items: flex-start; }
+.budget-card .b-amount { font-weight: 700; }
+.budget-card .b-sub { font-size: 12px; margin-top: 2px; }
+.budget-card .b-sub.pos { color: var(--success); }
+.budget-card .b-sub.neg { color: var(--danger); }
+
+/* ===== Inline link ===== */
+.field-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: -6px;
+  margin-bottom: 16px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #c7d2fe;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-btn:hover { color: var(--primary); }
+
+/* ===== Budget history heatmap ===== */
+.bh-table th:first-child, .bh-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 1;
+}
+
+.bh-table thead th:first-child { background: var(--bg-elevated); }
+
+.bh-cell { font-weight: 600; }
+.bh-cell.bh-over { color: #fca5a5; background: rgba(239, 68, 68, 0.14); }
+.bh-cell.bh-under { color: #6ee7b7; background: rgba(16, 185, 129, 0.10); }
+.bh-cell.bh-zero { color: var(--text-muted); }
+
+.pill-over { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
 .toolbar { display: flex; gap: 10px; align-items: center; }
 
 /* ===== Topbar & language switcher ===== */

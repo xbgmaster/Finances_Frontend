@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ExpensesApi, CategoriesApi, BalanceApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
@@ -11,6 +12,7 @@ const now = new Date()
 
 export default function Expenses() {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [categories, setCategories] = useState([])
@@ -73,6 +75,11 @@ export default function Expenses() {
   const remove = async (id) => {
     await ExpensesApi.remove(id)
     await load()
+  }
+
+  const goCreateCategory = () => {
+    setShowModal(false)
+    navigate('/categories', { state: { openCreate: true } })
   }
 
   const years = useMemo(() => {
@@ -197,6 +204,14 @@ export default function Expenses() {
                 <option value="" disabled>{t.common.select}</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              {categories.length === 0 && (
+                <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
+                  {t.dashboard.noCategories}{' '}
+                  <button type="button" className="link-btn" onClick={goCreateCategory}>
+                    {t.dashboard.createCategoryLink}
+                  </button>
+                </div>
+              )}
             </div>
             <div className="field">
               <label>{t.common.description}</label>
