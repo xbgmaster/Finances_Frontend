@@ -45,6 +45,18 @@ button {
   min-height: 100vh;
 }
 
+/* Full-screen animated MoltenMetal background behind the whole app. A negative
+   z-index keeps it below all content (which paints above it automatically), and
+   it never captures pointer events; low opacity keeps the data readable. The
+   opaque sidebar hides it there, while the transparent content area lets the
+   plasma show through the gaps between cards. */
+.app-molten-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
 .sidebar {
   background: var(--bg-elevated);
   border-right: 1px solid var(--border);

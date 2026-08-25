@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
@@ -6,6 +6,9 @@ import { CreditsApi } from '../api/client'
 import { formatDate } from '../utils/format'
 import LanguageSwitcher from './LanguageSwitcher'
 import BrandLogo from './BrandLogo'
+
+// Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
+const MoltenMetal = lazy(() => import('./MoltenMetal'))
 
 const POLL_MS = 5 * 60 * 1000
 
@@ -89,6 +92,29 @@ export default function Layout() {
 
   return (
     <div className="app">
+      <div className="app-molten-bg" aria-hidden="true">
+        <Suspense fallback={null}>
+          <MoltenMetal
+            color1="#5227FF"
+            color2="#FF9FFC"
+            color3="#FFFFFF"
+            colorMode="molten"
+            speed={0.35}
+            scale={4}
+            detail={3}
+            glow={1.6}
+            coreSize={0.1}
+            swirl={1}
+            fold={-0.2}
+            blackPoint={0.05}
+            brightness={1.2}
+            opacity={0.3}
+            grain
+            grainIntensity={0.05}
+            mouseInteraction={false}
+          />
+        </Suspense>
+      </div>
       <header className="mobile-header">
         <button
           className="hamburger"
