@@ -9,9 +9,11 @@ export const translations = {
       budgetHistory: 'Budget history',
       projections: 'AI Projections',
       admin: 'Admin',
+      menu: 'Menu',
     },
     common: {
       amount: 'Amount',
+      close: 'Close',
       description: 'Description',
       category: 'Category',
       date: 'Date',
@@ -329,9 +331,11 @@ export const translations = {
       budgetHistory: 'Historial de presupuestos',
       projections: 'Proyecciones IA',
       admin: 'Administración',
+      menu: 'Menú',
     },
     common: {
       amount: 'Monto',
+      close: 'Cerrar',
       description: 'Descripción',
       category: 'Categoría',
       date: 'Fecha',

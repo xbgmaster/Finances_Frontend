@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { CreditsApi } from '../api/client'
@@ -12,9 +12,11 @@ export default function Layout() {
   const { t } = useI18n()
   const { user, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [alerts, setAlerts] = useState(null)
   const [bellOpen, setBellOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const bellRef = useRef(null)
 
   const loadAlerts = async () => {
@@ -40,6 +42,17 @@ export default function Layout() {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [bellOpen])
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+
+  // Lock body scroll while the mobile drawer is open.
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
 
   const links = [
     { to: '/', label: t.nav.summary, icon: '📊', end: true },
@@ -75,16 +88,41 @@ export default function Layout() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <header className="mobile-header">
+        <button
+          className="hamburger"
+          onClick={() => setMenuOpen(true)}
+          aria-label={t.nav.menu}
+          aria-expanded={menuOpen}
+        >
+          <span /><span /><span />
+        </button>
+        <div className="brand brand-mobile">
+          <span className="logo">💰</span>
+          <span>{t.appName}</span>
+        </div>
+      </header>
+
+      {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
+
+      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span className="logo">💰</span>
           <span>{t.appName}</span>
+          <button
+            className="sidebar-close"
+            onClick={() => setMenuOpen(false)}
+            aria-label={t.common.close}
+          >
+            ✕
+          </button>
         </div>
         {links.map((l) => (
           <NavLink
             key={l.to}
             to={l.to}
             end={l.end}
+            onClick={() => setMenuOpen(false)}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
             <span className="ic">{l.icon}</span>
