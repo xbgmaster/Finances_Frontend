@@ -90,7 +90,9 @@ export default function CreditDetail() {
           <Link to="/credits" className="hint" style={{ textDecoration: 'none' }}>{t.credits.back}</Link>
           <h1 style={{ marginTop: 6 }}>{summary.name}</h1>
           <p>
-            {t.credits.types[summary.type] || summary.type} · {summary.annualInterestRate}% · {summary.termMonths} mo
+            {t.credits.types[summary.type] || summary.type}
+            {' · '}{t.credits.interestModels[summary.interestModel] || summary.interestModel}
+            {' · '}{summary.annualInterestRate}% · {summary.effectiveAnnualRate}% APR · {summary.termMonths} mo
             {' · '}{formatDate(summary.startDate)}
           </p>
         </div>
@@ -99,16 +101,18 @@ export default function CreditDetail() {
 
       <div className="grid grid-4">
         <StatCard
-          label={t.credits.outstanding}
-          value={summary.outstandingPrincipal}
+          label={t.credits.payoffToday}
+          value={summary.payoffAmountToday}
           icon="🎯"
           color="#ef4444"
           tone="neg"
-          hint={t.credits.outstandingHint}
+          hint={summary.prepaymentPenaltyAmount > 0
+            ? `${t.credits.penaltyAmount}: ${formatMoney(summary.prepaymentPenaltyAmount)}`
+            : t.credits.payoffTodayHint}
         />
         <StatCard
           label={t.credits.savingsIfPaidOff}
-          value={summary.savingsIfPaidOffToday}
+          value={summary.netSavingsIfPaidOffToday}
           icon="💚"
           color="#10b981"
           tone="pos"

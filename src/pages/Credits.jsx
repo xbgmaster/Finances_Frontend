@@ -10,6 +10,9 @@ const today = () => new Date().toISOString().slice(0, 10)
 const emptyCredit = {
   name: '',
   type: 'LibreInversion',
+  interestModel: 'CompoundFrench',
+  prepaymentEffect: 'ReduceTerm',
+  prepaymentPenaltyRate: '',
   principal: '',
   annualInterestRate: '',
   termMonths: '',
@@ -55,6 +58,9 @@ export default function Credits() {
       await CreditsApi.create({
         name: form.name.trim(),
         type: form.type,
+        interestModel: form.interestModel,
+        prepaymentEffect: form.prepaymentEffect,
+        prepaymentPenaltyRate: form.prepaymentPenaltyRate === '' ? 0 : parseFloat(form.prepaymentPenaltyRate),
         principal: parseFloat(form.principal),
         annualInterestRate: parseFloat(form.annualInterestRate),
         termMonths: parseInt(form.termMonths, 10),
@@ -129,7 +135,7 @@ export default function Credits() {
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 17 }}>{c.name}</div>
                     <div className="hint" style={{ marginTop: 2 }}>
-                      {t.credits.types[c.type] || c.type} · {c.annualInterestRate}% · {c.termMonths} mo
+                      {t.credits.types[c.type] || c.type} · {(t.credits.interestModels[c.interestModel] || c.interestModel)} · {c.annualInterestRate}% · {c.termMonths} mo
                     </div>
                   </div>
                   <span className={`pill ${paidOff ? 'pill-user' : 'pill-admin'}`}>
@@ -191,9 +197,45 @@ export default function Credits() {
 
             <div className="field">
               <label>{t.credits.type}</label>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              <select
+                value={form.type}
+                onChange={(e) => {
+                  const type = e.target.value
+                  setForm((f) => ({
+                    ...f,
+                    type,
+                    // Credit cards are modeled as flat installment purchases; loans default to French.
+                    interestModel: type === 'CreditCard'
+                      ? 'SimpleFlat'
+                      : (f.type === 'CreditCard' ? 'CompoundFrench' : f.interestModel),
+                  }))
+                }}
+              >
                 {Object.keys(t.credits.types).map((key) => (
                   <option key={key} value={key}>{t.credits.types[key]}</option>
+                ))}
+              </select>
+            </div>
+
+            {form.type === 'CreditCard' ? (
+              <div className="hint" style={{ marginTop: -8, marginBottom: 16 }}>{t.credits.cardModelNote}</div>
+            ) : (
+              <div className="field">
+                <label>{t.credits.interestModel}</label>
+                <select value={form.interestModel} onChange={(e) => setForm({ ...form, interestModel: e.target.value })}>
+                  {Object.keys(t.credits.interestModels).map((key) => (
+                    <option key={key} value={key}>{t.credits.interestModels[key]}</option>
+                  ))}
+                </select>
+                <div className="hint" style={{ marginTop: 6 }}>{t.credits.interestModelHint}</div>
+              </div>
+            )}
+
+            <div className="field">
+              <label>{t.credits.prepaymentEffect}</label>
+              <select value={form.prepaymentEffect} onChange={(e) => setForm({ ...form, prepaymentEffect: e.target.value })}>
+                {Object.keys(t.credits.prepaymentEffects).map((key) => (
+                  <option key={key} value={key}>{t.credits.prepaymentEffects[key]}</option>
                 ))}
               </select>
             </div>
@@ -239,16 +281,27 @@ export default function Credits() {
               </div>
             </div>
 
-            <div className="field">
-              <label>{t.credits.currency}</label>
-              <input
-                type="text" maxLength={3}
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                placeholder="USD"
-              />
-              <div className="hint" style={{ marginTop: 6 }}>{t.credits.rateHint}</div>
+            <div className="row" style={{ gap: 12 }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.credits.currency}</label>
+                <input
+                  type="text" maxLength={3}
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+                  placeholder="USD"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.credits.penaltyRate}</label>
+                <input
+                  type="number" step="0.01" min="0" max="100"
+                  value={form.prepaymentPenaltyRate}
+                  onChange={(e) => setForm({ ...form, prepaymentPenaltyRate: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
             </div>
+            <div className="hint" style={{ marginBottom: 16 }}>{t.credits.penaltyRateHint}</div>
 
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowCreate(false)}>{t.common.cancel}</button>
