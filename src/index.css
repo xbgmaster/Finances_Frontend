@@ -702,11 +702,54 @@ input:focus, select:focus {
     #05060d;
 }
 
-/* Guarantee the WebGL mount fills the fixed background immediately (avoids a
-   0-height first frame that would stall the effect until a resize). */
+/* Guarantee the WebGL mount fills the fixed background immediately. We size it
+   from inset (top/bottom/left/right) rather than width/height:100% because a
+   percentage height against an inset-sized parent is "flaky": it may resolve to
+   0 until a reflow (window resize), which stalled the effect on first load. The
+   `auto` overrides defeat the component's own width/height:100% rules. */
 .laser-bg > .laser-flow-container {
   position: absolute;
   inset: 0;
+  width: auto;
+  height: auto;
+}
+
+.laser-bg > .laser-flow-container > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* "Reveal" image: dark by default, uncovered by a spotlight mask that follows the
+   pointer (--mx/--my updated from JS). Sits above the beam but behind the card. */
+.laser-reveal {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  opacity: 0.5;
+  mix-blend-mode: lighten;
+  pointer-events: none;
+  --mx: -9999px;
+  --my: -9999px;
+  -webkit-mask-image: radial-gradient(
+    circle 220px at var(--mx) var(--my),
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.65) 45%,
+    rgba(0, 0, 0, 0) 75%
+  );
+  mask-image: radial-gradient(
+    circle 220px at var(--mx) var(--my),
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.65) 45%,
+    rgba(0, 0, 0, 0) 75%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
 .auth-page--laser .auth-topbar { z-index: 3; }

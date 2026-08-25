@@ -382,8 +382,10 @@ export const LaserFlow = ({
     const mouseSmooth = new THREE.Vector2(0, 0);
 
     const setSizeNow = () => {
-      const w = mount.clientWidth || 1;
-      const h = mount.clientHeight || 1;
+      // Fall back to the viewport if the container hasn't been laid out yet, so a
+      // 0-sized first measurement never leaves the beam invisible until a resize.
+      const w = mount.clientWidth || window.innerWidth || 1;
+      const h = mount.clientHeight || window.innerHeight || 1;
       const pr = currentDprRef.current;
 
       const last = lastSizeRef.current;
