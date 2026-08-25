@@ -3,7 +3,7 @@ let currentLocale = 'en-US'
 
 // Moneda base del usuario (de su perfil). La usa formatMoney cuando no se pasa
 // una moneda explicita. La actualiza AuthContext cuando cambia el usuario.
-let baseCurrency = 'USD'
+let baseCurrency = 'CAD'
 
 export const setLocale = (locale) => {
   currentLocale = locale

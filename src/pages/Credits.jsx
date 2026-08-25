@@ -6,6 +6,7 @@ import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const currentDay = () => String(new Date().getDate())
@@ -27,6 +28,7 @@ const emptyCredit = {
 export default function Credits() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const { currency: activeCurrency } = useCurrency()
   const baseCurrency = user?.currency || getBaseCurrency()
   const [credits, setCredits] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,17 +45,18 @@ export default function Credits() {
 
   const load = async () => {
     setLoading(true)
-    setCredits(await CreditsApi.list())
+    setCredits(await CreditsApi.list({ currency: activeCurrency }))
     setLoading(false)
   }
 
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCurrency])
 
   const openCreate = () => {
     setEditingId(null)
-    setForm({ ...emptyCredit, startDate: today(), paymentDueDay: currentDay(), currency: baseCurrency })
+    setForm({ ...emptyCredit, startDate: today(), paymentDueDay: currentDay(), currency: activeCurrency })
     setError('')
     setShowCreate(true)
   }

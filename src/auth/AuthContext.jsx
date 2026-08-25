@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
 
   // Keep the money formatter's default currency in sync with the user's base currency.
   useEffect(() => {
-    setBaseCurrency(user?.currency || 'USD')
+    setBaseCurrency(user?.currency || 'CAD')
   }, [user])
 
   const persist = (result) => {

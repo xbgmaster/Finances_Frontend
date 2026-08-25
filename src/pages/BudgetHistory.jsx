@@ -4,9 +4,11 @@ import { BalanceApi } from '../api/client'
 import { formatMoney } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 export default function BudgetHistory() {
   const { t } = useI18n()
+  const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [months, setMonths] = useState(6)
   const [data, setData] = useState(null)
@@ -17,7 +19,7 @@ export default function BudgetHistory() {
     setLoading(true)
     setError(false)
     try {
-      setData(await BalanceApi.budgetHistory({ months }))
+      setData(await BalanceApi.budgetHistory({ months, currency: activeCurrency }))
     } catch {
       setError(true)
     } finally {
@@ -28,7 +30,7 @@ export default function BudgetHistory() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [months])
+  }, [months, activeCurrency])
 
   const monthLabel = (m) => `${t.months[m.month - 1].slice(0, 3)} ${String(m.year).slice(2)}`
 
@@ -113,7 +115,7 @@ export default function BudgetHistory() {
                         </span>
                         <div>
                           <div className="title">{c.categoryName}</div>
-                          <div className="sub">{t.budgetHistory.of} {formatMoney(c.monthlyBudget)}</div>
+                          <div className="sub">{t.budgetHistory.of} {formatMoney(c.monthlyBudget, activeCurrency)}</div>
                         </div>
                       </div>
                     </td>
@@ -123,7 +125,7 @@ export default function BudgetHistory() {
                         className={`num bh-cell ${cell.spent === 0 ? 'bh-zero' : cell.over ? 'bh-over' : 'bh-under'}`}
                         title={`${cell.percent}%`}
                       >
-                        {cell.spent === 0 ? '—' : formatMoney(cell.spent)}
+                        {cell.spent === 0 ? '—' : formatMoney(cell.spent, activeCurrency)}
                       </td>
                     ))}
                     <td className="num">

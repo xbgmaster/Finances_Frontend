@@ -7,24 +7,26 @@ import { ProjectionApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 export default function Projections() {
   const { t, language } = useI18n()
+  const { currency: activeCurrency } = useCurrency()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [savingsRate, setSavingsRate] = useState(20)
 
   const load = async (rate) => {
     setLoading(true)
-    setData(await ProjectionApi.get({ savingsRate: rate / 100, historyMonths: 6, lang: language }))
+    setData(await ProjectionApi.get({ savingsRate: rate / 100, historyMonths: 6, lang: language, currency: activeCurrency }))
     setLoading(false)
   }
 
-  // Recarga al montar y cuando cambia el idioma (insights vienen localizados del backend).
+  // Recarga al montar, cuando cambia el idioma (insights localizados) o el lente de moneda.
   useEffect(() => {
     load(savingsRate)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language])
+  }, [language, activeCurrency])
 
   const applyRate = () => load(savingsRate)
 
@@ -76,20 +78,22 @@ export default function Projections() {
         <StatCard
           label={t.projections.projectedNextMonth}
           value={data.projectedExpenseNextMonth}
+          currency={activeCurrency}
           icon="🔮"
           color={trendColor}
           hint={`${t.projections.trend}: ${trendLabel}`}
         />
-        <StatCard label={t.projections.recommendedSavings} value={data.recommendedSavings} icon="🐷" color="#10b981" />
+        <StatCard label={t.projections.recommendedSavings} value={data.recommendedSavings} currency={activeCurrency} icon="🐷" color="#10b981" />
         <StatCard
           label={t.projections.canSpend}
           value={data.safeToSpend}
+          currency={activeCurrency}
           icon="✅"
           color="#6366f1"
           tone="pos"
-          hint={`≈ ${formatMoney(data.safeToSpendPerDayRemaining)}/${t.projections.perDay} (${data.daysRemainingInMonth} ${t.projections.daysLeft})`}
+          hint={`≈ ${formatMoney(data.safeToSpendPerDayRemaining, activeCurrency)}/${t.projections.perDay} (${data.daysRemainingInMonth} ${t.projections.daysLeft})`}
         />
-        <StatCard label={t.projections.currentBalance} value={data.currentBalance} icon="💰" color="#22d3ee" />
+        <StatCard label={t.projections.currentBalance} value={data.currentBalance} currency={activeCurrency} icon="💰" color="#22d3ee" />
       </div>
 
       <h2 className="section-title">{t.projections.trendSection}</h2>
@@ -107,7 +111,7 @@ export default function Projections() {
             <YAxis stroke="#94a3c4" fontSize={12} />
             <Tooltip
               contentStyle={{ background: '#1a2236', border: '1px solid #283251', borderRadius: 12 }}
-              formatter={(value) => formatMoney(value)}
+              formatter={(value) => formatMoney(value, activeCurrency)}
             />
             <Legend />
             <Area type="monotone" dataKey={t.projections.chartExpenses} stroke="#ef4444" fill="url(#gExp)" strokeWidth={2} />
@@ -130,8 +134,8 @@ export default function Projections() {
       </div>
 
       <div className="grid grid-2" style={{ marginTop: 24 }}>
-        <StatCard label={t.projections.avgIncome} value={data.avgMonthlyIncome} icon="📊" color="#10b981" />
-        <StatCard label={t.projections.avgExpense} value={data.avgMonthlyExpense} icon="📊" color="#ef4444" />
+        <StatCard label={t.projections.avgIncome} value={data.avgMonthlyIncome} currency={activeCurrency} icon="📊" color="#10b981" />
+        <StatCard label={t.projections.avgExpense} value={data.avgMonthlyExpense} currency={activeCurrency} icon="📊" color="#ef4444" />
       </div>
     </div>
   )

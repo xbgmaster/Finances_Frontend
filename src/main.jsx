@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { I18nProvider } from './i18n/I18nContext.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
+import { CurrencyProvider } from './currency/CurrencyContext.jsx'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')).render(
     <I18nProvider>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <CurrencyProvider>
+            <App />
+          </CurrencyProvider>
         </AuthProvider>
       </BrowserRouter>
     </I18nProvider>

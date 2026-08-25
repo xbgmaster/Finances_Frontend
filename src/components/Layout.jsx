@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { CreditsApi } from '../api/client'
 import { formatDate } from '../utils/format'
 import LanguageSwitcher from './LanguageSwitcher'
+import CurrencySwitcher from './CurrencySwitcher'
 import BrandLogo from './BrandLogo'
 
 // Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
@@ -21,7 +22,9 @@ export default function Layout() {
   const [alerts, setAlerts] = useState(null)
   const [bellOpen, setBellOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [userOpen, setUserOpen] = useState(false)
   const bellRef = useRef(null)
+  const userRef = useRef(null)
 
   const loadAlerts = async () => {
     try {
@@ -46,6 +49,16 @@ export default function Layout() {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [bellOpen])
+
+  // Close the user menu when clicking outside it.
+  useEffect(() => {
+    if (!userOpen) return
+    const onClick = (e) => {
+      if (userRef.current && !userRef.current.contains(e.target)) setUserOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [userOpen])
 
   // Close the mobile drawer whenever the route changes.
   useEffect(() => {
@@ -159,7 +172,10 @@ export default function Layout() {
       </aside>
       <main className="content">
         <div className="topbar">
-          <LanguageSwitcher />
+          <div className="topbar-left">
+            <LanguageSwitcher />
+            <CurrencySwitcher />
+          </div>
           <div className="topbar-right">
             <div className="bell-wrap" ref={bellRef}>
               <button
@@ -198,10 +214,38 @@ export default function Layout() {
                 </div>
               )}
             </div>
-            <div className="user-menu">
-              <span className="user-avatar">{initial}</span>
-              <span className="user-name">{displayName}</span>
-              <button className="btn secondary" onClick={onLogout}>{t.auth.logout}</button>
+            <div className="user-wrap" ref={userRef}>
+              <button
+                className="user-menu"
+                onClick={() => setUserOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={userOpen}
+              >
+                <span className="user-avatar">{initial}</span>
+                <span className="user-name">{displayName}</span>
+                <span className="user-caret">▾</span>
+              </button>
+              {userOpen && (
+                <div className="user-dropdown" role="menu">
+                  <div className="user-dd-head">
+                    <span className="user-avatar lg">{initial}</span>
+                    <div className="user-dd-info">
+                      <span className="user-dd-name">{displayName}</span>
+                      {user?.email && <span className="user-dd-email">{user.email}</span>}
+                    </div>
+                  </div>
+                  <button
+                    className="user-dd-item"
+                    role="menuitem"
+                    onClick={() => { setUserOpen(false); navigate('/settings') }}
+                  >
+                    <span className="ic">⚙️</span> {t.settings.menuItem}
+                  </button>
+                  <button className="user-dd-item danger" role="menuitem" onClick={onLogout}>
+                    <span className="ic">🚪</span> {t.auth.logout}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { AuthApi } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import AuthLaserBackground from '../components/AuthLaserBackground'
+import AuthIcon from '../components/AuthIcon'
 
 // Page reached from the password reset email link:
 //   /restore-password?email=<email>&token=<reset-token>
@@ -48,7 +49,7 @@ export default function RestorePassword() {
       <AuthLaserBackground />
       <div className="auth-topbar"><LanguageSwitcher /></div>
       <div className="auth-card">
-        <div className="auth-brand"><span className="logo">🔑</span><span>{t.auth.resetTitle}</span></div>
+        <div className="auth-brand"><AuthIcon /><span>{t.auth.resetTitle}</span></div>
 
         {done ? (
           <>

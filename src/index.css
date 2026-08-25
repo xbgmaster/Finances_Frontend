@@ -327,6 +327,88 @@ button {
   font-weight: 500;
 }
 
+/* Two fields side by side (e.g. amount + currency). */
+.field-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.field-row > .field {
+  flex: 1;
+}
+
+/* Chips showing balances held in non-base currencies. */
+.currency-balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.currency-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.currency-chip .cc-code {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.currency-chip .cc-amount {
+  font-weight: 600;
+}
+.currency-chip.pos .cc-amount {
+  color: var(--success);
+}
+.currency-chip.neg .cc-amount {
+  color: var(--danger);
+}
+
+.currency-switch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.currency-switch .cs-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.currency-switch .cs-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cs-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cs-chip:hover {
+  color: var(--text);
+  border-color: var(--primary, #6366f1);
+}
+.cs-chip.active {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+  color: #fff;
+}
+
 input, select {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -654,11 +736,22 @@ input:focus, select:focus {
 }
 
 /* ===== User menu ===== */
+.user-wrap { position: relative; }
+
 .user-menu {
   display: flex;
   align-items: center;
   gap: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
+.user-menu:hover { background: var(--bg-elevated); border-color: var(--border); }
+
+.user-caret { color: var(--text-muted); font-size: 12px; }
 
 .user-avatar {
   width: 34px;
@@ -670,12 +763,65 @@ input:focus, select:focus {
   font-weight: 700;
   color: #fff;
 }
+.user-avatar.lg { width: 42px; height: 42px; font-size: 18px; }
 
 .user-name {
   color: var(--text-muted);
   font-weight: 600;
   font-size: 14px;
 }
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 8px;
+  z-index: 60;
+  animation: overlay-fade 0.12s ease;
+}
+
+.user-dd-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.user-dd-info { display: flex; flex-direction: column; min-width: 0; }
+.user-dd-name { font-weight: 700; color: var(--text); }
+.user-dd-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.user-dd-item:hover { background: var(--surface-2, rgba(255, 255, 255, 0.06)); }
+.user-dd-item.danger { color: var(--danger); }
+.user-dd-item .ic { font-size: 16px; }
 
 /* ===== Auth pages ===== */
 .auth-page {
@@ -803,6 +949,18 @@ input:focus, select:focus {
   box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
 }
 
+.auth-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary), #22d3ee);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+.auth-icon svg { display: block; }
+
 .auth-card h1 { font-size: 24px; }
 .auth-card form { margin-top: 20px; }
 .auth-error {
@@ -875,6 +1033,40 @@ input:focus, select:focus {
 .lang-switch button.active {
   background: var(--primary);
   color: #fff;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.currency-switch-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px 4px 12px;
+}
+.currency-switch-top .cst-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.currency-switch-top select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 2px;
+  cursor: pointer;
+  outline: none;
+}
+.currency-switch-top select option {
+  background: var(--bg-elevated);
+  color: var(--text);
 }
 
 /* ===== Receipt upload ===== */

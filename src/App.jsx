@@ -7,6 +7,7 @@ import Credits from './pages/Credits'
 import CreditDetail from './pages/CreditDetail'
 import BudgetHistory from './pages/BudgetHistory'
 import Projections from './pages/Projections'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Password from './pages/ForgotPassword'
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="credits/:id" element={<CreditDetail />} />
           <Route path="budget-history" element={<BudgetHistory />} />
           <Route path="projections" element={<Projections />} />
+          <Route path="settings" element={<Settings />} />
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
           </Route>

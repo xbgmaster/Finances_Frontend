@@ -15,7 +15,7 @@ export default function Onboarding() {
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
     country: '',
-    currency: 'USD',
+    currency: 'CAD',
     monthlyIncomeTarget: '',
   })
   const [loading, setLoading] = useState(false)

@@ -7,11 +7,13 @@ import ReceiptInput from '../components/ReceiptInput'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 const now = new Date()
 
 export default function Expenses() {
   const { t } = useI18n()
+  const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -27,8 +29,8 @@ export default function Expenses() {
     setLoading(true)
     const [cats, sum, exp] = await Promise.all([
       CategoriesApi.list(),
-      BalanceApi.monthly({ year, month }),
-      ExpensesApi.list({ year, month }),
+      BalanceApi.monthly({ year, month, currency: activeCurrency }),
+      ExpensesApi.list({ year, month, currency: activeCurrency }),
     ])
     setCategories(cats)
     setSummary(sum)
@@ -39,7 +41,7 @@ export default function Expenses() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month])
+  }, [year, month, activeCurrency])
 
   const openCreate = () => {
     setForm({
@@ -64,6 +66,7 @@ export default function Expenses() {
         categoryId: Number(form.categoryId),
         date: form.date ? new Date(form.date).toISOString() : undefined,
         receipt: form.receipt,
+        currency: activeCurrency,
       })
       setShowModal(false)
       await load()
@@ -108,11 +111,12 @@ export default function Expenses() {
       </div>
 
       <div className="grid grid-3">
-        <StatCard label={t.expenses.incomeThisMonth} value={summary.income} icon="📈" color="#10b981" />
-        <StatCard label={t.expenses.spentThisMonth} value={summary.expense} icon="💸" color="#ef4444" />
+        <StatCard label={t.expenses.incomeThisMonth} value={summary.income} currency={activeCurrency} icon="📈" color="#10b981" />
+        <StatCard label={t.expenses.spentThisMonth} value={summary.expense} currency={activeCurrency} icon="💸" color="#ef4444" />
         <StatCard
           label={t.expenses.remainingThisMonth}
           value={summary.net}
+          currency={activeCurrency}
           icon="🧮"
           color="#6366f1"
           tone={summary.net >= 0 ? 'pos' : 'neg'}
@@ -137,10 +141,10 @@ export default function Expenses() {
                     <div style={{ fontWeight: 600 }}>{c.categoryName}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700 }}>{formatMoney(c.spent)}</div>
+                    <div style={{ fontWeight: 700 }}>{formatMoney(c.spent, activeCurrency)}</div>
                     {c.monthlyBudget != null && (
                       <div className="hint" style={{ fontSize: 12, color: over ? 'var(--danger)' : 'var(--text-muted)' }}>
-                        {t.expenses.of} {formatMoney(c.monthlyBudget)}
+                        {t.expenses.of} {formatMoney(c.monthlyBudget, activeCurrency)}
                       </div>
                     )}
                   </div>
@@ -175,7 +179,7 @@ export default function Expenses() {
                   <img className="receipt-thumb" src={assetUrl(e.receiptUrl)} alt="receipt" />
                 </a>
               )}
-              <span className="amount neg">−{formatMoney(e.amount)}</span>
+              <span className="amount neg">−{formatMoney(e.amount, e.currency || activeCurrency)}</span>
               <button className="btn danger" onClick={() => remove(e.id)}>{t.common.delete}</button>
             </div>
           ))}
@@ -186,7 +190,7 @@ export default function Expenses() {
         <Modal title={t.dashboard.expenseModalTitle} onClose={() => setShowModal(false)}>
           <form onSubmit={submit}>
             <div className="field">
-              <label>{t.common.amount}</label>
+              <label>{t.common.amount} ({activeCurrency})</label>
               <input
                 type="number" step="0.01" min="0" autoFocus required
                 value={form.amount}

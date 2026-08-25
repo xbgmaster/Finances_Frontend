@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, assetUrl } from '../api/client'
+import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ReceiptInput from '../components/ReceiptInput'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
+import { CURRENCIES } from '../utils/currencies'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 const now = new Date()
 
 export default function Dashboard() {
   const { t } = useI18n()
+  const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [balance, setBalance] = useState(null)
   const [incomes, setIncomes] = useState([])
@@ -20,21 +23,24 @@ export default function Dashboard() {
   const [categories, setCategories] = useState([])
   const [monthly, setMonthly] = useState(null)
   const [creditAlerts, setCreditAlerts] = useState(null)
+  const [exchanges, setExchanges] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // 'income' | 'expense' | null
+  const [modal, setModal] = useState(null) // 'income' | 'expense' | 'exchange' | null
   const [saving, setSaving] = useState(false)
-  const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '' })
-  const [expenseForm, setExpenseForm] = useState({ amount: '', description: '', categoryId: '', date: '', receipt: null })
+  const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '', currency: '' })
+  const [expenseForm, setExpenseForm] = useState({ amount: '', description: '', categoryId: '', date: '', receipt: null, currency: '' })
+  const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', toAmount: '', date: '', note: '' })
 
   const load = async () => {
     setLoading(true)
-    const [b, inc, exp, cats, mon, alerts] = await Promise.all([
+    const [b, inc, exp, cats, mon, alerts, exch] = await Promise.all([
       BalanceApi.get(),
       IncomesApi.list(),
       ExpensesApi.list(),
       CategoriesApi.list(),
-      BalanceApi.monthly({ year: now.getFullYear(), month: now.getMonth() + 1 }),
+      BalanceApi.monthly({ year: now.getFullYear(), month: now.getMonth() + 1, currency: activeCurrency }),
       CreditsApi.alerts().catch(() => null),
+      ExchangesApi.list().catch(() => []),
     ])
     setBalance(b)
     setIncomes(inc)
@@ -42,26 +48,64 @@ export default function Dashboard() {
     setCategories(cats)
     setMonthly(mon)
     setCreditAlerts(alerts)
+    setExchanges(exch)
     setLoading(false)
   }
 
+  // Reload the currency-scoped monthly summary whenever the lens changes.
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCurrency])
 
   const openIncome = () => {
-    setIncomeForm({ amount: '', description: '', date: todayIso() })
+    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency })
     setModal('income')
   }
 
   const openExpense = () => {
-    setExpenseForm({ amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(), receipt: null })
+    setExpenseForm({ amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(), receipt: null, currency: activeCurrency })
     setModal('expense')
   }
 
   const goCreateCategory = () => {
     setModal(null)
     navigate('/categories', { state: { openCreate: true } })
+  }
+
+  const openExchange = () => {
+    const from = activeCurrency
+    const to = CURRENCIES.find((c) => c !== from) || from
+    setExchangeForm({ fromCurrency: from, fromAmount: '', toCurrency: to, toAmount: '', date: todayIso(), note: '' })
+    setModal('exchange')
+  }
+
+  const addExchange = async (e) => {
+    e.preventDefault()
+    const fromAmount = parseFloat(exchangeForm.fromAmount)
+    const toAmount = parseFloat(exchangeForm.toAmount)
+    if (!fromAmount || fromAmount <= 0 || !toAmount || toAmount <= 0) return
+    if (exchangeForm.fromCurrency === exchangeForm.toCurrency) return
+    setSaving(true)
+    try {
+      await ExchangesApi.create({
+        fromCurrency: exchangeForm.fromCurrency,
+        fromAmount,
+        toCurrency: exchangeForm.toCurrency,
+        toAmount,
+        date: exchangeForm.date ? new Date(exchangeForm.date).toISOString() : undefined,
+        note: exchangeForm.note.trim() || undefined,
+      })
+      setModal(null)
+      await load()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deleteExchange = async (id) => {
+    await ExchangesApi.remove(id)
+    await load()
   }
 
   const addIncome = async (e) => {
@@ -74,6 +118,7 @@ export default function Dashboard() {
         amount,
         description: incomeForm.description,
         date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
+        currency: incomeForm.currency || undefined,
       })
       setModal(null)
       await load()
@@ -94,6 +139,7 @@ export default function Dashboard() {
         categoryId: Number(expenseForm.categoryId),
         date: expenseForm.date ? new Date(expenseForm.date).toISOString() : undefined,
         receipt: expenseForm.receipt,
+        currency: expenseForm.currency || undefined,
       })
       setModal(null)
       await load()
@@ -114,19 +160,48 @@ export default function Dashboard() {
 
   if (loading) return <div className="loading">{t.common.loading}</div>
 
+  const baseCurrency = balance.baseCurrency
+  const selCur = activeCurrency
+  const isBase = selCur === baseCurrency
+
+  const selEntry = (balance.byCurrency ?? []).find((c) => c.currency === selCur)
+    ?? { balance: 0, totalIncome: 0, totalExpense: 0 }
+
+  // Movements are strictly per-currency (no conversion). Exchanges show the leg that affects
+  // the selected currency: money leaving it (out) or arriving into it (in).
   const movements = [
-    ...incomes.map((i) => ({ ...i, type: 'income' })),
-    ...expenses.map((e) => ({ ...e, type: 'expense' })),
+    ...incomes
+      .filter((i) => (i.currency || baseCurrency) === selCur)
+      .map((i) => ({ ...i, kind: 'income' })),
+    ...expenses
+      .filter((e) => (e.currency || baseCurrency) === selCur)
+      .map((e) => ({ ...e, kind: 'expense' })),
+    ...exchanges
+      .filter((x) => x.fromCurrency === selCur || x.toCurrency === selCur)
+      .map((x) => {
+        const out = x.fromCurrency === selCur
+        return {
+          id: x.id,
+          kind: 'exchange',
+          dir: out ? 'out' : 'in',
+          date: x.date,
+          amount: out ? x.fromAmount : x.toAmount,
+          currency: selCur,
+          otherCurrency: out ? x.toCurrency : x.fromCurrency,
+          otherAmount: out ? x.toAmount : x.fromAmount,
+        }
+      }),
   ]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 10)
+    .slice(0, 12)
 
   const spentByCategory = new Map((monthly?.byCategory ?? []).map((c) => [c.categoryId, c.spent]))
+  const budgetFor = (c) => c.budgets?.[selCur] ?? null
   const budgets = categories
-    .filter((c) => c.monthlyBudget != null && c.monthlyBudget > 0)
+    .filter((c) => budgetFor(c) != null && budgetFor(c) > 0)
     .map((c) => {
       const spent = spentByCategory.get(c.id) ?? 0
-      const budget = c.monthlyBudget
+      const budget = budgetFor(c)
       const over = spent > budget
       return {
         ...c,
@@ -147,6 +222,7 @@ export default function Dashboard() {
           <p>{t.dashboard.subtitle}</p>
         </div>
         <div className="toolbar">
+          <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
           <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
           <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
         </div>
@@ -173,15 +249,16 @@ export default function Dashboard() {
 
       <div className="grid grid-3">
         <StatCard
-          label={t.dashboard.availableBalance}
-          value={balance.balance}
+          label={`${t.dashboard.availableBalance} (${selCur})`}
+          value={selEntry.balance}
+          currency={selCur}
           icon="💰"
           color="#6366f1"
-          tone={balance.balance >= 0 ? 'pos' : 'neg'}
-          hint={t.dashboard.balanceHint}
+          tone={selEntry.balance >= 0 ? 'pos' : 'neg'}
+          hint={isBase ? t.dashboard.balanceHint : t.dashboard.balanceHintCurrency.replace('{cur}', selCur)}
         />
-        <StatCard label={t.dashboard.totalIncome} value={balance.totalIncome} icon="📈" color="#10b981" />
-        <StatCard label={t.dashboard.totalExpenses} value={balance.totalExpense} icon="📉" color="#ef4444" />
+        <StatCard label={t.dashboard.totalIncome} value={selEntry.totalIncome} currency={selCur} icon="📈" color="#10b981" />
+        <StatCard label={t.dashboard.totalExpenses} value={selEntry.totalExpense} currency={selCur} icon="📉" color="#ef4444" />
       </div>
 
       <h2 className="section-title">
@@ -205,9 +282,9 @@ export default function Dashboard() {
                   <div style={{ fontWeight: 600 }}>{c.name}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div className="b-amount">{formatMoney(c.spent)}</div>
+                  <div className="b-amount">{formatMoney(c.spent, selCur)}</div>
                   <div className="hint" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {t.dashboard.spentOf} {formatMoney(c.budget)}
+                    {t.dashboard.spentOf} {formatMoney(c.budget, selCur)}
                   </div>
                 </div>
               </div>
@@ -216,8 +293,8 @@ export default function Dashboard() {
               </div>
               <div className={`b-sub ${c.over ? 'neg' : 'pos'}`}>
                 {c.over
-                  ? `${t.dashboard.overBudget} ${formatMoney(c.spent - c.budget)}`
-                  : `${formatMoney(c.remaining)} ${t.dashboard.remaining}`}
+                  ? `${t.dashboard.overBudget} ${formatMoney(c.spent - c.budget, selCur)}`
+                  : `${formatMoney(c.remaining, selCur)} ${t.dashboard.remaining}`}
               </div>
             </div>
           ))}
@@ -229,52 +306,87 @@ export default function Dashboard() {
         <div className="empty">{t.dashboard.emptyMovements}</div>
       ) : (
         <div className="list">
-          {movements.map((m) => (
-            <div className="list-item" key={`${m.type}-${m.id}`}>
-              <span className="badge-icon" style={{
-                background: m.type === 'income' ? '#10b98122' : `${m.categoryColor}22`,
-                color: m.type === 'income' ? '#10b981' : m.categoryColor,
-              }}>
-                {m.type === 'income' ? '⬆️' : iconFor(m.categoryIcon)}
-              </span>
-              <div className="meta">
-                <div className="title">
-                  {m.type === 'income' ? (m.description || t.common.income) : (m.description || m.categoryName)}
+          {movements.map((m) => {
+            if (m.kind === 'exchange') {
+              const incoming = m.dir === 'in'
+              return (
+                <div className="list-item" key={`exchange-${m.id}-${m.dir}`}>
+                  <span className="badge-icon" style={{ background: '#a855f722', color: '#a855f7' }}>🔄</span>
+                  <div className="meta">
+                    <div className="title">{t.dashboard.exchange}</div>
+                    <div className="sub">
+                      {incoming
+                        ? `${t.dashboard.fromLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`
+                        : `${t.dashboard.toLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`}
+                      {' · '}{formatDate(m.date)}
+                    </div>
+                  </div>
+                  <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
+                    {incoming ? '+' : '−'}{formatMoney(m.amount, m.currency)}
+                  </span>
+                  <button className="btn danger" onClick={() => deleteExchange(m.id)}>{t.common.delete}</button>
                 </div>
-                <div className="sub">
-                  {m.type === 'expense' ? `${m.categoryName} · ` : ''}{formatDate(m.date)}
+              )
+            }
+            const income = m.kind === 'income'
+            return (
+              <div className="list-item" key={`${m.kind}-${m.id}`}>
+                <span className="badge-icon" style={{
+                  background: income ? '#10b98122' : `${m.categoryColor}22`,
+                  color: income ? '#10b981' : m.categoryColor,
+                }}>
+                  {income ? '⬆️' : iconFor(m.categoryIcon)}
+                </span>
+                <div className="meta">
+                  <div className="title">
+                    {income ? (m.description || t.common.income) : (m.description || m.categoryName)}
+                  </div>
+                  <div className="sub">
+                    {!income ? `${m.categoryName} · ` : ''}{formatDate(m.date)}
+                  </div>
                 </div>
+                {!income && m.receiptUrl && (
+                  <a href={assetUrl(m.receiptUrl)} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
+                    <img className="receipt-thumb" src={assetUrl(m.receiptUrl)} alt="receipt" />
+                  </a>
+                )}
+                <span className={`amount ${income ? 'pos' : 'neg'}`}>
+                  {income ? '+' : '−'}{formatMoney(m.amount, m.currency)}
+                </span>
+                <button
+                  className="btn danger"
+                  onClick={() => (income ? deleteIncome(m.id) : deleteExpense(m.id))}
+                >
+                  {t.common.delete}
+                </button>
               </div>
-              {m.type === 'expense' && m.receiptUrl && (
-                <a href={assetUrl(m.receiptUrl)} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
-                  <img className="receipt-thumb" src={assetUrl(m.receiptUrl)} alt="receipt" />
-                </a>
-              )}
-              <span className={`amount ${m.type === 'income' ? 'pos' : 'neg'}`}>
-                {m.type === 'income' ? '+' : '−'}{formatMoney(m.amount)}
-              </span>
-              <button
-                className="btn danger"
-                onClick={() => (m.type === 'income' ? deleteIncome(m.id) : deleteExpense(m.id))}
-              >
-                {t.common.delete}
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {modal === 'income' && (
         <Modal title={t.dashboard.incomeModalTitle} onClose={() => setModal(null)}>
           <form onSubmit={addIncome}>
-            <div className="field">
-              <label>{t.common.amount}</label>
-              <input
-                type="number" step="0.01" min="0" autoFocus required
-                value={incomeForm.amount}
-                onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
-                placeholder="0.00"
-              />
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.common.amount}</label>
+                <input
+                  type="number" step="0.01" min="0" autoFocus required
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <select
+                  value={incomeForm.currency}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, currency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="field">
               <label>{t.common.description}</label>
@@ -304,14 +416,25 @@ export default function Dashboard() {
       {modal === 'expense' && (
         <Modal title={t.dashboard.expenseModalTitle} onClose={() => setModal(null)}>
           <form onSubmit={addExpense}>
-            <div className="field">
-              <label>{t.common.amount}</label>
-              <input
-                type="number" step="0.01" min="0" autoFocus required
-                value={expenseForm.amount}
-                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                placeholder="0.00"
-              />
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.common.amount}</label>
+                <input
+                  type="number" step="0.01" min="0" autoFocus required
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <select
+                  value={expenseForm.currency}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, currency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="field">
               <label>{t.common.category}</label>
@@ -359,6 +482,94 @@ export default function Dashboard() {
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
               <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === 'exchange' && (
+        <Modal title={t.dashboard.exchangeModalTitle} onClose={() => setModal(null)}>
+          <form onSubmit={addExchange}>
+            <div className="insight" style={{ marginBottom: 12, fontSize: 13 }}>
+              {t.dashboard.exchangeHint}
+            </div>
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.dashboard.youSend}</label>
+                <input
+                  type="number" step="0.01" min="0" autoFocus required
+                  value={exchangeForm.fromAmount}
+                  onChange={(e) => setExchangeForm({ ...exchangeForm, fromAmount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <select
+                  value={exchangeForm.fromCurrency}
+                  onChange={(e) => setExchangeForm({ ...exchangeForm, fromCurrency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.dashboard.youReceive}</label>
+                <input
+                  type="number" step="0.01" min="0" required
+                  value={exchangeForm.toAmount}
+                  onChange={(e) => setExchangeForm({ ...exchangeForm, toAmount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <select
+                  value={exchangeForm.toCurrency}
+                  onChange={(e) => setExchangeForm({ ...exchangeForm, toCurrency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            {exchangeForm.fromCurrency === exchangeForm.toCurrency && (
+              <div className="field-hint" style={{ color: 'var(--danger)' }}>{t.dashboard.exchangeSameCurrency}</div>
+            )}
+            {parseFloat(exchangeForm.fromAmount) > 0 && parseFloat(exchangeForm.toAmount) > 0 &&
+              exchangeForm.fromCurrency !== exchangeForm.toCurrency && (
+              <div className="hint" style={{ marginBottom: 8 }}>
+                {t.dashboard.impliedRate}: 1 {exchangeForm.fromCurrency} ={' '}
+                {(parseFloat(exchangeForm.toAmount) / parseFloat(exchangeForm.fromAmount)).toLocaleString(undefined, { maximumFractionDigits: 4 })}{' '}
+                {exchangeForm.toCurrency}
+              </div>
+            )}
+            <div className="field">
+              <label>{t.common.date}</label>
+              <input
+                type="date"
+                value={exchangeForm.date}
+                onChange={(e) => setExchangeForm({ ...exchangeForm, date: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>{t.common.description}</label>
+              <input
+                type="text"
+                value={exchangeForm.note}
+                onChange={(e) => setExchangeForm({ ...exchangeForm, note: e.target.value })}
+                placeholder={t.common.optional}
+              />
+            </div>
+            <div className="row">
+              <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
+              <button
+                type="submit"
+                className="btn"
+                disabled={saving || exchangeForm.fromCurrency === exchangeForm.toCurrency}
+              >
+                {saving ? t.common.saving : t.dashboard.exchange}
+              </button>
             </div>
           </form>
         </Modal>

@@ -61,7 +61,7 @@ export const CategoriesApi = {
 }
 
 export const IncomesApi = {
-  list: () => api.get('/incomes').then((r) => r.data),
+  list: (params) => api.get('/incomes', { params }).then((r) => r.data),
   create: (data) => api.post('/incomes', data).then((r) => r.data),
   remove: (id) => api.delete(`/incomes/${id}`),
 }
@@ -69,12 +69,13 @@ export const IncomesApi = {
 export const ExpensesApi = {
   list: (params) => api.get('/expenses', { params }).then((r) => r.data),
   // Envia multipart/form-data para admitir la imagen del recibo (opcional).
-  create: ({ amount, description, categoryId, date, receipt }) => {
+  create: ({ amount, description, categoryId, date, receipt, currency }) => {
     const form = new FormData()
     form.append('amount', amount)
     form.append('categoryId', categoryId)
     if (description) form.append('description', description)
     if (date) form.append('date', date)
+    if (currency) form.append('currency', currency)
     if (receipt) form.append('receipt', receipt)
     return api.post('/expenses', form).then((r) => r.data)
   },
@@ -87,12 +88,18 @@ export const BalanceApi = {
   budgetHistory: (params) => api.get('/balance/budget-history', { params }).then((r) => r.data),
 }
 
+export const ExchangesApi = {
+  list: () => api.get('/exchanges').then((r) => r.data),
+  create: (data) => api.post('/exchanges', data).then((r) => r.data),
+  remove: (id) => api.delete(`/exchanges/${id}`),
+}
+
 export const ProjectionApi = {
   get: (params) => api.get('/projection', { params }).then((r) => r.data),
 }
 
 export const CreditsApi = {
-  list: () => api.get('/credits').then((r) => r.data),
+  list: (params) => api.get('/credits', { params }).then((r) => r.data),
   // Credits that need attention right now (due soon / overdue) for the bell + banner.
   alerts: () => api.get('/credits/alerts').then((r) => r.data),
   // Returns the derived "smart summary" of a single credit as of today.

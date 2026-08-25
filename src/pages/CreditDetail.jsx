@@ -61,13 +61,14 @@ export default function CreditDetail() {
 
   const submit = async (e) => {
     e.preventDefault()
-    const amount = parseFloat(form.amount)
-    if (!amount || amount <= 0) return
+    const entered = parseFloat(form.amount)
+    if (!entered || entered <= 0) return
+
     setSaving(true)
     try {
       const isPrepayment = form.type === 'PrincipalPrepayment'
       const payload = {
-        amount,
+        amount: Math.round((entered + Number.EPSILON) * 100) / 100,
         date: new Date(form.date).toISOString(),
         note: form.note.trim() || null,
         type: form.type,
@@ -223,7 +224,10 @@ export default function CreditDetail() {
                     </span>
                   )}
                 </div>
-                <div className="sub">{formatDate(p.date)}{p.note ? ` · ${p.note}` : ''}</div>
+                <div className="sub">
+                  {formatDate(p.date)}
+                  {p.note ? ` · ${p.note}` : ''}
+                </div>
               </div>
               <button className="btn secondary" onClick={() => openEdit(p)}>{t.common.edit}</button>
               <button className="btn danger" onClick={() => removePayment(p)}>{t.common.delete}</button>
@@ -294,7 +298,9 @@ export default function CreditDetail() {
               </div>
             )}
             <div className="field">
-              <label>{t.credits.paymentAmount}</label>
+              <label>
+                {t.credits.paymentAmount}{cur ? ` (${cur})` : ''}
+              </label>
               <input
                 type="number" step="0.01" min="0" autoFocus required
                 value={form.amount}

@@ -5,11 +5,13 @@ import Modal from '../components/Modal'
 import { ICON_KEYS, iconFor, COLOR_PALETTE } from '../utils/icons'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
+import { useCurrency } from '../currency/CurrencyContext'
 
 const emptyForm = { name: '', icon: 'tag', color: '#6366f1', monthlyBudget: '' }
 
 export default function Categories() {
   const { t } = useI18n()
+  const { currency: activeCurrency } = useCurrency()
   const location = useLocation()
   const navigate = useNavigate()
   const [categories, setCategories] = useState([])
@@ -44,9 +46,11 @@ export default function Categories() {
     setShowModal(true)
   }
 
+  const budgetOf = (c) => c.budgets?.[activeCurrency] ?? null
+
   const openEdit = (c) => {
     setEditing(c)
-    setForm({ name: c.name, icon: c.icon, color: c.color, monthlyBudget: c.monthlyBudget ?? '' })
+    setForm({ name: c.name, icon: c.icon, color: c.color, monthlyBudget: budgetOf(c) ?? '' })
     setError('')
     setShowModal(true)
   }
@@ -59,6 +63,7 @@ export default function Categories() {
       icon: form.icon,
       color: form.color,
       monthlyBudget: form.monthlyBudget === '' ? null : parseFloat(form.monthlyBudget),
+      budgetCurrency: activeCurrency,
     }
     if (editing) await CategoriesApi.update(editing.id, payload)
     else await CategoriesApi.create(payload)
@@ -114,7 +119,9 @@ export default function Categories() {
                   <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
                     {c.isSystem
                       ? t.categories.systemHint
-                      : (c.monthlyBudget != null ? `${t.categories.budget}: ${formatMoney(c.monthlyBudget)}` : t.categories.noBudget)}
+                      : (budgetOf(c) != null
+                        ? `${t.categories.budget} (${activeCurrency}): ${formatMoney(budgetOf(c), activeCurrency)}`
+                        : `${t.categories.noBudget} · ${activeCurrency}`)}
                   </div>
                 </div>
               </div>
@@ -174,13 +181,14 @@ export default function Categories() {
             </div>
 
             <div className="field">
-              <label>{t.categories.monthlyBudget}</label>
+              <label>{t.categories.monthlyBudget} ({activeCurrency})</label>
               <input
                 type="number" step="0.01" min="0"
                 value={form.monthlyBudget}
                 onChange={(e) => setForm({ ...form, monthlyBudget: e.target.value })}
                 placeholder="0.00"
               />
+              <div className="hint" style={{ marginTop: 6 }}>{t.categories.budgetCurrencyHint.replace('{cur}', activeCurrency)}</div>
             </div>
 
             <div className="row">
