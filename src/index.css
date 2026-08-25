@@ -70,10 +70,16 @@ button {
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), #22d3ee);
-  display: grid;
-  place-items: center;
-  font-size: 20px;
+  display: block;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+
+.brand > span {
+  background: linear-gradient(90deg, var(--text), #a5b4fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.2px;
 }
 
 .nav-link {
@@ -137,7 +143,7 @@ button {
   background: var(--text);
 }
 .brand-mobile { padding: 0; font-size: 18px; }
-.brand-mobile .logo { width: 32px; height: 32px; font-size: 17px; }
+.brand-mobile .logo { width: 34px; height: 34px; }
 
 .sidebar-close {
   margin-left: auto;
@@ -679,6 +685,42 @@ input:focus, select:focus {
   align-items: center;
 }
 
+/* Laser background variant (used on the login page) */
+.auth-page--laser {
+  position: relative;
+  overflow: hidden;
+}
+
+.laser-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* Ambient glow fallback: stays visible even if WebGL can't render the beam. */
+  background:
+    radial-gradient(900px 520px at 50% 8%, rgba(48, 52, 235, 0.30), transparent 60%),
+    radial-gradient(520px 360px at 50% 30%, rgba(99, 102, 241, 0.14), transparent 65%),
+    #05060d;
+}
+
+/* Guarantee the WebGL mount fills the fixed background immediately (avoids a
+   0-height first frame that would stall the effect until a resize). */
+.laser-bg > .laser-flow-container {
+  position: absolute;
+  inset: 0;
+}
+
+.auth-page--laser .auth-topbar { z-index: 3; }
+
+.auth-page--laser .auth-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(18, 24, 42, 0.55);
+  border-color: rgba(124, 118, 255, 0.28);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 118, 255, 0.08);
+}
+
 .auth-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -701,10 +743,9 @@ input:focus, select:focus {
 .auth-brand .logo {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), #22d3ee);
-  display: grid;
-  place-items: center;
+  border-radius: 13px;
+  display: block;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
 }
 
 .auth-card h1 { font-size: 24px; }

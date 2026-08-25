@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { CreditsApi } from '../api/client'
 import { formatDate } from '../utils/format'
 import LanguageSwitcher from './LanguageSwitcher'
+import BrandLogo from './BrandLogo'
 
 const POLL_MS = 5 * 60 * 1000
 
@@ -98,7 +99,7 @@ export default function Layout() {
           <span /><span /><span />
         </button>
         <div className="brand brand-mobile">
-          <span className="logo">💰</span>
+          <BrandLogo className="logo" size={34} />
           <span>{t.appName}</span>
         </div>
       </header>
@@ -107,7 +108,7 @@ export default function Layout() {
 
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
-          <span className="logo">💰</span>
+          <BrandLogo className="logo" size={38} />
           <span>{t.appName}</span>
           <button
             className="sidebar-close"

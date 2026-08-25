@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AuthApi } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import AuthLaserBackground from '../components/AuthLaserBackground'
 
 export default function ForgotPassword() {
   const { t } = useI18n()
@@ -26,7 +27,8 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--laser">
+      <AuthLaserBackground />
       <div className="auth-topbar"><LanguageSwitcher /></div>
       <div className="auth-card">
         <div className="auth-brand"><span className="logo">🔑</span><span>{t.auth.restorePassword}</span></div>

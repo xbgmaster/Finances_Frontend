@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import BrandLogo from '../components/BrandLogo'
+import AuthLaserBackground from '../components/AuthLaserBackground'
 
 export default function Register() {
   const { t } = useI18n()
@@ -27,10 +29,11 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--laser">
+      <AuthLaserBackground />
       <div className="auth-topbar"><LanguageSwitcher /></div>
       <div className="auth-card">
-        <div className="auth-brand"><span className="logo">💰</span><span>{t.appName}</span></div>
+        <div className="auth-brand"><BrandLogo className="logo" size={40} /><span>{t.appName}</span></div>
         <h1>{t.auth.registerTitle}</h1>
         <p className="hint">{t.auth.registerSubtitle}</p>
         <form onSubmit={submit}>

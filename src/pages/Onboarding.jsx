@@ -4,6 +4,8 @@ import { ProfileApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import BrandLogo from '../components/BrandLogo'
+import AuthLaserBackground from '../components/AuthLaserBackground'
 import { CURRENCIES } from '../utils/currencies'
 
 export default function Onboarding() {
@@ -36,13 +38,14 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--laser">
+      <AuthLaserBackground />
       <div className="auth-topbar">
         <LanguageSwitcher />
         <button className="btn secondary" onClick={logout}>{t.auth.logout}</button>
       </div>
       <div className="auth-card">
-        <div className="auth-brand"><span className="logo">💰</span><span>{t.appName}</span></div>
+        <div className="auth-brand"><BrandLogo className="logo" size={40} /><span>{t.appName}</span></div>
         <h1>{t.onboarding.title}</h1>
         <p className="hint">{t.onboarding.subtitle}</p>
         <form onSubmit={submit}>
