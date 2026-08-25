@@ -12,6 +12,7 @@ export default function Layout() {
     { to: '/', label: t.nav.summary, icon: '📊', end: true },
     { to: '/categories', label: t.nav.categories, icon: '🏷️' },
     { to: '/expenses', label: t.nav.expenses, icon: '💸' },
+    { to: '/credits', label: t.nav.credits, icon: '🏦' },
     { to: '/projections', label: t.nav.projections, icon: '🤖' },
   ]
   if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: '🛡️' })

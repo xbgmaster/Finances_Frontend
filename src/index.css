@@ -104,7 +104,9 @@ button {
 .content {
   padding: 32px 40px;
   overflow-y: auto;
-  max-width: 1200px;
+  /*max-width: 1200px;
+  margin: auto;
+  */
   width: 100%;
 }
 

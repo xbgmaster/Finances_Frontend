@@ -90,4 +90,20 @@ export const ProjectionApi = {
   get: (params) => api.get('/projection', { params }).then((r) => r.data),
 }
 
+export const CreditsApi = {
+  list: () => api.get('/credits').then((r) => r.data),
+  // Returns the derived "smart summary" of a single credit as of today.
+  summary: (id) => api.get(`/credits/${id}`).then((r) => r.data),
+  // Full month-by-month amortization table.
+  schedule: (id) => api.get(`/credits/${id}/schedule`).then((r) => r.data),
+  create: (data) => api.post('/credits', data).then((r) => r.data),
+  remove: (id) => api.delete(`/credits/${id}`),
+  // Payment ledger (list / add / edit / delete). Mutations return the recalculated summary.
+  payments: (id) => api.get(`/credits/${id}/payments`).then((r) => r.data),
+  addPayment: (id, data) => api.post(`/credits/${id}/payments`, data).then((r) => r.data),
+  updatePayment: (id, paymentId, data) =>
+    api.put(`/credits/${id}/payments/${paymentId}`, data).then((r) => r.data),
+  removePayment: (id, paymentId) => api.delete(`/credits/${id}/payments/${paymentId}`),
+}
+
 export default api
