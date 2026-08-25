@@ -4,8 +4,7 @@ import { ProfileApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'MXN', 'COP', 'ARS', 'BRL', 'CLP']
+import { CURRENCIES } from '../utils/currencies'
 
 export default function Onboarding() {
   const { t } = useI18n()
@@ -29,7 +28,7 @@ export default function Onboarding() {
         currency: form.currency,
         monthlyIncomeTarget: form.monthlyIncomeTarget === '' ? null : parseFloat(form.monthlyIncomeTarget),
       })
-      updateUser({ fullName: profile.fullName, onboardingCompleted: true })
+      updateUser({ fullName: profile.fullName, onboardingCompleted: true, currency: profile.currency })
       navigate('/', { replace: true })
     } finally {
       setLoading(false)

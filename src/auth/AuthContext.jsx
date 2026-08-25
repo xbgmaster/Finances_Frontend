@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { AuthApi, TOKEN_KEY, USER_KEY } from '../api/client'
+import { setBaseCurrency } from '../utils/format'
 
 const AuthContext = createContext(null)
 
@@ -15,6 +16,11 @@ const readUser = () => {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState(readUser)
+
+  // Keep the money formatter's default currency in sync with the user's base currency.
+  useEffect(() => {
+    setBaseCurrency(user?.currency || 'USD')
+  }, [user])
 
   const persist = (result) => {
     localStorage.setItem(TOKEN_KEY, result.token)

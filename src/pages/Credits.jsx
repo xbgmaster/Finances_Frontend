@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CreditsApi } from '../api/client'
 import Modal from '../components/Modal'
-import { formatMoney } from '../utils/format'
+import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
+import { CURRENCIES } from '../utils/currencies'
+import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const currentDay = () => String(new Date().getDate())
 
 const emptyCredit = {
   name: '',
@@ -17,11 +20,14 @@ const emptyCredit = {
   annualInterestRate: '',
   termMonths: '',
   startDate: today(),
+  paymentDueDay: currentDay(),
   currency: '',
 }
 
 export default function Credits() {
   const { t } = useI18n()
+  const { user } = useAuth()
+  const baseCurrency = user?.currency || getBaseCurrency()
   const [credits, setCredits] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -45,7 +51,7 @@ export default function Credits() {
   }, [])
 
   const openCreate = () => {
-    setForm({ ...emptyCredit, startDate: today() })
+    setForm({ ...emptyCredit, startDate: today(), paymentDueDay: currentDay(), currency: baseCurrency })
     setError('')
     setShowCreate(true)
   }
@@ -65,6 +71,7 @@ export default function Credits() {
         annualInterestRate: parseFloat(form.annualInterestRate),
         termMonths: parseInt(form.termMonths, 10),
         startDate: new Date(form.startDate).toISOString(),
+        paymentDueDay: parseInt(form.paymentDueDay, 10),
         currency: form.currency.trim() || null,
       })
       setShowCreate(false)
@@ -109,6 +116,23 @@ export default function Credits() {
     }
   }
 
+  const alertPill = (c) => {
+    if (c.status === 'PaidOff') return null
+    if (c.isOverdue) return <span className="pill pill-over">{t.credits.alerts.overdue}</span>
+    if (c.isDueSoon) return <span className="pill pill-due">{t.credits.alerts.dueSoon}</span>
+    return null
+  }
+
+  // Outstanding debt grouped by currency (Level A: we never sum across currencies).
+  const debtByCurrency = credits
+    .filter((c) => c.status !== 'PaidOff')
+    .reduce((acc, c) => {
+      const cur = c.currency || baseCurrency
+      acc[cur] = (acc[cur] || 0) + c.outstandingPrincipal
+      return acc
+    }, {})
+  const debtEntries = Object.entries(debtByCurrency).filter(([, v]) => v > 0)
+
   if (loading) return <div className="loading">{t.common.loading}</div>
 
   return (
@@ -122,6 +146,15 @@ export default function Credits() {
       </div>
 
       {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 16 }}>{error}</div>}
+
+      {debtEntries.length > 0 && (
+        <div className="currency-totals">
+          <span className="hint">{t.credits.totalDebt}</span>
+          {debtEntries.map(([cur, val]) => (
+            <span className="pill pill-admin" key={cur}>{formatMoney(val, cur)}</span>
+          ))}
+        </div>
+      )}
 
       {credits.length === 0 ? (
         <div className="empty">{t.credits.noCredits}</div>
@@ -138,21 +171,24 @@ export default function Credits() {
                       {t.credits.types[c.type] || c.type} · {(t.credits.interestModels[c.interestModel] || c.interestModel)} · {c.annualInterestRate}% · {c.termMonths} mo
                     </div>
                   </div>
-                  <span className={`pill ${paidOff ? 'pill-user' : 'pill-admin'}`}>
-                    {paidOff ? t.credits.statusPaidOff : t.credits.statusActive}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <span className={`pill ${paidOff ? 'pill-user' : 'pill-admin'}`}>
+                      {paidOff ? t.credits.statusPaidOff : t.credits.statusActive}
+                    </span>
+                    {alertPill(c)}
+                  </div>
                 </div>
 
                 <div className="row" style={{ marginTop: 16 }}>
                   <div>
                     <div className="hint">{t.credits.outstanding}</div>
                     <div style={{ fontWeight: 700, fontSize: 20 }} className="amount neg">
-                      {formatMoney(c.outstandingPrincipal)}
+                      {formatMoney(c.outstandingPrincipal, c.currency)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className="hint">{t.credits.monthlyInstallment}</div>
-                    <div style={{ fontWeight: 600 }}>{formatMoney(c.monthlyInstallment)}</div>
+                    <div style={{ fontWeight: 600 }}>{formatMoney(c.monthlyInstallment, c.currency)}</div>
                   </div>
                 </div>
 
@@ -165,9 +201,27 @@ export default function Credits() {
                     <span style={{ width: `${Math.min(100, c.progressPercent)}%`, background: 'var(--success)' }} />
                   </div>
                   <div className="hint" style={{ marginTop: 6 }}>
-                    {formatMoney(c.totalPaid)} / {formatMoney(c.totalToPay)}
+                    {formatMoney(c.totalPaid, c.currency)} / {formatMoney(c.totalToPay, c.currency)}
                   </div>
                 </div>
+
+                {!paidOff && (
+                  <div
+                    className="hint"
+                    style={{
+                      marginTop: 12,
+                      color: c.isOverdue ? 'var(--danger)' : c.isDueSoon ? '#f59e0b' : 'var(--text-muted)',
+                    }}
+                  >
+                    {c.isOverdue ? '⚠️ ' : c.isDueSoon ? '⏰ ' : '📅 '}
+                    {t.credits.alerts.nextDue}: {formatDate(c.nextDueDate)}
+                    {c.isOverdue
+                      ? ` · ${t.credits.alerts.overdue} (${Math.abs(c.daysUntilDue)})`
+                      : c.isDueSoon
+                        ? ` · ${c.daysUntilDue === 0 ? t.credits.alerts.dueToday : `${c.daysUntilDue}d`}`
+                        : ''}
+                  </div>
+                )}
 
                 <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
                   <Link className="btn secondary" to={`/credits/${c.id}`}>{t.credits.details}</Link>
@@ -281,15 +335,27 @@ export default function Credits() {
               </div>
             </div>
 
+            <div className="field">
+              <label>{t.credits.paymentDueDay}</label>
+              <input
+                type="number" step="1" min="1" max="31" required
+                value={form.paymentDueDay}
+                onChange={(e) => setForm({ ...form, paymentDueDay: e.target.value })}
+                placeholder="5"
+              />
+              <div className="hint" style={{ marginTop: 6 }}>{t.credits.paymentDueDayHint}</div>
+            </div>
+
             <div className="row" style={{ gap: 12 }}>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.currency}</label>
-                <input
-                  type="text" maxLength={3}
+                <select
                   value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                  placeholder="USD"
-                />
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  required
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.penaltyRate}</label>
@@ -320,10 +386,10 @@ export default function Credits() {
                 type="number" step="0.01" min="0" autoFocus required
                 value={payment.amount}
                 onChange={(e) => setPayment({ ...payment, amount: e.target.value })}
-                placeholder={formatMoney(payFor.monthlyInstallment)}
+                placeholder={formatMoney(payFor.monthlyInstallment, payFor.currency)}
               />
               <div className="hint" style={{ marginTop: 6 }}>
-                {t.credits.monthlyInstallment}: {formatMoney(payFor.monthlyInstallment)}
+                {t.credits.monthlyInstallment}: {formatMoney(payFor.monthlyInstallment, payFor.currency)}
               </div>
             </div>
             <div className="field">

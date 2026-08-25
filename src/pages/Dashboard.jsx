@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, assetUrl } from '../api/client'
+import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ReceiptInput from '../components/ReceiptInput'
@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState([])
   const [categories, setCategories] = useState([])
   const [monthly, setMonthly] = useState(null)
+  const [creditAlerts, setCreditAlerts] = useState(null)
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // 'income' | 'expense' | null
   const [saving, setSaving] = useState(false)
@@ -27,18 +28,20 @@ export default function Dashboard() {
 
   const load = async () => {
     setLoading(true)
-    const [b, inc, exp, cats, mon] = await Promise.all([
+    const [b, inc, exp, cats, mon, alerts] = await Promise.all([
       BalanceApi.get(),
       IncomesApi.list(),
       ExpensesApi.list(),
       CategoriesApi.list(),
       BalanceApi.monthly({ year: now.getFullYear(), month: now.getMonth() + 1 }),
+      CreditsApi.alerts().catch(() => null),
     ])
     setBalance(b)
     setIncomes(inc)
     setExpenses(exp)
     setCategories(cats)
     setMonthly(mon)
+    setCreditAlerts(alerts)
     setLoading(false)
   }
 
@@ -148,6 +151,25 @@ export default function Dashboard() {
           <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
         </div>
       </div>
+
+      {creditAlerts && (creditAlerts.overdueCount + creditAlerts.dueSoonCount) > 0 && (
+        <div
+          className={`alert-banner ${creditAlerts.overdueCount > 0 ? 'alert-overdue' : 'alert-duesoon'}`}
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/credits')}
+        >
+          <span className="alert-icon">{creditAlerts.overdueCount > 0 ? '⚠️' : '⏰'}</span>
+          <div style={{ flex: 1 }}>
+            <strong>{t.notifications.bannerTitle}.</strong>{' '}
+            {creditAlerts.overdueCount > 0 &&
+              t.notifications.overdue.replace('{count}', creditAlerts.overdueCount)}
+            {creditAlerts.overdueCount > 0 && creditAlerts.dueSoonCount > 0 && ' · '}
+            {creditAlerts.dueSoonCount > 0 &&
+              t.notifications.dueSoon.replace('{count}', creditAlerts.dueSoonCount)}
+          </div>
+          <span className="link-btn">{t.notifications.viewCredits}</span>
+        </div>
+      )}
 
       <div className="grid grid-3">
         <StatCard

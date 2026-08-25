@@ -82,6 +82,43 @@ export default function CreditDetail() {
   if (loading || !summary) return <div className="loading">{t.common.loading}</div>
 
   const paidOff = summary.status === 'PaidOff'
+  const cur = summary.currency
+
+  const fillMsg = (tpl) =>
+    tpl
+      .replace('{days}', String(Math.abs(summary.daysUntilDue)))
+      .replace('{date}', formatDate(summary.nextDueDate))
+
+  const dueBanner = () => {
+    if (paidOff) return null
+    const a = t.credits.alerts
+    if (summary.isOverdue) {
+      return (
+        <div className="alert-banner alert-overdue">
+          <span className="alert-icon">⚠️</span>
+          <div><strong>{a.overdue}.</strong> {fillMsg(a.overdueMsg)}</div>
+        </div>
+      )
+    }
+    if (summary.isDueSoon) {
+      const dueToday = summary.daysUntilDue === 0
+      return (
+        <div className="alert-banner alert-duesoon">
+          <span className="alert-icon">⏰</span>
+          <div>
+            <strong>{dueToday ? a.dueToday : a.dueSoon}.</strong>{' '}
+            {fillMsg(dueToday ? a.dueTodayMsg : a.dueSoonMsg)}
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className="alert-banner alert-ok">
+        <span className="alert-icon">✅</span>
+        <div><strong>{a.upToDate}.</strong> {a.nextDue}: {formatDate(summary.nextDueDate)}</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -93,11 +130,15 @@ export default function CreditDetail() {
             {t.credits.types[summary.type] || summary.type}
             {' · '}{t.credits.interestModels[summary.interestModel] || summary.interestModel}
             {' · '}{summary.annualInterestRate}% · {summary.effectiveAnnualRate}% APR · {summary.termMonths} mo
+            {cur ? ` · ${cur}` : ''}
             {' · '}{formatDate(summary.startDate)}
+            {' · '}{t.credits.alerts.dueDayLabel} {summary.paymentDueDay}
           </p>
         </div>
         <button className="btn" onClick={openAdd}>{t.credits.addPayment}</button>
       </div>
+
+      {dueBanner()}
 
       <div className="grid grid-4">
         <StatCard
@@ -106,8 +147,9 @@ export default function CreditDetail() {
           icon="🎯"
           color="#ef4444"
           tone="neg"
+          currency={cur}
           hint={summary.prepaymentPenaltyAmount > 0
-            ? `${t.credits.penaltyAmount}: ${formatMoney(summary.prepaymentPenaltyAmount)}`
+            ? `${t.credits.penaltyAmount}: ${formatMoney(summary.prepaymentPenaltyAmount, cur)}`
             : t.credits.payoffTodayHint}
         />
         <StatCard
@@ -116,17 +158,18 @@ export default function CreditDetail() {
           icon="💚"
           color="#10b981"
           tone="pos"
+          currency={cur}
           hint={t.credits.savingsHint}
         />
-        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon="✅" color="#6366f1" />
-        <StatCard label={t.credits.remainingTotal} value={summary.remainingTotal} icon="⏳" color="#f59e0b" />
+        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon="✅" color="#6366f1" currency={cur} />
+        <StatCard label={t.credits.remainingTotal} value={summary.remainingTotal} icon="⏳" color="#f59e0b" currency={cur} />
       </div>
 
       <div className="grid grid-4" style={{ marginTop: 16 }}>
-        <StatCard label={t.credits.monthlyInstallment} value={summary.monthlyInstallment} icon="📅" color="#22d3ee" />
-        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#94a3c4" />
-        <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon="📈" color="#ef4444" />
-        <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" />
+        <StatCard label={t.credits.monthlyInstallment} value={summary.monthlyInstallment} icon="📅" color="#22d3ee" currency={cur} />
+        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#94a3c4" currency={cur} />
+        <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon="📈" color="#ef4444" currency={cur} />
+        <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" currency={cur} />
       </div>
 
       <div className="card" style={{ marginTop: 24 }}>
@@ -150,7 +193,7 @@ export default function CreditDetail() {
             <div className="list-item" key={p.id}>
               <span className="badge-icon" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>💵</span>
               <div className="meta">
-                <div className="title">{formatMoney(p.amount)}</div>
+                <div className="title">{formatMoney(p.amount, cur)}</div>
                 <div className="sub">{formatDate(p.date)}{p.note ? ` · ${p.note}` : ''}</div>
               </div>
               <button className="btn secondary" onClick={() => openEdit(p)}>{t.common.edit}</button>
@@ -181,10 +224,10 @@ export default function CreditDetail() {
                 <tr key={r.number}>
                   <td>{r.number}</td>
                   <td>{formatDate(r.dueDate)}</td>
-                  <td className="num">{formatMoney(r.installment)}</td>
-                  <td className="num">{formatMoney(r.interest)}</td>
-                  <td className="num">{formatMoney(r.principal)}</td>
-                  <td className="num">{formatMoney(r.remainingBalance)}</td>
+                  <td className="num">{formatMoney(r.installment, cur)}</td>
+                  <td className="num">{formatMoney(r.interest, cur)}</td>
+                  <td className="num">{formatMoney(r.principal, cur)}</td>
+                  <td className="num">{formatMoney(r.remainingBalance, cur)}</td>
                   <td>{isPaid && <span className="pill pill-user">{t.credits.paid}</span>}</td>
                 </tr>
               )
@@ -205,10 +248,10 @@ export default function CreditDetail() {
                 type="number" step="0.01" min="0" autoFocus required
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder={formatMoney(summary.monthlyInstallment)}
+                placeholder={formatMoney(summary.monthlyInstallment, cur)}
               />
               <div className="hint" style={{ marginTop: 6 }}>
-                {t.credits.monthlyInstallment}: {formatMoney(summary.monthlyInstallment)}
+                {t.credits.monthlyInstallment}: {formatMoney(summary.monthlyInstallment, cur)}
               </div>
             </div>
             <div className="field">

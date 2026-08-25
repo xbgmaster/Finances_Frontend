@@ -93,6 +93,8 @@ export const ProjectionApi = {
 
 export const CreditsApi = {
   list: () => api.get('/credits').then((r) => r.data),
+  // Credits that need attention right now (due soon / overdue) for the bell + banner.
+  alerts: () => api.get('/credits/alerts').then((r) => r.data),
   // Returns the derived "smart summary" of a single credit as of today.
   summary: (id) => api.get(`/credits/${id}`).then((r) => r.data),
   // Full month-by-month amortization table.
