@@ -39,7 +39,7 @@ export default function Credits() {
 
   const [payFor, setPayFor] = useState(null)
   const [paying, setPaying] = useState(false)
-  const [payment, setPayment] = useState({ amount: '', date: today(), note: '' })
+  const [payment, setPayment] = useState({ amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' })
 
   const load = async () => {
     setLoading(true)
@@ -106,7 +106,7 @@ export default function Credits() {
 
   const openPayment = (credit) => {
     setPayFor(credit)
-    setPayment({ amount: '', date: today(), note: '' })
+    setPayment({ amount: '', date: today(), note: '', type: 'Installment', effect: credit.prepaymentEffect || 'ReduceTerm' })
     setError('')
   }
 
@@ -116,10 +116,13 @@ export default function Credits() {
     if (!amount || amount <= 0) return
     setPaying(true)
     try {
+      const isPrepayment = payment.type === 'PrincipalPrepayment'
       await CreditsApi.addPayment(payFor.id, {
         amount,
         date: new Date(payment.date).toISOString(),
         note: payment.note.trim() || null,
+        type: payment.type,
+        effect: isPrepayment ? payment.effect : null,
       })
       setPayFor(null)
       await load()
@@ -407,6 +410,25 @@ export default function Credits() {
         <Modal title={`${t.credits.registerPayment} · ${payFor.name}`} onClose={() => setPayFor(null)}>
           <form onSubmit={submitPayment}>
             <div className="field">
+              <label>{t.credits.paymentType}</label>
+              <select value={payment.type} onChange={(e) => setPayment({ ...payment, type: e.target.value })}>
+                {Object.keys(t.credits.paymentTypes).map((key) => (
+                  <option key={key} value={key}>{t.credits.paymentTypes[key]}</option>
+                ))}
+              </select>
+            </div>
+            {payment.type === 'PrincipalPrepayment' && (
+              <div className="field">
+                <label>{t.credits.paymentEffect}</label>
+                <select value={payment.effect} onChange={(e) => setPayment({ ...payment, effect: e.target.value })}>
+                  {Object.keys(t.credits.prepaymentEffects).map((key) => (
+                    <option key={key} value={key}>{t.credits.prepaymentEffects[key]}</option>
+                  ))}
+                </select>
+                <div className="hint" style={{ marginTop: 6 }}>{t.credits.paymentEffectHint}</div>
+              </div>
+            )}
+            <div className="field">
               <label>{t.credits.paymentAmount}</label>
               <input
                 type="number" step="0.01" min="0" autoFocus required
@@ -414,9 +436,11 @@ export default function Credits() {
                 onChange={(e) => setPayment({ ...payment, amount: e.target.value })}
                 placeholder={formatMoney(payFor.monthlyInstallment, payFor.currency)}
               />
-              <div className="hint" style={{ marginTop: 6 }}>
-                {t.credits.monthlyInstallment}: {formatMoney(payFor.monthlyInstallment, payFor.currency)}
-              </div>
+              {payment.type === 'Installment' && (
+                <div className="hint" style={{ marginTop: 6 }}>
+                  {t.credits.monthlyInstallment}: {formatMoney(payFor.monthlyInstallment, payFor.currency)}
+                </div>
+              )}
             </div>
             <div className="field">
               <label>{t.credits.paymentDate}</label>

@@ -7,7 +7,7 @@ import { formatMoney, formatDate } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
 const today = () => new Date().toISOString().slice(0, 10)
-const emptyPayment = { amount: '', date: today(), note: '' }
+const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' }
 
 export default function CreditDetail() {
   const { id } = useParams()
@@ -43,13 +43,19 @@ export default function CreditDetail() {
 
   const openAdd = () => {
     setEditing(null)
-    setForm(emptyPayment)
+    setForm({ ...emptyPayment, effect: summary?.prepaymentEffect || 'ReduceTerm' })
     setModalOpen(true)
   }
 
   const openEdit = (p) => {
     setEditing(p)
-    setForm({ amount: String(p.amount), date: p.date.slice(0, 10), note: p.note ?? '' })
+    setForm({
+      amount: String(p.amount),
+      date: p.date.slice(0, 10),
+      note: p.note ?? '',
+      type: p.type || 'Installment',
+      effect: p.effect || summary?.prepaymentEffect || 'ReduceTerm',
+    })
     setModalOpen(true)
   }
 
@@ -59,10 +65,13 @@ export default function CreditDetail() {
     if (!amount || amount <= 0) return
     setSaving(true)
     try {
+      const isPrepayment = form.type === 'PrincipalPrepayment'
       const payload = {
         amount,
         date: new Date(form.date).toISOString(),
         note: form.note.trim() || null,
+        type: form.type,
+        effect: isPrepayment ? form.effect : null,
       }
       if (editing) await CreditsApi.updatePayment(id, editing.id, payload)
       else await CreditsApi.addPayment(id, payload)
@@ -172,6 +181,19 @@ export default function CreditDetail() {
         <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" currency={cur} />
       </div>
 
+      {summary.prepaidPrincipal > 0 && (
+        <div className="grid grid-4" style={{ marginTop: 16 }}>
+          <StatCard
+            label={t.credits.prepaidPrincipal}
+            value={summary.prepaidPrincipal}
+            icon="⚡"
+            color="#a855f7"
+            currency={cur}
+            hint={t.credits.prepaidHint}
+          />
+        </div>
+      )}
+
       <div className="card" style={{ marginTop: 24 }}>
         <div className="row" style={{ marginBottom: 8 }}>
           <span style={{ fontWeight: 600 }}>{t.credits.progress}</span>
@@ -193,7 +215,14 @@ export default function CreditDetail() {
             <div className="list-item" key={p.id}>
               <span className="badge-icon" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>💵</span>
               <div className="meta">
-                <div className="title">{formatMoney(p.amount, cur)}</div>
+                <div className="title">
+                  {formatMoney(p.amount, cur)}
+                  {p.type === 'PrincipalPrepayment' && (
+                    <span className="pill pill-admin" style={{ marginLeft: 8 }}>
+                      {t.credits.prepaymentBadge}{p.effect ? ` · ${t.credits.prepaymentEffects[p.effect] || p.effect}` : ''}
+                    </span>
+                  )}
+                </div>
                 <div className="sub">{formatDate(p.date)}{p.note ? ` · ${p.note}` : ''}</div>
               </div>
               <button className="btn secondary" onClick={() => openEdit(p)}>{t.common.edit}</button>
@@ -243,6 +272,25 @@ export default function CreditDetail() {
         >
           <form onSubmit={submit}>
             <div className="field">
+              <label>{t.credits.paymentType}</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                {Object.keys(t.credits.paymentTypes).map((key) => (
+                  <option key={key} value={key}>{t.credits.paymentTypes[key]}</option>
+                ))}
+              </select>
+            </div>
+            {form.type === 'PrincipalPrepayment' && (
+              <div className="field">
+                <label>{t.credits.paymentEffect}</label>
+                <select value={form.effect} onChange={(e) => setForm({ ...form, effect: e.target.value })}>
+                  {Object.keys(t.credits.prepaymentEffects).map((key) => (
+                    <option key={key} value={key}>{t.credits.prepaymentEffects[key]}</option>
+                  ))}
+                </select>
+                <div className="hint" style={{ marginTop: 6 }}>{t.credits.paymentEffectHint}</div>
+              </div>
+            )}
+            <div className="field">
               <label>{t.credits.paymentAmount}</label>
               <input
                 type="number" step="0.01" min="0" autoFocus required
@@ -250,9 +298,11 @@ export default function CreditDetail() {
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 placeholder={formatMoney(summary.monthlyInstallment, cur)}
               />
-              <div className="hint" style={{ marginTop: 6 }}>
-                {t.credits.monthlyInstallment}: {formatMoney(summary.monthlyInstallment, cur)}
-              </div>
+              {form.type === 'Installment' && (
+                <div className="hint" style={{ marginTop: 6 }}>
+                  {t.credits.monthlyInstallment}: {formatMoney(summary.monthlyInstallment, cur)}
+                </div>
+              )}
             </div>
             <div className="field">
               <label>{t.credits.paymentDate}</label>
