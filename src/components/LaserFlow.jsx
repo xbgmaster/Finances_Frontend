@@ -301,7 +301,7 @@ export const LaserFlow = ({
         stencil: false,
         powerPreference: 'high-performance',
         premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
+        preserveDrawingBuffer: true,
         failIfMajorPerformanceCaveat: false,
         logarithmicDepthBuffer: false
       });
@@ -413,9 +413,17 @@ export const LaserFlow = ({
     };
 
     setSizeNow();
-    // Re-measure on the next frame: with lazy/Suspense mounting the fixed container
-    // may not have its final size on the first synchronous measure.
-    requestAnimationFrame(() => setSizeNow());
+    // Some browsers don't composite the WebGL canvas on first paint (it stays blank
+    // until a resize nudges it). Force a *real* re-size + render a few times right
+    // after mount — this mirrors what a manual window resize does and is what makes
+    // the beam appear immediately on initial load / refresh.
+    const forceResize = () => {
+      lastSizeRef.current = { width: 0, height: 0, dpr: 0 };
+      setSizeNow();
+    };
+    const kickRaf = requestAnimationFrame(forceResize);
+    const kickT1 = setTimeout(forceResize, 120);
+    const kickT2 = setTimeout(forceResize, 400);
     const ro = new ResizeObserver(scheduleResize);
     ro.observe(mount);
 
@@ -542,6 +550,9 @@ export const LaserFlow = ({
 
     return () => {
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(kickRaf);
+      clearTimeout(kickT1);
+      clearTimeout(kickT2);
       ro.disconnect();
       io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
