@@ -271,6 +271,9 @@ export default function CreditDetail() {
           onClose={() => setModalOpen(false)}
         >
           <form onSubmit={submit}>
+            <div className="insight" style={{ marginBottom: 12, fontSize: 13 }}>
+              {t.credits.expenseSyncHint}
+            </div>
             <div className="field">
               <label>{t.credits.paymentType}</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>

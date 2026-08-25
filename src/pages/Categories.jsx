@@ -99,17 +99,32 @@ export default function Categories() {
                   {iconFor(c.icon)}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{c.name}</div>
+                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {c.isSystem ? t.categories.debtPaymentsName : c.name}
+                    {c.isSystem && (
+                      <span
+                        className="tag"
+                        title={t.categories.systemHint}
+                        style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--surface-2, #1f2430)', color: 'var(--text-muted)' }}
+                      >
+                        {t.categories.systemBadge}
+                      </span>
+                    )}
+                  </div>
                   <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                    {c.monthlyBudget != null ? `${t.categories.budget}: ${formatMoney(c.monthlyBudget)}` : t.categories.noBudget}
+                    {c.isSystem
+                      ? t.categories.systemHint
+                      : (c.monthlyBudget != null ? `${t.categories.budget}: ${formatMoney(c.monthlyBudget)}` : t.categories.noBudget)}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
-              <button className="btn danger" onClick={() => remove(c)}>{t.common.delete}</button>
-            </div>
+            {!c.isSystem && (
+              <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+                <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
+                <button className="btn danger" onClick={() => remove(c)}>{t.common.delete}</button>
+              </div>
+            )}
           </div>
         ))}
       </div>
