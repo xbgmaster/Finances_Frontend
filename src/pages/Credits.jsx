@@ -34,6 +34,7 @@ export default function Credits() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyCredit)
 
   const [payFor, setPayFor] = useState(null)
@@ -51,17 +52,37 @@ export default function Credits() {
   }, [])
 
   const openCreate = () => {
+    setEditingId(null)
     setForm({ ...emptyCredit, startDate: today(), paymentDueDay: currentDay(), currency: baseCurrency })
     setError('')
     setShowCreate(true)
   }
 
-  const submitCreate = async (e) => {
+  const openEdit = (c) => {
+    setEditingId(c.id)
+    setForm({
+      name: c.name,
+      type: c.type,
+      interestModel: c.interestModel,
+      prepaymentEffect: c.prepaymentEffect || 'ReduceTerm',
+      prepaymentPenaltyRate: c.prepaymentPenaltyRate ? String(c.prepaymentPenaltyRate) : '',
+      principal: String(c.principal),
+      annualInterestRate: String(c.annualInterestRate),
+      termMonths: String(c.termMonths),
+      startDate: c.startDate.slice(0, 10),
+      paymentDueDay: String(c.paymentDueDay),
+      currency: c.currency || baseCurrency,
+    })
+    setError('')
+    setShowCreate(true)
+  }
+
+  const submitForm = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     setCreating(true)
     try {
-      await CreditsApi.create({
+      const payload = {
         name: form.name.trim(),
         type: form.type,
         interestModel: form.interestModel,
@@ -73,7 +94,9 @@ export default function Credits() {
         startDate: new Date(form.startDate).toISOString(),
         paymentDueDay: parseInt(form.paymentDueDay, 10),
         currency: form.currency.trim() || null,
-      })
+      }
+      if (editingId) await CreditsApi.update(editingId, payload)
+      else await CreditsApi.create(payload)
       setShowCreate(false)
       await load()
     } finally {
@@ -225,6 +248,7 @@ export default function Credits() {
 
                 <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
                   <Link className="btn secondary" to={`/credits/${c.id}`}>{t.credits.details}</Link>
+                  <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
                   {!paidOff && (
                     <button className="btn" onClick={() => openPayment(c)}>{t.credits.addPayment}</button>
                   )}
@@ -237,8 +261,8 @@ export default function Credits() {
       )}
 
       {showCreate && (
-        <Modal title={t.credits.createTitle} onClose={() => setShowCreate(false)}>
-          <form onSubmit={submitCreate}>
+        <Modal title={editingId ? t.credits.editTitle : t.credits.createTitle} onClose={() => setShowCreate(false)}>
+          <form onSubmit={submitForm}>
             <div className="field">
               <label>{t.credits.name}</label>
               <input
@@ -371,7 +395,9 @@ export default function Credits() {
 
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowCreate(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={creating}>{creating ? t.common.saving : t.common.create}</button>
+              <button type="submit" className="btn" disabled={creating}>
+                {creating ? t.common.saving : (editingId ? t.common.save : t.common.create)}
+              </button>
             </div>
           </form>
         </Modal>

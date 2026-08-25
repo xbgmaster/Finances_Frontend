@@ -100,6 +100,7 @@ export const CreditsApi = {
   // Full month-by-month amortization table.
   schedule: (id) => api.get(`/credits/${id}/schedule`).then((r) => r.data),
   create: (data) => api.post('/credits', data).then((r) => r.data),
+  update: (id, data) => api.put(`/credits/${id}`, data).then((r) => r.data),
   remove: (id) => api.delete(`/credits/${id}`),
   // Payment ledger (list / add / edit / delete). Mutations return the recalculated summary.
   payments: (id) => api.get(`/credits/${id}/payments`).then((r) => r.data),
