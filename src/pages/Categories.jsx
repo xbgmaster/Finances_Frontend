@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CategoriesApi } from '../api/client'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { ICON_KEYS, iconFor, COLOR_PALETTE } from '../utils/icons'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
@@ -20,6 +21,7 @@ export default function Categories() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -129,12 +131,30 @@ export default function Categories() {
             {!c.isSystem && (
               <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
                 <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
-                <button className="btn danger" onClick={() => remove(c)}>{t.common.delete}</button>
+                <button
+                  className="btn danger"
+                  onClick={() => setConfirm({
+                    message: t.categories.deleteConfirm?.replace('{name}', c.name) || t.common.confirmDelete,
+                    run: () => remove(c),
+                  })}
+                >
+                  {t.common.delete}
+                </button>
               </div>
             )}
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          await confirm.run()
+          setConfirm(null)
+        }}
+      />
 
       {showModal && (
         <Modal title={editing ? t.categories.editTitle : t.categories.newTitle} onClose={() => setShowModal(false)}>

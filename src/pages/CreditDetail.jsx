@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { CreditsApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { formatMoney, formatDate } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -22,6 +23,7 @@ export default function CreditDetail() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyPayment)
+  const [confirm, setConfirm] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -84,7 +86,6 @@ export default function CreditDetail() {
   }
 
   const removePayment = async (p) => {
-    if (!window.confirm(t.credits.paymentDeleteConfirm)) return
     await CreditsApi.removePayment(id, p.id)
     await load()
   }
@@ -230,7 +231,12 @@ export default function CreditDetail() {
                 </div>
               </div>
               <button className="btn secondary" onClick={() => openEdit(p)}>{t.common.edit}</button>
-              <button className="btn danger" onClick={() => removePayment(p)}>{t.common.delete}</button>
+              <button
+                className="btn danger"
+                onClick={() => setConfirm({ message: t.credits.paymentDeleteConfirm, run: () => removePayment(p) })}
+              >
+                {t.common.delete}
+              </button>
             </div>
           ))}
         </div>
@@ -339,6 +345,16 @@ export default function CreditDetail() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          await confirm.run()
+          setConfirm(null)
+        }}
+      />
     </div>
   )
 }

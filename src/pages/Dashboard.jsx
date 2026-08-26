@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
@@ -27,8 +28,15 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // 'income' | 'expense' | 'exchange' | null
   const [saving, setSaving] = useState(false)
+  const [editingExpenseId, setEditingExpenseId] = useState(null)
+  const [expenseError, setExpenseError] = useState('')
+  const [movementError, setMovementError] = useState('')
+  const [confirm, setConfirm] = useState(null)
   const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '', currency: '' })
-  const [expenseForm, setExpenseForm] = useState({ amount: '', description: '', categoryId: '', date: '', receipt: null, currency: '' })
+  const [expenseForm, setExpenseForm] = useState({
+    amount: '', description: '', categoryId: '', date: '', currency: '',
+    receipt: null, existingReceiptUrl: null, removeReceipt: false,
+  })
   const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '' })
 
   const load = async () => {
@@ -64,7 +72,28 @@ export default function Dashboard() {
   }
 
   const openExpense = () => {
-    setExpenseForm({ amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(), receipt: null, currency: activeCurrency })
+    setEditingExpenseId(null)
+    setExpenseError('')
+    setExpenseForm({
+      amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(),
+      currency: activeCurrency, receipt: null, existingReceiptUrl: null, removeReceipt: false,
+    })
+    setModal('expense')
+  }
+
+  const openEditExpense = (m) => {
+    setEditingExpenseId(m.id)
+    setExpenseError('')
+    setExpenseForm({
+      amount: String(m.amount ?? ''),
+      description: m.description || '',
+      categoryId: m.categoryId ?? '',
+      date: m.date ? new Date(m.date).toISOString().slice(0, 10) : '',
+      currency: m.currency || activeCurrency,
+      receipt: null,
+      existingReceiptUrl: m.receiptUrl || null,
+      removeReceipt: false,
+    })
     setModal('expense')
   }
 
@@ -140,30 +169,51 @@ export default function Dashboard() {
     const amount = parseFloat(expenseForm.amount)
     if (!amount || amount <= 0 || !expenseForm.categoryId) return
     setSaving(true)
+    setExpenseError('')
     try {
-      await ExpensesApi.create({
+      const payload = {
         amount,
         description: expenseForm.description,
         categoryId: Number(expenseForm.categoryId),
         date: expenseForm.date ? new Date(expenseForm.date).toISOString() : undefined,
         receipt: expenseForm.receipt,
         currency: expenseForm.currency || undefined,
-      })
+      }
+      if (editingExpenseId) {
+        await ExpensesApi.update(editingExpenseId, {
+          ...payload,
+          removeReceipt: expenseForm.removeReceipt && !expenseForm.receipt,
+        })
+      } else {
+        await ExpensesApi.create(payload)
+      }
       setModal(null)
       await load()
+    } catch (err) {
+      setExpenseError(err?.response?.data?.message || t.expenses.saveError)
     } finally {
       setSaving(false)
     }
   }
 
   const deleteIncome = async (id) => {
-    await IncomesApi.remove(id)
-    await load()
+    setMovementError('')
+    try {
+      await IncomesApi.remove(id)
+      await load()
+    } catch (err) {
+      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   const deleteExpense = async (id) => {
-    await ExpensesApi.remove(id)
-    await load()
+    setMovementError('')
+    try {
+      await ExpensesApi.remove(id)
+      await load()
+    } catch (err) {
+      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   if (loading) return <div className="loading">{t.common.loading}</div>
@@ -310,6 +360,9 @@ export default function Dashboard() {
       )}
 
       <h2 className="section-title">{t.dashboard.recentActivity}</h2>
+      {movementError && (
+        <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{movementError}</div>
+      )}
       {movements.length === 0 ? (
         <div className="empty">{t.dashboard.emptyMovements}</div>
       ) : (
@@ -332,7 +385,12 @@ export default function Dashboard() {
                   <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
                     {incoming ? '+' : '−'}{formatMoney(m.amount, m.currency)}
                   </span>
-                  <button className="btn danger" onClick={() => deleteExchange(m.id)}>{t.common.delete}</button>
+                  <button
+                    className="btn danger"
+                    onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => deleteExchange(m.id) })}
+                  >
+                    {t.common.delete}
+                  </button>
                 </div>
               )
             }
@@ -361,9 +419,17 @@ export default function Dashboard() {
                 <span className={`amount ${income ? 'pos' : 'neg'}`}>
                   {income ? '+' : '−'}{formatMoney(m.amount, m.currency)}
                 </span>
+                {!income && (
+                  <button className="btn secondary" onClick={() => openEditExpense(m)}>{t.common.edit}</button>
+                )}
                 <button
                   className="btn danger"
-                  onClick={() => (income ? deleteIncome(m.id) : deleteExpense(m.id))}
+                  onClick={() =>
+                    setConfirm({
+                      message: t.common.confirmDelete,
+                      run: () => (income ? deleteIncome(m.id) : deleteExpense(m.id)),
+                    })
+                  }
                 >
                   {t.common.delete}
                 </button>
@@ -422,7 +488,10 @@ export default function Dashboard() {
       )}
 
       {modal === 'expense' && (
-        <Modal title={t.dashboard.expenseModalTitle} onClose={() => setModal(null)}>
+        <Modal
+          title={editingExpenseId ? t.dashboard.editExpenseTitle : t.dashboard.expenseModalTitle}
+          onClose={() => setModal(null)}
+        >
           <form onSubmit={addExpense}>
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
@@ -482,11 +551,30 @@ export default function Dashboard() {
             </div>
             <div className="field">
               <label>{t.common.receipt}</label>
-              <ReceiptInput
-                file={expenseForm.receipt}
-                onChange={(f) => setExpenseForm({ ...expenseForm, receipt: f })}
-              />
+              {expenseForm.existingReceiptUrl && !expenseForm.removeReceipt && !expenseForm.receipt ? (
+                <div className="receipt-preview">
+                  <img src={assetUrl(expenseForm.existingReceiptUrl)} alt="receipt" />
+                  <button
+                    type="button"
+                    className="btn danger"
+                    onClick={() => setExpenseForm({ ...expenseForm, removeReceipt: true })}
+                  >
+                    {t.common.remove}
+                  </button>
+                  <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
+                    {t.common.keepReceiptHint}
+                  </div>
+                </div>
+              ) : (
+                <ReceiptInput
+                  file={expenseForm.receipt}
+                  onChange={(f) => setExpenseForm({ ...expenseForm, receipt: f, removeReceipt: false })}
+                />
+              )}
             </div>
+            {expenseError && (
+              <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{expenseError}</div>
+            )}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
               <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
@@ -602,6 +690,16 @@ export default function Dashboard() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          await confirm.run()
+          setConfirm(null)
+        }}
+      />
     </div>
   )
 }

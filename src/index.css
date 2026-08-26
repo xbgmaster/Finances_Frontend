@@ -1088,6 +1088,12 @@ input:focus, select:focus {
   white-space: nowrap;
 }
 
+.confirm-message {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
 /* Explicit recap of an exchange so the destination currency is unmistakable. */
 .exchange-summary {
   display: flex;

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { ExpensesApi, CategoriesApi, BalanceApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
+import { CURRENCIES } from '../utils/currencies'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
@@ -23,7 +25,14 @@ export default function Expenses() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ amount: '', description: '', categoryId: '', date: '', receipt: null })
+  const [editingId, setEditingId] = useState(null)
+  const [error, setError] = useState('')
+  const [listError, setListError] = useState('')
+  const [confirm, setConfirm] = useState(null)
+  const [form, setForm] = useState({
+    amount: '', description: '', categoryId: '', date: '', currency: '',
+    receipt: null, existingReceiptUrl: null, removeReceipt: false,
+  })
 
   const load = async () => {
     setLoading(true)
@@ -44,12 +53,33 @@ export default function Expenses() {
   }, [year, month, activeCurrency])
 
   const openCreate = () => {
+    setEditingId(null)
+    setError('')
     setForm({
       amount: '',
       description: '',
       categoryId: categories[0]?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
+      currency: activeCurrency,
       receipt: null,
+      existingReceiptUrl: null,
+      removeReceipt: false,
+    })
+    setShowModal(true)
+  }
+
+  const openEdit = (e) => {
+    setEditingId(e.id)
+    setError('')
+    setForm({
+      amount: String(e.amount ?? ''),
+      description: e.description || '',
+      categoryId: e.categoryId ?? '',
+      date: e.date ? new Date(e.date).toISOString().slice(0, 10) : '',
+      currency: e.currency || activeCurrency,
+      receipt: null,
+      existingReceiptUrl: e.receiptUrl || null,
+      removeReceipt: false,
     })
     setShowModal(true)
   }
@@ -59,25 +89,38 @@ export default function Expenses() {
     const amount = parseFloat(form.amount)
     if (!amount || amount <= 0 || !form.categoryId) return
     setSaving(true)
+    setError('')
     try {
-      await ExpensesApi.create({
+      const payload = {
         amount,
         description: form.description,
         categoryId: Number(form.categoryId),
         date: form.date ? new Date(form.date).toISOString() : undefined,
         receipt: form.receipt,
-        currency: activeCurrency,
-      })
+        currency: form.currency || activeCurrency,
+      }
+      if (editingId) {
+        await ExpensesApi.update(editingId, { ...payload, removeReceipt: form.removeReceipt && !form.receipt })
+      } else {
+        await ExpensesApi.create(payload)
+      }
       setShowModal(false)
       await load()
+    } catch (err) {
+      setError(err?.response?.data?.message || t.expenses.saveError)
     } finally {
       setSaving(false)
     }
   }
 
   const remove = async (id) => {
-    await ExpensesApi.remove(id)
-    await load()
+    setListError('')
+    try {
+      await ExpensesApi.remove(id)
+      await load()
+    } catch (err) {
+      setListError(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   const goCreateCategory = () => {
@@ -161,6 +204,7 @@ export default function Expenses() {
       )}
 
       <h2 className="section-title">{t.expenses.expenseDetails}</h2>
+      {listError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{listError}</div>}
       {expenses.length === 0 ? (
         <div className="empty">{t.expenses.noExpenses}</div>
       ) : (
@@ -180,23 +224,43 @@ export default function Expenses() {
                 </a>
               )}
               <span className="amount neg">−{formatMoney(e.amount, e.currency || activeCurrency)}</span>
-              <button className="btn danger" onClick={() => remove(e.id)}>{t.common.delete}</button>
+              <button className="btn secondary" onClick={() => openEdit(e)}>{t.common.edit}</button>
+              <button
+                className="btn danger"
+                onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => remove(e.id) })}
+              >
+                {t.common.delete}
+              </button>
             </div>
           ))}
         </div>
       )}
 
       {showModal && (
-        <Modal title={t.dashboard.expenseModalTitle} onClose={() => setShowModal(false)}>
+        <Modal
+          title={editingId ? t.dashboard.editExpenseTitle : t.dashboard.expenseModalTitle}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={submit}>
-            <div className="field">
-              <label>{t.common.amount} ({activeCurrency})</label>
-              <input
-                type="number" step="0.01" min="0" autoFocus required
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="0.00"
-              />
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.common.amount}</label>
+                <input
+                  type="number" step="0.01" min="0" autoFocus required
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <select
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="field">
               <label>{t.common.category}</label>
@@ -236,11 +300,28 @@ export default function Expenses() {
             </div>
             <div className="field">
               <label>{t.common.receipt}</label>
-              <ReceiptInput
-                file={form.receipt}
-                onChange={(f) => setForm({ ...form, receipt: f })}
-              />
+              {form.existingReceiptUrl && !form.removeReceipt && !form.receipt ? (
+                <div className="receipt-preview">
+                  <img src={assetUrl(form.existingReceiptUrl)} alt="receipt" />
+                  <button
+                    type="button"
+                    className="btn danger"
+                    onClick={() => setForm({ ...form, removeReceipt: true })}
+                  >
+                    {t.common.remove}
+                  </button>
+                  <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
+                    {t.common.keepReceiptHint}
+                  </div>
+                </div>
+              ) : (
+                <ReceiptInput
+                  file={form.receipt}
+                  onChange={(f) => setForm({ ...form, receipt: f, removeReceipt: false })}
+                />
+              )}
             </div>
+            {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowModal(false)}>{t.common.cancel}</button>
               <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
@@ -248,6 +329,16 @@ export default function Expenses() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          await confirm.run()
+          setConfirm(null)
+        }}
+      />
     </div>
   )
 }

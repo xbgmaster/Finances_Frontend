@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CreditsApi } from '../api/client'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
 import { useAuth } from '../auth/AuthContext'
@@ -41,6 +42,7 @@ export default function Credits() {
 
   const [payFor, setPayFor] = useState(null)
   const [paying, setPaying] = useState(false)
+  const [confirm, setConfirm] = useState(null)
   const [payment, setPayment] = useState({ amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' })
 
   const load = async () => {
@@ -135,7 +137,6 @@ export default function Credits() {
   }
 
   const remove = async (credit) => {
-    if (!window.confirm(t.credits.deleteConfirm)) return
     setError('')
     try {
       await CreditsApi.remove(credit.id)
@@ -258,13 +259,28 @@ export default function Credits() {
                   {!paidOff && (
                     <button className="btn" onClick={() => openPayment(c)}>{t.credits.addPayment}</button>
                   )}
-                  <button className="btn danger" onClick={() => remove(c)}>{t.common.delete}</button>
+                  <button
+                    className="btn danger"
+                    onClick={() => setConfirm({ message: t.credits.deleteConfirm, run: () => remove(c) })}
+                  >
+                    {t.common.delete}
+                  </button>
                 </div>
               </div>
             )
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          await confirm.run()
+          setConfirm(null)
+        }}
+      />
 
       {showCreate && (
         <Modal title={editingId ? t.credits.editTitle : t.credits.createTitle} onClose={() => setShowCreate(false)}>
