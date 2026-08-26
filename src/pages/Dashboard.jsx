@@ -419,20 +419,32 @@ export default function Dashboard() {
                 <span className={`amount ${income ? 'pos' : 'neg'}`}>
                   {income ? '+' : '−'}{formatMoney(m.amount, m.currency)}
                 </span>
-                {!income && (
-                  <button className="btn secondary" onClick={() => openEditExpense(m)}>{t.common.edit}</button>
+                {!income && m.creditId ? (
+                  <button
+                    className="btn secondary"
+                    title={t.expenses.creditLinkedHint}
+                    onClick={() => navigate(`/credits/${m.creditId}`)}
+                  >
+                    {t.expenses.manageInCredits}
+                  </button>
+                ) : (
+                  <>
+                    {!income && (
+                      <button className="btn secondary" onClick={() => openEditExpense(m)}>{t.common.edit}</button>
+                    )}
+                    <button
+                      className="btn danger"
+                      onClick={() =>
+                        setConfirm({
+                          message: t.common.confirmDelete,
+                          run: () => (income ? deleteIncome(m.id) : deleteExpense(m.id)),
+                        })
+                      }
+                    >
+                      {t.common.delete}
+                    </button>
+                  </>
                 )}
-                <button
-                  className="btn danger"
-                  onClick={() =>
-                    setConfirm({
-                      message: t.common.confirmDelete,
-                      run: () => (income ? deleteIncome(m.id) : deleteExpense(m.id)),
-                    })
-                  }
-                >
-                  {t.common.delete}
-                </button>
               </div>
             )
           })}
@@ -614,7 +626,7 @@ export default function Dashboard() {
               <div className="rate-row">
                 <span className="rate-eq">1 {exchangeForm.fromCurrency} =</span>
                 <input
-                  type="number" step="0.0001" min="0" required
+                  type="number" step="any" min="0" required
                   value={exchangeForm.rate}
                   onChange={(e) => setExchangeForm({ ...exchangeForm, rate: e.target.value })}
                   placeholder="0.00"
