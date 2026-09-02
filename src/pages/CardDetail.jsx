@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PaymentMethodsApi, ExpensesApi } from '../api/client'
 import StatCard from '../components/StatCard'
+import ConfirmDialog from '../components/ConfirmDialog'
+import PayCardModal from '../components/PayCardModal'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
@@ -14,23 +16,36 @@ export default function CardDetail() {
   const navigate = useNavigate()
   const [method, setMethod] = useState(null)
   const [charges, setCharges] = useState([])
+  const [payments, setPayments] = useState([])
+  const [methods, setMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showPay, setShowPay] = useState(false)
+  const [confirm, setConfirm] = useState(null)
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      const [m, ch] = await Promise.all([
+      const [m, ch, pays, all] = await Promise.all([
         PaymentMethodsApi.get(id),
         ExpensesApi.list({ paymentMethodId: id }),
+        PaymentMethodsApi.payments(id).catch(() => []),
+        PaymentMethodsApi.list({ includeArchived: true }).catch(() => []),
       ])
       setMethod(m)
       setCharges(ch)
+      setPayments(pays)
+      setMethods(all)
     } catch {
       setError(t.cards.loadError)
     }
     setLoading(false)
+  }
+
+  const removePayment = async (paymentId) => {
+    await PaymentMethodsApi.removePayment(id, paymentId)
+    await load()
   }
 
   useEffect(() => {
@@ -73,6 +88,7 @@ export default function CardDetail() {
             <p>{typeLabel(method.type)} · {cur}</p>
           </div>
         </div>
+        {isCard && <button className="btn" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>}
       </div>
 
       <div className="grid grid-3">
@@ -127,6 +143,39 @@ export default function CardDetail() {
         </div>
       )}
 
+      {isCard && (
+        <>
+          <h2 className="section-title">{t.cards.paymentsTitle}</h2>
+          {payments.length === 0 ? (
+            <div className="empty">{t.cards.noPayments}</div>
+          ) : (
+            <div className="list">
+              {payments.map((p) => (
+                <div className="list-item" key={p.id}>
+                  <span className="badge-icon" style={{ background: '#10b98122', color: '#10b981' }}>✅</span>
+                  <div className="meta">
+                    <div className="title">{p.note || t.cards.paymentTitle}</div>
+                    <div className="sub">
+                      {p.sourcePaymentMethodName
+                        ? `${t.cards.payFrom}: ${p.sourcePaymentMethodName}`
+                        : t.cards.externalPayment}
+                      {' · '}{formatDate(p.date)}
+                    </div>
+                  </div>
+                  <span className="amount pos">−{formatMoney(p.amount, p.currency)}</span>
+                  <button
+                    className="btn danger"
+                    onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removePayment(p.id) })}
+                  >
+                    {t.common.delete}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
       <h2 className="section-title">{t.cards.charges}</h2>
       {charges.length === 0 ? (
         <div className="empty">{t.cards.noCharges}</div>
@@ -146,6 +195,22 @@ export default function CardDetail() {
           ))}
         </div>
       )}
+
+      {showPay && (
+        <PayCardModal
+          methods={methods}
+          preselectedCardId={method.id}
+          onClose={() => setShowPay(false)}
+          onDone={async () => { setShowPay(false); await load() }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        message={confirm?.message}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => { await confirm.run(); setConfirm(null) }}
+      />
     </div>
   )
 }

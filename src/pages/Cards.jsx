@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PaymentMethodsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PayCardModal from '../components/PayCardModal'
 import { COLOR_PALETTE } from '../utils/icons'
 import { formatMoney } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
@@ -37,6 +38,7 @@ export default function Cards() {
   const [error, setError] = useState('')
   const [listError, setListError] = useState('')
   const [confirm, setConfirm] = useState(null)
+  const [payCardId, setPayCardId] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -117,6 +119,17 @@ export default function Cards() {
     }
   }
 
+  // One favorite at a time (the backend clears any previous favorite).
+  const toggleFavorite = async (m) => {
+    setListError('')
+    try {
+      await PaymentMethodsApi.setFavorite(m.id, !m.isFavorite)
+      await load()
+    } catch (err) {
+      setListError(err?.response?.data?.message || t.cards.saveError)
+    }
+  }
+
   if (loading) return <div className="loading">{t.common.loading}</div>
 
   return (
@@ -140,7 +153,16 @@ export default function Cards() {
             const limit = m.creditLimit ?? 0
             const usedPct = isCard && limit > 0 ? Math.min(100, (m.balance / limit) * 100) : 0
             return (
-              <div className="card" key={m.id} style={{ opacity: m.archived ? 0.6 : 1 }}>
+              <div className="card" key={m.id} style={{ opacity: m.archived ? 0.6 : 1, position: 'relative' }}>
+                <button
+                  type="button"
+                  className={`fav-star ${m.isFavorite ? 'on' : ''}`}
+                  title={m.isFavorite ? t.cards.favorite : t.cards.makeFavorite}
+                  aria-pressed={m.isFavorite}
+                  onClick={() => toggleFavorite(m)}
+                >
+                  {m.isFavorite ? '⭐' : '☆'}
+                </button>
                 <div className="row">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span className="badge-icon" style={{ background: `${m.color}22`, color: m.color }}>
@@ -148,7 +170,6 @@ export default function Cards() {
                     </span>
                     <div>
                       <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {m.isFavorite && <span title={t.cards.favorite}>⭐</span>}
                         {m.name}
                         {m.archived && (
                           <span
@@ -211,6 +232,7 @@ export default function Cards() {
                 </div>
 
                 <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+                  {isCard && <button className="btn" onClick={() => setPayCardId(m.id)}>{t.cards.payAction}</button>}
                   <button className="btn secondary" onClick={() => navigate(`/cards/${m.id}`)}>{t.cards.details}</button>
                   <button className="btn secondary" onClick={() => openEdit(m)}>{t.common.edit}</button>
                   <button
@@ -227,6 +249,15 @@ export default function Cards() {
             )
           })}
         </div>
+      )}
+
+      {payCardId && (
+        <PayCardModal
+          methods={methods}
+          preselectedCardId={payCardId}
+          onClose={() => setPayCardId(null)}
+          onDone={async () => { setPayCardId(null); await load() }}
+        />
       )}
 
       <ConfirmDialog

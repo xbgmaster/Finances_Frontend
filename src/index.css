@@ -580,6 +580,36 @@ input:focus, select:focus {
 
 .activity-date { width: auto; }
 
+.activity-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.fav-star {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 8px;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.fav-star:hover { background: var(--surface-2, rgba(148, 163, 184, 0.15)); transform: scale(1.1); }
+
+.fav-star.on { color: #f59e0b; }
+
 .activity-spacer { flex: 1; }
 
 .activity-pagesize {

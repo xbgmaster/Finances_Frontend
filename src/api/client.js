@@ -63,6 +63,7 @@ export const CategoriesApi = {
 export const IncomesApi = {
   list: (params) => api.get('/incomes', { params }).then((r) => r.data),
   create: (data) => api.post('/incomes', data).then((r) => r.data),
+  update: (id, data) => api.put(`/incomes/${id}`, data).then((r) => r.data),
   remove: (id) => api.delete(`/incomes/${id}`),
 }
 
@@ -71,7 +72,13 @@ export const PaymentMethodsApi = {
   get: (id) => api.get(`/paymentmethods/${id}`).then((r) => r.data),
   create: (data) => api.post('/paymentmethods', data).then((r) => r.data),
   update: (id, data) => api.put(`/paymentmethods/${id}`, data).then((r) => r.data),
+  setFavorite: (id, value) =>
+    api.put(`/paymentmethods/${id}/favorite`, null, { params: { value } }).then((r) => r.data),
   remove: (id) => api.delete(`/paymentmethods/${id}`),
+  // Credit card payments (reduce debt / free cupo).
+  payments: (id) => api.get(`/paymentmethods/${id}/payments`).then((r) => r.data),
+  payCard: (id, data) => api.post(`/paymentmethods/${id}/payments`, data).then((r) => r.data),
+  removePayment: (id, paymentId) => api.delete(`/paymentmethods/${id}/payments/${paymentId}`),
 }
 
 export const ExpensesApi = {

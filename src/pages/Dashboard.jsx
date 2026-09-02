@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
+import PayCardModal from '../components/PayCardModal'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
@@ -26,16 +27,20 @@ export default function Dashboard() {
   const [creditAlerts, setCreditAlerts] = useState(null)
   const [exchanges, setExchanges] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
+  const [cardPayments, setCardPayments] = useState([])
+  const [showPay, setShowPay] = useState(false)
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // 'income' | 'expense' | 'exchange' | null
   const [saving, setSaving] = useState(false)
   const [editingExpenseId, setEditingExpenseId] = useState(null)
+  const [editingIncomeId, setEditingIncomeId] = useState(null)
   const [expenseError, setExpenseError] = useState('')
   const [movementError, setMovementError] = useState('')
   const [confirm, setConfirm] = useState(null)
-  // Recent activity: text/date search + pagination.
+  // Recent activity: text search, date range + pagination.
   const [actSearch, setActSearch] = useState('')
-  const [actDate, setActDate] = useState('')
+  const [actFrom, setActFrom] = useState('')
+  const [actTo, setActTo] = useState('')
   const [actPageSize, setActPageSize] = useState(5)
   const [actPage, setActPage] = useState(1)
   const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '', currency: '', paymentMethodId: '' })
@@ -65,6 +70,13 @@ export default function Dashboard() {
     setCreditAlerts(alerts)
     setExchanges(exch)
     setPaymentMethods(pms)
+
+    // Card payments live in a side table; fetch them per credit card and flatten.
+    const creditCards = pms.filter((p) => p.type === 'CreditCard')
+    const payLists = await Promise.all(
+      creditCards.map((c) => PaymentMethodsApi.payments(c.id).catch(() => [])),
+    )
+    setCardPayments(payLists.flat())
     setLoading(false)
   }
 
@@ -77,10 +89,23 @@ export default function Dashboard() {
   // Reset to the first page whenever the search/filters change.
   useEffect(() => {
     setActPage(1)
-  }, [actSearch, actDate, actPageSize, activeCurrency])
+  }, [actSearch, actFrom, actTo, actPageSize, activeCurrency])
 
   const openIncome = () => {
-    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency, paymentMethodId: '' })
+    setEditingIncomeId(null)
+    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency, paymentMethodId: defaultPmId() })
+    setModal('income')
+  }
+
+  const openEditIncome = (m) => {
+    setEditingIncomeId(m.id)
+    setIncomeForm({
+      amount: String(m.amount ?? ''),
+      description: m.description || '',
+      date: m.date ? new Date(m.date).toISOString().slice(0, 10) : '',
+      currency: m.currency || activeCurrency,
+      paymentMethodId: m.paymentMethodId != null ? String(m.paymentMethodId) : '',
+    })
     setModal('income')
   }
 
@@ -115,6 +140,10 @@ export default function Dashboard() {
     setModal(null)
     navigate('/categories', { state: { openCreate: true } })
   }
+
+  // Icon that mirrors the /cards view: cash 💵, debit 🏦, credit card 💳.
+  const pmTypeIcon = (type) =>
+    type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : type === 'Debit' ? '🏦' : null
 
   // Label a payment method with its type so debit/credit/cash are distinguishable.
   const pmLabel = (p) => {
@@ -182,17 +211,43 @@ export default function Dashboard() {
     if (!amount || amount <= 0) return
     setSaving(true)
     try {
-      await IncomesApi.create({
+      const selectedMethod = paymentMethods.find(
+        (p) => String(p.id) === String(incomeForm.paymentMethodId),
+      )
+      // Choosing a credit card as the "destination" means paying that card (external).
+      if (!editingIncomeId && selectedMethod?.type === 'CreditCard') {
+        await PaymentMethodsApi.payCard(selectedMethod.id, {
+          amount,
+          date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
+          note: incomeForm.description.trim() || undefined,
+        })
+        setModal(null)
+        await load()
+        return
+      }
+      const payload = {
         amount,
         description: incomeForm.description,
         date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
         currency: incomeForm.currency || undefined,
         paymentMethodId: incomeForm.paymentMethodId ? Number(incomeForm.paymentMethodId) : undefined,
-      })
+      }
+      if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
+      else await IncomesApi.create(payload)
       setModal(null)
       await load()
     } finally {
       setSaving(false)
+    }
+  }
+
+  const deleteCardPayment = async (cardId, paymentId) => {
+    setMovementError('')
+    try {
+      await PaymentMethodsApi.removePayment(cardId, paymentId)
+      await load()
+    } catch (err) {
+      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
@@ -282,19 +337,35 @@ export default function Dashboard() {
           otherAmount: out ? x.toAmount : x.fromAmount,
         }
       }),
+    ...cardPayments
+      .filter((p) => p.currency === selCur)
+      .map((p) => ({
+        id: p.id,
+        kind: 'cardpayment',
+        date: p.date,
+        amount: p.amount,
+        currency: selCur,
+        creditCardId: p.creditCardId,
+        cardName: p.creditCardName,
+        sourceName: p.sourcePaymentMethodName,
+        external: !p.sourcePaymentMethodId,
+        note: p.note,
+      })),
   ]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
 
   // Text/date search over the current-currency movements.
   const actQuery = actSearch.trim().toLowerCase()
   const filteredMovements = movements.filter((m) => {
-    if (actDate) {
+    if (actFrom || actTo) {
       const d = m.date ? new Date(m.date).toISOString().slice(0, 10) : ''
-      if (d !== actDate) return false
+      if (actFrom && d < actFrom) return false
+      if (actTo && d > actTo) return false
     }
     if (actQuery) {
       const label = m.kind === 'income' ? t.common.income
         : m.kind === 'exchange' ? t.dashboard.exchange
+        : m.kind === 'cardpayment' ? t.cards.paymentTitle
         : (m.categoryName || t.common.expense)
       const haystack = [
         m.description,
@@ -302,6 +373,9 @@ export default function Dashboard() {
         m.categoryName,
         m.paymentMethodName,
         m.otherCurrency,
+        m.cardName,
+        m.sourceName,
+        m.note,
         m.date ? formatDate(m.date) : '',
       ].filter(Boolean).join(' ').toLowerCase()
       if (!haystack.includes(actQuery)) return false
@@ -316,6 +390,15 @@ export default function Dashboard() {
     (actCurrentPage - 1) * actPageSize,
     actCurrentPage * actPageSize,
   )
+
+  // Credit-card capacity for the active currency: total owed vs. total limit (used / limit).
+  const creditCardsCur = paymentMethods.filter(
+    (p) => p.type === 'CreditCard' && !p.archived && p.currency === selCur,
+  )
+  const ccUsed = creditCardsCur.reduce((s, p) => s + (p.balance || 0), 0)
+  const ccLimit = creditCardsCur.reduce((s, p) => s + (p.creditLimit || 0), 0)
+  const ccAvailable = ccLimit - ccUsed
+  const ccPct = ccLimit > 0 ? Math.min(100, (ccUsed / ccLimit) * 100) : 0
 
   const spentByCategory = new Map((monthly?.byCategory ?? []).map((c) => [c.categoryId, c.spent]))
   const budgetFor = (c) => c.budgets?.[selCur] ?? null
@@ -344,6 +427,9 @@ export default function Dashboard() {
           <p>{t.dashboard.subtitle}</p>
         </div>
         <div className="toolbar">
+          {paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived) && (
+            <button className="btn secondary" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>
+          )}
           <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
           <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
           <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
@@ -382,6 +468,35 @@ export default function Dashboard() {
         <StatCard label={t.dashboard.totalIncome} value={selEntry.totalIncome} currency={selCur} icon="📈" color="#10b981" />
         <StatCard label={t.dashboard.totalExpenses} value={selEntry.totalExpense} currency={selCur} icon="📉" color="#ef4444" />
       </div>
+
+      {creditCardsCur.length > 0 && (
+        <div className="card credit-capacity">
+          <div className="row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="badge-icon" style={{ background: '#6366f122', color: '#6366f1' }}>💳</span>
+              <div>
+                <div style={{ fontWeight: 600 }}>{t.cards.capacityTitle}</div>
+                <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                  {t.cards.capacityHint}
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="b-amount">
+                {formatMoney(ccUsed, selCur)} <span style={{ color: 'var(--text-muted)' }}>/ {formatMoney(ccLimit, selCur)}</span>
+              </div>
+              <div className="hint" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {t.cards.available}: {formatMoney(ccAvailable, selCur)}
+              </div>
+            </div>
+          </div>
+          {ccLimit > 0 && (
+            <div className="progress" style={{ marginTop: 12 }}>
+              <span style={{ width: `${ccPct}%`, background: ccPct >= 100 ? 'var(--danger)' : '#6366f1' }} />
+            </div>
+          )}
+        </div>
+      )}
 
       <h2 className="section-title">
         {t.dashboard.monthlyBudgets}
@@ -437,17 +552,31 @@ export default function Dashboard() {
             onChange={(e) => setActSearch(e.target.value)}
             placeholder={t.dashboard.searchPlaceholder}
           />
-          <input
-            type="date"
-            className="activity-date"
-            value={actDate}
-            onChange={(e) => setActDate(e.target.value)}
-          />
-          {(actSearch || actDate) && (
+          <label className="activity-range">
+            <span>{t.dashboard.dateFrom}</span>
+            <input
+              type="date"
+              className="activity-date"
+              value={actFrom}
+              max={actTo || undefined}
+              onChange={(e) => setActFrom(e.target.value)}
+            />
+          </label>
+          <label className="activity-range">
+            <span>{t.dashboard.dateTo}</span>
+            <input
+              type="date"
+              className="activity-date"
+              value={actTo}
+              min={actFrom || undefined}
+              onChange={(e) => setActTo(e.target.value)}
+            />
+          </label>
+          {(actSearch || actFrom || actTo) && (
             <button
               type="button"
               className="btn secondary"
-              onClick={() => { setActSearch(''); setActDate('') }}
+              onClick={() => { setActSearch(''); setActFrom(''); setActTo('') }}
             >
               {t.dashboard.clearFilters}
             </button>
@@ -495,14 +624,42 @@ export default function Dashboard() {
                 </div>
               )
             }
+            if (m.kind === 'cardpayment') {
+              return (
+                <div className="list-item" key={`cardpay-${m.id}`}>
+                  <span className="badge-icon" style={{ background: '#10b98122', color: '#10b981' }}>💳</span>
+                  <div className="meta">
+                    <div className="title">{t.cards.paymentTitle}</div>
+                    <div className="sub">
+                      {`${t.cards.toCard} ${m.cardName}`}
+                      {m.external ? ` · ${t.cards.externalPayment}` : m.sourceName ? ` · ${m.sourceName}` : ''}
+                      {' · '}{formatDate(m.date)}
+                    </div>
+                  </div>
+                  <span className={`amount ${m.external ? '' : 'neg'}`}>
+                    {m.external ? '' : '−'}{formatMoney(m.amount, m.currency)}
+                  </span>
+                  <button
+                    className="btn danger"
+                    onClick={() => setConfirm({
+                      message: t.common.confirmDelete,
+                      run: () => deleteCardPayment(m.creditCardId, m.id),
+                    })}
+                  >
+                    {t.common.delete}
+                  </button>
+                </div>
+              )
+            }
             const income = m.kind === 'income'
+            const pmIcon = pmTypeIcon(m.paymentMethodType)
             return (
               <div className="list-item" key={`${m.kind}-${m.id}`}>
                 <span className="badge-icon" style={{
                   background: income ? '#10b98122' : `${m.categoryColor}22`,
                   color: income ? '#10b981' : m.categoryColor,
                 }}>
-                  {income ? '⬆️' : iconFor(m.categoryIcon)}
+                  {pmIcon || (income ? '⬆️' : iconFor(m.categoryIcon))}
                 </span>
                 <div className="meta">
                   <div className="title">
@@ -531,9 +688,12 @@ export default function Dashboard() {
                   </button>
                 ) : (
                   <>
-                    {!income && (
-                      <button className="btn secondary" onClick={() => openEditExpense(m)}>{t.common.edit}</button>
-                    )}
+                    <button
+                      className="btn secondary"
+                      onClick={() => (income ? openEditIncome(m) : openEditExpense(m))}
+                    >
+                      {t.common.edit}
+                    </button>
                     <button
                       className="btn danger"
                       onClick={() =>
@@ -578,7 +738,10 @@ export default function Dashboard() {
       )}
 
       {modal === 'income' && (
-        <Modal title={t.dashboard.incomeModalTitle} onClose={() => setModal(null)}>
+        <Modal
+          title={editingIncomeId ? t.dashboard.editIncomeTitle : t.dashboard.incomeModalTitle}
+          onClose={() => setModal(null)}
+        >
           <form onSubmit={addIncome}>
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
@@ -624,10 +787,16 @@ export default function Dashboard() {
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
                 <option value="">{t.common.none}</option>
-                {paymentMethods.filter((p) => !p.archived).map((p) => (
-                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                ))}
+                {paymentMethods
+                  .filter((p) => !p.archived && (!editingIncomeId || p.type !== 'CreditCard'))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                  ))}
               </select>
+              {!editingIncomeId
+                && paymentMethods.find((p) => String(p.id) === String(incomeForm.paymentMethodId))?.type === 'CreditCard' && (
+                <div className="hint" style={{ marginTop: 4 }}>{t.cards.incomeToCardHint}</div>
+              )}
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
@@ -852,6 +1021,14 @@ export default function Dashboard() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {showPay && (
+        <PayCardModal
+          methods={paymentMethods}
+          onClose={() => setShowPay(false)}
+          onDone={async () => { setShowPay(false); await load() }}
+        />
       )}
 
       <ConfirmDialog
