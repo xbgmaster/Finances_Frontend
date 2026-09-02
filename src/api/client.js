@@ -66,27 +66,37 @@ export const IncomesApi = {
   remove: (id) => api.delete(`/incomes/${id}`),
 }
 
+export const PaymentMethodsApi = {
+  list: (params) => api.get('/paymentmethods', { params }).then((r) => r.data),
+  get: (id) => api.get(`/paymentmethods/${id}`).then((r) => r.data),
+  create: (data) => api.post('/paymentmethods', data).then((r) => r.data),
+  update: (id, data) => api.put(`/paymentmethods/${id}`, data).then((r) => r.data),
+  remove: (id) => api.delete(`/paymentmethods/${id}`),
+}
+
 export const ExpensesApi = {
   list: (params) => api.get('/expenses', { params }).then((r) => r.data),
   // Envia multipart/form-data para admitir la imagen del recibo (opcional).
-  create: ({ amount, description, categoryId, date, receipt, currency }) => {
+  create: ({ amount, description, categoryId, date, receipt, currency, paymentMethodId }) => {
     const form = new FormData()
     form.append('amount', amount)
     form.append('categoryId', categoryId)
     if (description) form.append('description', description)
     if (date) form.append('date', date)
     if (currency) form.append('currency', currency)
+    if (paymentMethodId) form.append('paymentMethodId', paymentMethodId)
     if (receipt) form.append('receipt', receipt)
     return api.post('/expenses', form).then((r) => r.data)
   },
   // Edit an existing expense. Send a new receipt to replace it, or removeReceipt to clear it.
-  update: (id, { amount, description, categoryId, date, receipt, currency, removeReceipt }) => {
+  update: (id, { amount, description, categoryId, date, receipt, currency, paymentMethodId, removeReceipt }) => {
     const form = new FormData()
     form.append('amount', amount)
     form.append('categoryId', categoryId)
     form.append('description', description ?? '')
     if (date) form.append('date', date)
     if (currency) form.append('currency', currency)
+    if (paymentMethodId) form.append('paymentMethodId', paymentMethodId)
     if (removeReceipt) form.append('removeReceipt', 'true')
     if (receipt) form.append('receipt', receipt)
     return api.put(`/expenses/${id}`, form).then((r) => r.data)

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExpensesApi, CategoriesApi, BalanceApi, ExchangesApi, assetUrl } from '../api/client'
+import { ExpensesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -23,6 +23,7 @@ export default function Expenses() {
   const [summary, setSummary] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [exchanges, setExchanges] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -32,21 +33,23 @@ export default function Expenses() {
   const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState({
     amount: '', description: '', categoryId: '', date: '', currency: '',
-    receipt: null, existingReceiptUrl: null, removeReceipt: false,
+    paymentMethodId: '', receipt: null, existingReceiptUrl: null, removeReceipt: false,
   })
 
   const load = async () => {
     setLoading(true)
-    const [cats, sum, exp, exch] = await Promise.all([
+    const [cats, sum, exp, exch, pms] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
       ExpensesApi.list({ year, month, currency: activeCurrency }),
       ExchangesApi.list().catch(() => []),
+      PaymentMethodsApi.list().catch(() => []),
     ])
     setCategories(cats)
     setSummary(sum)
     setExpenses(exp)
     setExchanges(exch)
+    setPaymentMethods(pms)
     setLoading(false)
   }
 
@@ -64,6 +67,7 @@ export default function Expenses() {
       categoryId: categories[0]?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
       currency: activeCurrency,
+      paymentMethodId: defaultPmId(),
       receipt: null,
       existingReceiptUrl: null,
       removeReceipt: false,
@@ -80,6 +84,7 @@ export default function Expenses() {
       categoryId: e.categoryId ?? '',
       date: e.date ? new Date(e.date).toISOString().slice(0, 10) : '',
       currency: e.currency || activeCurrency,
+      paymentMethodId: e.paymentMethodId ?? defaultPmId(),
       receipt: null,
       existingReceiptUrl: e.receiptUrl || null,
       removeReceipt: false,
@@ -90,7 +95,7 @@ export default function Expenses() {
   const submit = async (e) => {
     e.preventDefault()
     const amount = parseFloat(form.amount)
-    if (!amount || amount <= 0 || !form.categoryId) return
+    if (!amount || amount <= 0 || !form.categoryId || !form.paymentMethodId) return
     setSaving(true)
     setError('')
     try {
@@ -101,6 +106,7 @@ export default function Expenses() {
         date: form.date ? new Date(form.date).toISOString() : undefined,
         receipt: form.receipt,
         currency: form.currency || activeCurrency,
+        paymentMethodId: form.paymentMethodId ? Number(form.paymentMethodId) : undefined,
       }
       if (editingId) {
         await ExpensesApi.update(editingId, { ...payload, removeReceipt: form.removeReceipt && !form.receipt })
@@ -139,6 +145,21 @@ export default function Expenses() {
   const goCreateCategory = () => {
     setShowModal(false)
     navigate('/categories', { state: { openCreate: true } })
+  }
+
+  const pmLabel = (p) => {
+    const type = p.type === 'CreditCard' ? t.cards.typeCreditCard
+      : p.type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
+    return `${p.name} · ${type} · ${p.currency}`
+  }
+
+  const defaultPmId = () => {
+    const active = paymentMethods.filter((p) => !p.archived)
+    return String(
+      active.find((p) => p.isFavorite)?.id
+      ?? active.find((p) => p.currency === activeCurrency)?.id
+      ?? active[0]?.id ?? '',
+    )
   }
 
   const years = useMemo(() => {
@@ -300,7 +321,10 @@ export default function Expenses() {
                 </span>
                 <div className="meta">
                   <div className="title">{e.description || e.categoryName}</div>
-                  <div className="sub">{e.categoryName} · {formatDate(e.date)}</div>
+                  <div className="sub">
+                    {e.categoryName} · {formatDate(e.date)}
+                    {e.paymentMethodName ? ` · 💳 ${e.paymentMethodName}` : ''}
+                  </div>
                 </div>
                 {e.receiptUrl && (
                   <a href={assetUrl(e.receiptUrl)} target="_blank" rel="noreferrer" title={t.common.viewReceipt}>
@@ -377,6 +401,19 @@ export default function Expenses() {
                   </button>
                 </div>
               )}
+            </div>
+            <div className="field">
+              <label>{t.common.paymentMethod}</label>
+              <select
+                required
+                value={form.paymentMethodId}
+                onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
+              >
+                <option value="" disabled>{t.common.select}</option>
+                {paymentMethods.filter((p) => !p.archived).map((p) => (
+                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>{t.common.description}</label>

@@ -20,6 +20,9 @@ export const ICONS = {
   gas: '⛽',
   bank: '🏦',
   savings: '🐷',
+  card: '💳',
+  cash: '💵',
+  wallet: '👛',
 }
 
 export const ICON_KEYS = Object.keys(ICONS)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, assetUrl } from '../api/client'
+import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [monthly, setMonthly] = useState(null)
   const [creditAlerts, setCreditAlerts] = useState(null)
   const [exchanges, setExchanges] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // 'income' | 'expense' | 'exchange' | null
   const [saving, setSaving] = useState(false)
@@ -32,16 +33,21 @@ export default function Dashboard() {
   const [expenseError, setExpenseError] = useState('')
   const [movementError, setMovementError] = useState('')
   const [confirm, setConfirm] = useState(null)
-  const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '', currency: '' })
+  // Recent activity: text/date search + pagination.
+  const [actSearch, setActSearch] = useState('')
+  const [actDate, setActDate] = useState('')
+  const [actPageSize, setActPageSize] = useState(5)
+  const [actPage, setActPage] = useState(1)
+  const [incomeForm, setIncomeForm] = useState({ amount: '', description: '', date: '', currency: '', paymentMethodId: '' })
   const [expenseForm, setExpenseForm] = useState({
     amount: '', description: '', categoryId: '', date: '', currency: '',
-    receipt: null, existingReceiptUrl: null, removeReceipt: false,
+    paymentMethodId: '', receipt: null, existingReceiptUrl: null, removeReceipt: false,
   })
   const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '' })
 
   const load = async () => {
     setLoading(true)
-    const [b, inc, exp, cats, mon, alerts, exch] = await Promise.all([
+    const [b, inc, exp, cats, mon, alerts, exch, pms] = await Promise.all([
       BalanceApi.get(),
       IncomesApi.list(),
       ExpensesApi.list(),
@@ -49,6 +55,7 @@ export default function Dashboard() {
       BalanceApi.monthly({ year: now.getFullYear(), month: now.getMonth() + 1, currency: activeCurrency }),
       CreditsApi.alerts().catch(() => null),
       ExchangesApi.list().catch(() => []),
+      PaymentMethodsApi.list().catch(() => []),
     ])
     setBalance(b)
     setIncomes(inc)
@@ -57,6 +64,7 @@ export default function Dashboard() {
     setMonthly(mon)
     setCreditAlerts(alerts)
     setExchanges(exch)
+    setPaymentMethods(pms)
     setLoading(false)
   }
 
@@ -66,8 +74,13 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCurrency])
 
+  // Reset to the first page whenever the search/filters change.
+  useEffect(() => {
+    setActPage(1)
+  }, [actSearch, actDate, actPageSize, activeCurrency])
+
   const openIncome = () => {
-    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency })
+    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency, paymentMethodId: '' })
     setModal('income')
   }
 
@@ -76,7 +89,7 @@ export default function Dashboard() {
     setExpenseError('')
     setExpenseForm({
       amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(),
-      currency: activeCurrency, receipt: null, existingReceiptUrl: null, removeReceipt: false,
+      currency: activeCurrency, paymentMethodId: defaultPmId(), receipt: null, existingReceiptUrl: null, removeReceipt: false,
     })
     setModal('expense')
   }
@@ -90,6 +103,7 @@ export default function Dashboard() {
       categoryId: m.categoryId ?? '',
       date: m.date ? new Date(m.date).toISOString().slice(0, 10) : '',
       currency: m.currency || activeCurrency,
+      paymentMethodId: m.paymentMethodId ?? defaultPmId(),
       receipt: null,
       existingReceiptUrl: m.receiptUrl || null,
       removeReceipt: false,
@@ -100,6 +114,23 @@ export default function Dashboard() {
   const goCreateCategory = () => {
     setModal(null)
     navigate('/categories', { state: { openCreate: true } })
+  }
+
+  // Label a payment method with its type so debit/credit/cash are distinguishable.
+  const pmLabel = (p) => {
+    const type = p.type === 'CreditCard' ? t.cards.typeCreditCard
+      : p.type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
+    return `${p.name} · ${type} · ${p.currency}`
+  }
+
+  // Preselect a method: favorite first, then one in the active currency, else the first.
+  const defaultPmId = () => {
+    const active = paymentMethods.filter((p) => !p.archived)
+    return String(
+      active.find((p) => p.isFavorite)?.id
+      ?? active.find((p) => p.currency === activeCurrency)?.id
+      ?? active[0]?.id ?? '',
+    )
   }
 
   const openExchange = () => {
@@ -156,6 +187,7 @@ export default function Dashboard() {
         description: incomeForm.description,
         date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
         currency: incomeForm.currency || undefined,
+        paymentMethodId: incomeForm.paymentMethodId ? Number(incomeForm.paymentMethodId) : undefined,
       })
       setModal(null)
       await load()
@@ -167,7 +199,7 @@ export default function Dashboard() {
   const addExpense = async (e) => {
     e.preventDefault()
     const amount = parseFloat(expenseForm.amount)
-    if (!amount || amount <= 0 || !expenseForm.categoryId) return
+    if (!amount || amount <= 0 || !expenseForm.categoryId || !expenseForm.paymentMethodId) return
     setSaving(true)
     setExpenseError('')
     try {
@@ -178,6 +210,7 @@ export default function Dashboard() {
         date: expenseForm.date ? new Date(expenseForm.date).toISOString() : undefined,
         receipt: expenseForm.receipt,
         currency: expenseForm.currency || undefined,
+        paymentMethodId: expenseForm.paymentMethodId ? Number(expenseForm.paymentMethodId) : undefined,
       }
       if (editingExpenseId) {
         await ExpensesApi.update(editingExpenseId, {
@@ -251,7 +284,38 @@ export default function Dashboard() {
       }),
   ]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 12)
+
+  // Text/date search over the current-currency movements.
+  const actQuery = actSearch.trim().toLowerCase()
+  const filteredMovements = movements.filter((m) => {
+    if (actDate) {
+      const d = m.date ? new Date(m.date).toISOString().slice(0, 10) : ''
+      if (d !== actDate) return false
+    }
+    if (actQuery) {
+      const label = m.kind === 'income' ? t.common.income
+        : m.kind === 'exchange' ? t.dashboard.exchange
+        : (m.categoryName || t.common.expense)
+      const haystack = [
+        m.description,
+        label,
+        m.categoryName,
+        m.paymentMethodName,
+        m.otherCurrency,
+        m.date ? formatDate(m.date) : '',
+      ].filter(Boolean).join(' ').toLowerCase()
+      if (!haystack.includes(actQuery)) return false
+    }
+    return true
+  })
+
+  const actTotal = filteredMovements.length
+  const actTotalPages = Math.max(1, Math.ceil(actTotal / actPageSize))
+  const actCurrentPage = Math.min(actPage, actTotalPages)
+  const pagedMovements = filteredMovements.slice(
+    (actCurrentPage - 1) * actPageSize,
+    actCurrentPage * actPageSize,
+  )
 
   const spentByCategory = new Map((monthly?.byCategory ?? []).map((c) => [c.categoryId, c.spent]))
   const budgetFor = (c) => c.budgets?.[selCur] ?? null
@@ -363,11 +427,48 @@ export default function Dashboard() {
       {movementError && (
         <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{movementError}</div>
       )}
+
+      {movements.length > 0 && (
+        <div className="activity-toolbar">
+          <input
+            type="search"
+            className="activity-search"
+            value={actSearch}
+            onChange={(e) => setActSearch(e.target.value)}
+            placeholder={t.dashboard.searchPlaceholder}
+          />
+          <input
+            type="date"
+            className="activity-date"
+            value={actDate}
+            onChange={(e) => setActDate(e.target.value)}
+          />
+          {(actSearch || actDate) && (
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => { setActSearch(''); setActDate('') }}
+            >
+              {t.dashboard.clearFilters}
+            </button>
+          )}
+          <div className="activity-spacer" />
+          <label className="activity-pagesize">
+            {t.dashboard.perPage}
+            <select value={actPageSize} onChange={(e) => setActPageSize(Number(e.target.value))}>
+              {[5, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+
       {movements.length === 0 ? (
         <div className="empty">{t.dashboard.emptyMovements}</div>
+      ) : filteredMovements.length === 0 ? (
+        <div className="empty">{t.dashboard.noResults}</div>
       ) : (
         <div className="list">
-          {movements.map((m) => {
+          {pagedMovements.map((m) => {
             if (m.kind === 'exchange') {
               const incoming = m.dir === 'in'
               return (
@@ -409,6 +510,7 @@ export default function Dashboard() {
                   </div>
                   <div className="sub">
                     {!income ? `${m.categoryName} · ` : ''}{formatDate(m.date)}
+                    {m.paymentMethodName ? ` · 💳 ${m.paymentMethodName}` : ''}
                   </div>
                 </div>
                 {!income && m.receiptUrl && (
@@ -451,6 +553,30 @@ export default function Dashboard() {
         </div>
       )}
 
+      {filteredMovements.length > 0 && actTotalPages > 1 && (
+        <div className="activity-pager">
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={actCurrentPage <= 1}
+            onClick={() => setActPage((p) => Math.max(1, p - 1))}
+          >
+            {t.dashboard.prev}
+          </button>
+          <span className="activity-pageinfo">
+            {t.dashboard.pageOf.replace('{page}', actCurrentPage).replace('{total}', actTotalPages)}
+          </span>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={actCurrentPage >= actTotalPages}
+            onClick={() => setActPage((p) => Math.min(actTotalPages, p + 1))}
+          >
+            {t.dashboard.next}
+          </button>
+        </div>
+      )}
+
       {modal === 'income' && (
         <Modal title={t.dashboard.incomeModalTitle} onClose={() => setModal(null)}>
           <form onSubmit={addIncome}>
@@ -490,6 +616,18 @@ export default function Dashboard() {
                 value={incomeForm.date}
                 onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
               />
+            </div>
+            <div className="field">
+              <label>{t.common.paymentMethod} ({t.common.optional})</label>
+              <select
+                value={incomeForm.paymentMethodId}
+                onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
+              >
+                <option value="">{t.common.none}</option>
+                {paymentMethods.filter((p) => !p.archived).map((p) => (
+                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                ))}
+              </select>
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
@@ -543,6 +681,19 @@ export default function Dashboard() {
                   </button>
                 </div>
               )}
+            </div>
+            <div className="field">
+              <label>{t.common.paymentMethod}</label>
+              <select
+                required
+                value={expenseForm.paymentMethodId}
+                onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethodId: e.target.value })}
+              >
+                <option value="" disabled>{t.common.select}</option>
+                {paymentMethods.filter((p) => !p.archived).map((p) => (
+                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>{t.common.description}</label>

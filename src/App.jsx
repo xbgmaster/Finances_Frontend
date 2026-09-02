@@ -5,6 +5,8 @@ import Categories from './pages/Categories'
 import Expenses from './pages/Expenses'
 import Credits from './pages/Credits'
 import CreditDetail from './pages/CreditDetail'
+import Cards from './pages/Cards'
+import CardDetail from './pages/CardDetail'
 import BudgetHistory from './pages/BudgetHistory'
 import Projections from './pages/Projections'
 import Settings from './pages/Settings'
@@ -32,6 +34,8 @@ export default function App() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="credits" element={<Credits />} />
           <Route path="credits/:id" element={<CreditDetail />} />
+          <Route path="cards" element={<Cards />} />
+          <Route path="cards/:id" element={<CardDetail />} />
           <Route path="budget-history" element={<BudgetHistory />} />
           <Route path="projections" element={<Projections />} />
           <Route path="settings" element={<Settings />} />
