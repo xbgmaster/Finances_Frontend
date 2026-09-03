@@ -8,6 +8,7 @@ import ReceiptInput from '../components/ReceiptInput'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
+import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
@@ -227,7 +228,7 @@ export default function Expenses() {
           value={summary.net}
           currency={activeCurrency}
           icon="🧮"
-          color="#6366f1"
+          color="#0f5c4d"
           tone={summary.net >= 0 ? 'pos' : 'neg'}
           hint={t.expenses.remainingHint}
         />
@@ -291,8 +292,8 @@ export default function Expenses() {
             if (e.kind === 'exchange') {
               const incoming = !e.out
               return (
-                <div className="list-item" key={`exchange-${e.id}`}>
-                  <span className="badge-icon" style={{ background: '#a855f722', color: '#a855f7' }}>🔄</span>
+                <div className="list-item tinted" key={`exchange-${e.id}`} style={tintVars('#b8943e')}>
+                  <span className="badge-icon">🔄</span>
                   <div className="meta">
                     <div className="title">{t.dashboard.exchange}</div>
                     <div className="sub">
@@ -315,8 +316,12 @@ export default function Expenses() {
               )
             }
             return (
-              <div className="list-item" key={e.id}>
-                <span className="badge-icon" style={{ background: `${e.categoryColor}22`, color: e.categoryColor }}>
+              <div
+                className="list-item tinted"
+                key={e.id}
+                style={tintVars(paymentMethods.find((p) => p.id === e.paymentMethodId)?.color || e.categoryColor)}
+              >
+                <span className="badge-icon">
                   {iconFor(e.categoryIcon)}
                 </span>
                 <div className="meta">
@@ -388,10 +393,17 @@ export default function Expenses() {
               <select
                 required
                 value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    goCreateCategory()
+                    return
+                  }
+                  setForm({ ...form, categoryId: e.target.value })
+                }}
               >
                 <option value="" disabled>{t.common.select}</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
+                <option value="__new__">{t.common.addNewCategory}</option>
               </select>
               {categories.length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>

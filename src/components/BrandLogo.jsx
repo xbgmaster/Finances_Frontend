@@ -14,8 +14,8 @@ export default function BrandLogo({ size = 38, className = '' }) {
     >
       <defs>
         <linearGradient id="finLogoBg" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6366f1" />
-          <stop offset="1" stopColor="#22d3ee" />
+          <stop stopColor="#0f5c4d" />
+          <stop offset="1" stopColor="#b8943e" />
         </linearGradient>
         <linearGradient id="finLogoGlass" x1="24" y1="2" x2="24" y2="30" gradientUnits="userSpaceOnUse">
           <stop stopColor="#ffffff" stopOpacity="0.28" />

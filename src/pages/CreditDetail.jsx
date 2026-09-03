@@ -172,13 +172,13 @@ export default function CreditDetail() {
           currency={cur}
           hint={t.credits.savingsHint}
         />
-        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon="✅" color="#6366f1" currency={cur} />
+        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon="✅" color="#0f5c4d" currency={cur} />
         <StatCard label={t.credits.remainingTotal} value={summary.remainingTotal} icon="⏳" color="#f59e0b" currency={cur} />
       </div>
 
       <div className="grid grid-4" style={{ marginTop: 16 }}>
-        <StatCard label={t.credits.monthlyInstallment} value={summary.monthlyInstallment} icon="📅" color="#22d3ee" currency={cur} />
-        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#94a3c4" currency={cur} />
+        <StatCard label={t.credits.monthlyInstallment} value={summary.monthlyInstallment} icon="📅" color="#b8943e" currency={cur} />
+        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#1a3a4a" currency={cur} />
         <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon="📈" color="#ef4444" currency={cur} />
         <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" currency={cur} />
       </div>
@@ -189,7 +189,7 @@ export default function CreditDetail() {
             label={t.credits.prepaidPrincipal}
             value={summary.prepaidPrincipal}
             icon="⚡"
-            color="#a855f7"
+            color="#b8943e"
             currency={cur}
             hint={t.credits.prepaidHint}
           />

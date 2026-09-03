@@ -89,11 +89,11 @@ export default function Projections() {
           value={data.safeToSpend}
           currency={activeCurrency}
           icon="✅"
-          color="#6366f1"
+          color="#0f5c4d"
           tone="pos"
           hint={`≈ ${formatMoney(data.safeToSpendPerDayRemaining, activeCurrency)}/${t.projections.perDay} (${data.daysRemainingInMonth} ${t.projections.daysLeft})`}
         />
-        <StatCard label={t.projections.currentBalance} value={data.currentBalance} currency={activeCurrency} icon="💰" color="#22d3ee" />
+        <StatCard label={t.projections.currentBalance} value={data.currentBalance} currency={activeCurrency} icon="💰" color="#b8943e" />
       </div>
 
       <h2 className="section-title">{t.projections.trendSection}</h2>
@@ -106,11 +106,11 @@ export default function Projections() {
                 <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#283251" />
-            <XAxis dataKey="name" stroke="#94a3c4" fontSize={12} />
-            <YAxis stroke="#94a3c4" fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4ddd2" />
+            <XAxis dataKey="name" stroke="#66757a" fontSize={12} />
+            <YAxis stroke="#66757a" fontSize={12} />
             <Tooltip
-              contentStyle={{ background: '#1a2236', border: '1px solid #283251', borderRadius: 12 }}
+              contentStyle={{ background: '#ffffff', border: '1px solid #e4ddd2', borderRadius: 12, color: '#1a2b33' }}
               formatter={(value) => formatMoney(value, activeCurrency)}
             />
             <Legend />

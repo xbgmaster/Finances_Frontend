@@ -7,6 +7,7 @@ import PayCardModal from '../components/PayCardModal'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
+import { tintVars } from '../utils/color'
 
 const typeIcon = (type) => (type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : '🏦')
 
@@ -75,11 +76,12 @@ export default function CardDetail() {
     <div>
       <button className="btn secondary" onClick={() => navigate('/cards')}>← {t.cards.backToCards}</button>
 
-      <div className="page-header row" style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="badge-icon" style={{ background: `${method.color}22`, color: method.color }}>
-            {typeIcon(method.type)}
-          </span>
+      <div className="card method-card" style={{ ...tintVars(method.color), marginTop: 16, marginBottom: 8 }}>
+        <div className="page-header row" style={{ marginBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span className="badge-icon">
+              {typeIcon(method.type)}
+            </span>
           <div>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {method.isFavorite && <span title={t.cards.favorite}>⭐</span>}
@@ -89,6 +91,7 @@ export default function CardDetail() {
           </div>
         </div>
         {isCard && <button className="btn" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>}
+        </div>
       </div>
 
       <div className="grid grid-3">
@@ -182,8 +185,8 @@ export default function CardDetail() {
       ) : (
         <div className="list">
           {charges.map((e) => (
-            <div className="list-item" key={e.id}>
-              <span className="badge-icon" style={{ background: `${e.categoryColor}22`, color: e.categoryColor }}>
+            <div className="list-item tinted" key={e.id} style={tintVars(method.color)}>
+              <span className="badge-icon">
                 {iconFor(e.categoryIcon)}
               </span>
               <div className="meta">

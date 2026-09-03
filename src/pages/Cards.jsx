@@ -4,7 +4,7 @@ import { PaymentMethodsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PayCardModal from '../components/PayCardModal'
-import { COLOR_PALETTE } from '../utils/icons'
+import { tintVars, normalizeHex, sameColor, CARD_BANK_COLORS, CARD_EXTRA_COLORS } from '../utils/color'
 import { formatMoney } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
 import { useI18n } from '../i18n/I18nContext'
@@ -12,11 +12,17 @@ import { useCurrency } from '../currency/CurrencyContext'
 
 const TYPES = ['Debit', 'Cash', 'CreditCard']
 
+const TYPE_SECTIONS = [
+  { type: 'Debit', titleKey: 'sectionDebit', icon: '🏦' },
+  { type: 'Cash', titleKey: 'sectionCash', icon: '💵' },
+  { type: 'CreditCard', titleKey: 'sectionCreditCard', icon: '💳' },
+]
+
 const emptyForm = {
   name: '',
   type: 'Debit',
   currency: '',
-  color: '#6366f1',
+  color: '#0f5c4d',
   creditLimit: '',
   statementDay: '',
   paymentDueDay: '',
@@ -25,6 +31,118 @@ const emptyForm = {
 }
 
 const typeIcon = (type) => (type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : '🏦')
+
+function sortMethods(list) {
+  return list.slice().sort((a, b) => {
+    if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1
+    if (a.archived !== b.archived) return a.archived ? 1 : -1
+    return a.name.localeCompare(b.name)
+  })
+}
+
+function MethodCard({
+  m, t, typeLabel, onFavorite, onPay, onDetails, onEdit, onDelete,
+}) {
+  const isCard = m.type === 'CreditCard'
+  const limit = m.creditLimit ?? 0
+  const usedPct = isCard && limit > 0 ? Math.min(100, (m.balance / limit) * 100) : 0
+
+  return (
+    <div
+      className="card method-card"
+      style={{ ...tintVars(m.color), opacity: m.archived ? 0.6 : 1 }}
+    >
+      <button
+        type="button"
+        className={`fav-star ${m.isFavorite ? 'on' : ''}`}
+        title={m.isFavorite ? t.cards.favorite : t.cards.makeFavorite}
+        aria-pressed={m.isFavorite}
+        onClick={() => onFavorite(m)}
+      >
+        {m.isFavorite ? '⭐' : '☆'}
+      </button>
+      <div className="row">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="badge-icon">
+            {typeIcon(m.type)}
+          </span>
+          <div>
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {m.name}
+              {m.archived && (
+                <span
+                  className="tag"
+                  title={t.cards.archiveHint}
+                  style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-muted)' }}
+                >
+                  {t.cards.archivedBadge}
+                </span>
+              )}
+            </div>
+            <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+              {typeLabel(m.type)} · {m.currency}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {!isCard && (
+          <div className="row" style={{ fontSize: 13 }}>
+            <span style={{ color: 'var(--text-muted)' }}>{t.cards.balance}</span>
+            <strong className={m.balance < 0 ? 'neg' : 'pos'}>{formatMoney(m.balance, m.currency)}</strong>
+          </div>
+        )}
+
+        <div className="row" style={{ fontSize: 13 }}>
+          <span style={{ color: 'var(--text-muted)' }}>{t.cards.spentThisMonth}</span>
+          <strong>{formatMoney(m.spentThisMonth, m.currency)}</strong>
+        </div>
+
+        {!isCard && m.receivedThisMonth > 0 && (
+          <div className="row" style={{ fontSize: 13 }}>
+            <span style={{ color: 'var(--text-muted)' }}>{t.cards.receivedThisMonth}</span>
+            <strong className="pos">{formatMoney(m.receivedThisMonth, m.currency)}</strong>
+          </div>
+        )}
+
+        {isCard && (
+          <>
+            <div className="row" style={{ fontSize: 13 }}>
+              <span style={{ color: 'var(--text-muted)' }}>{t.cards.used}</span>
+              <span>{formatMoney(m.balance, m.currency)}{limit > 0 ? ` / ${formatMoney(limit, m.currency)}` : ''}</span>
+            </div>
+            {limit > 0 && (
+              <>
+                <div className="progress" style={{ marginTop: 4 }}>
+                  <span style={{ width: `${usedPct}%`, background: usedPct >= 100 ? 'var(--danger)' : m.color }} />
+                </div>
+                <div className="row" style={{ fontSize: 13, marginTop: 2 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{t.cards.available}</span>
+                  <strong className={m.availableCredit < 0 ? 'neg' : 'pos'}>
+                    {formatMoney(m.availableCredit, m.currency)}
+                  </strong>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+        {isCard && <button className="btn" onClick={() => onPay(m.id)}>{t.cards.payAction}</button>}
+        <button className="btn secondary" onClick={() => onDetails(m.id)}>{t.cards.details}</button>
+        <button className="btn secondary" onClick={() => onEdit(m)}>{t.common.edit}</button>
+        <button
+          className="btn danger"
+          onClick={() => onDelete(m)}
+        >
+          {t.common.delete}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function Cards() {
   const { t } = useI18n()
@@ -72,7 +190,7 @@ export default function Cards() {
       name: m.name,
       type: m.type,
       currency: m.currency,
-      color: m.color,
+      color: normalizeHex(m.color),
       creditLimit: m.creditLimit ?? '',
       statementDay: m.statementDay ?? '',
       paymentDueDay: m.paymentDueDay ?? '',
@@ -91,7 +209,7 @@ export default function Cards() {
       name: form.name.trim(),
       type: form.type,
       currency: form.currency || activeCurrency,
-      color: form.color,
+      color: normalizeHex(form.color),
       creditLimit: isCard && form.creditLimit !== '' ? parseFloat(form.creditLimit) : null,
       statementDay: isCard && form.statementDay !== '' ? parseInt(form.statementDay, 10) : null,
       paymentDueDay: isCard && form.paymentDueDay !== '' ? parseInt(form.paymentDueDay, 10) : null,
@@ -132,6 +250,13 @@ export default function Cards() {
 
   if (loading) return <div className="loading">{t.common.loading}</div>
 
+  const sections = TYPE_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: sortMethods(methods.filter((m) => m.type === section.type)),
+    }))
+    .filter((section) => section.items.length > 0)
+
   return (
     <div>
       <div className="page-header row">
@@ -147,108 +272,33 @@ export default function Cards() {
       {methods.length === 0 ? (
         <div className="empty">{t.cards.empty}</div>
       ) : (
-        <div className="grid grid-3">
-          {methods.map((m) => {
-            const isCard = m.type === 'CreditCard'
-            const limit = m.creditLimit ?? 0
-            const usedPct = isCard && limit > 0 ? Math.min(100, (m.balance / limit) * 100) : 0
-            return (
-              <div className="card" key={m.id} style={{ opacity: m.archived ? 0.6 : 1, position: 'relative' }}>
-                <button
-                  type="button"
-                  className={`fav-star ${m.isFavorite ? 'on' : ''}`}
-                  title={m.isFavorite ? t.cards.favorite : t.cards.makeFavorite}
-                  aria-pressed={m.isFavorite}
-                  onClick={() => toggleFavorite(m)}
-                >
-                  {m.isFavorite ? '⭐' : '☆'}
-                </button>
-                <div className="row">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span className="badge-icon" style={{ background: `${m.color}22`, color: m.color }}>
-                      {typeIcon(m.type)}
-                    </span>
-                    <div>
-                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {m.name}
-                        {m.archived && (
-                          <span
-                            className="tag"
-                            title={t.cards.archiveHint}
-                            style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--surface-2, #1f2430)', color: 'var(--text-muted)' }}
-                          >
-                            {t.cards.archivedBadge}
-                          </span>
-                        )}
-                      </div>
-                      <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                        {typeLabel(m.type)} · {m.currency}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {!isCard && (
-                    <div className="row" style={{ fontSize: 13 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>{t.cards.balance}</span>
-                      <strong className={m.balance < 0 ? 'neg' : 'pos'}>{formatMoney(m.balance, m.currency)}</strong>
-                    </div>
-                  )}
-
-                  <div className="row" style={{ fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{t.cards.spentThisMonth}</span>
-                    <strong>{formatMoney(m.spentThisMonth, m.currency)}</strong>
-                  </div>
-
-                  {!isCard && m.receivedThisMonth > 0 && (
-                    <div className="row" style={{ fontSize: 13 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>{t.cards.receivedThisMonth}</span>
-                      <strong className="pos">{formatMoney(m.receivedThisMonth, m.currency)}</strong>
-                    </div>
-                  )}
-
-                  {isCard && (
-                    <>
-                      <div className="row" style={{ fontSize: 13 }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t.cards.used}</span>
-                        <span>{formatMoney(m.balance, m.currency)}{limit > 0 ? ` / ${formatMoney(limit, m.currency)}` : ''}</span>
-                      </div>
-                      {limit > 0 && (
-                        <>
-                          <div className="progress" style={{ marginTop: 4 }}>
-                            <span style={{ width: `${usedPct}%`, background: usedPct >= 100 ? 'var(--danger)' : m.color }} />
-                          </div>
-                          <div className="row" style={{ fontSize: 13, marginTop: 2 }}>
-                            <span style={{ color: 'var(--text-muted)' }}>{t.cards.available}</span>
-                            <strong className={m.availableCredit < 0 ? 'neg' : 'pos'}>
-                              {formatMoney(m.availableCredit, m.currency)}
-                            </strong>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
-                  {isCard && <button className="btn" onClick={() => setPayCardId(m.id)}>{t.cards.payAction}</button>}
-                  <button className="btn secondary" onClick={() => navigate(`/cards/${m.id}`)}>{t.cards.details}</button>
-                  <button className="btn secondary" onClick={() => openEdit(m)}>{t.common.edit}</button>
-                  <button
-                    className="btn danger"
-                    onClick={() => setConfirm({
-                      message: t.cards.deleteConfirm.replace('{name}', m.name),
-                      run: () => remove(m),
-                    })}
-                  >
-                    {t.common.delete}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        sections.map((section) => (
+          <section className="method-section" key={section.type}>
+            <h2 className="section-title">
+              <span aria-hidden="true">{section.icon}</span>
+              {t.cards[section.titleKey]}
+              <span className="count">{section.items.length}</span>
+            </h2>
+            <div className="grid grid-3">
+              {section.items.map((m) => (
+                <MethodCard
+                  key={m.id}
+                  m={m}
+                  t={t}
+                  typeLabel={typeLabel}
+                  onFavorite={toggleFavorite}
+                  onPay={setPayCardId}
+                  onDetails={(id) => navigate(`/cards/${id}`)}
+                  onEdit={openEdit}
+                  onDelete={(method) => setConfirm({
+                    message: t.cards.deleteConfirm.replace('{name}', method.name),
+                    run: () => remove(method),
+                  })}
+                />
+              ))}
+            </div>
+          </section>
+        ))
       )}
 
       {payCardId && (
@@ -337,16 +387,54 @@ export default function Cards() {
 
             <div className="field">
               <label>{t.cards.color}</label>
-              <div className="color-grid">
-                {COLOR_PALETTE.map((color) => (
-                  <button
-                    type="button"
-                    key={color}
-                    className={`color-pick ${form.color === color ? 'active' : ''}`}
-                    style={{ background: color }}
-                    onClick={() => setForm({ ...form, color })}
+              <div className="color-group">
+                <span className="color-group-label">{t.cards.colorBank}</span>
+                <div className="color-grid">
+                  {CARD_BANK_COLORS.map((color) => (
+                    <button
+                      type="button"
+                      key={color}
+                      className={`color-pick ${sameColor(form.color, color) ? 'active' : ''}`}
+                      style={{ background: color }}
+                      title={color}
+                      onClick={() => setForm({ ...form, color })}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="color-group">
+                <span className="color-group-label">{t.cards.colorPalette}</span>
+                <div className="color-grid">
+                  {CARD_EXTRA_COLORS.map((color) => (
+                    <button
+                      type="button"
+                      key={color}
+                      className={`color-pick ${sameColor(form.color, color) ? 'active' : ''}`}
+                      style={{ background: color }}
+                      title={color}
+                      onClick={() => setForm({ ...form, color })}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="color-group">
+                <span className="color-group-label">{t.cards.colorCustom}</span>
+                <div className="color-custom">
+                  <input
+                    type="color"
+                    value={normalizeHex(form.color)}
+                    onChange={(e) => setForm({ ...form, color: e.target.value })}
+                    aria-label={t.cards.colorCustom}
                   />
-                ))}
+                  <input
+                    type="text"
+                    value={form.color}
+                    spellCheck={false}
+                    maxLength={7}
+                    onChange={(e) => setForm({ ...form, color: e.target.value })}
+                    onBlur={() => setForm({ ...form, color: normalizeHex(form.color) })}
+                  />
+                </div>
               </div>
             </div>
 

@@ -73,10 +73,9 @@ export default function Layout() {
 
   const links = [
     { to: '/', label: t.nav.summary, icon: '📊', end: true },
-    { to: '/categories', label: t.nav.categories, icon: '🏷️' },
+    { to: '/cards', label: t.nav.cards, icon: '💳' },
     { to: '/expenses', label: t.nav.expenses, icon: '💸' },
     { to: '/credits', label: t.nav.credits, icon: '🏦' },
-    { to: '/cards', label: t.nav.cards, icon: '💳' },
     { to: '/budget-history', label: t.nav.budgetHistory, icon: '📅' },
     { to: '/projections', label: t.nav.projections, icon: '🤖' },
   ]
@@ -109,23 +108,24 @@ export default function Layout() {
       <div className="app-molten-bg" aria-hidden="true">
         <Suspense fallback={null}>
           <MoltenMetal
-            color1="#5227FF"
-            color2="#FF9FFC"
-            color3="#FFFFFF"
+            color1="#D7E4DC"
+            color2="#D4B05A"
+            color3="#FFF8EE"
             colorMode="molten"
-            speed={0.35}
+            speed={0.32}
             scale={4}
             detail={3}
-            glow={1.6}
-            coreSize={0.1}
-            swirl={1}
-            fold={-0.2}
-            blackPoint={0.05}
-            brightness={1.2}
-            opacity={0.3}
+            glow={1.55}
+            coreSize={0.12}
+            swirl={0.95}
+            fold={-0.18}
+            blackPoint={0.04}
+            brightness={1.28}
+            opacity={0.52}
             grain
-            grainIntensity={0.05}
-            mouseInteraction={false}
+            grainIntensity={0.035}
+            mouseInteraction
+            mouseStrength={0.22}
           />
         </Suspense>
       </div>
@@ -235,6 +235,13 @@ export default function Layout() {
                       {user?.email && <span className="user-dd-email">{user.email}</span>}
                     </div>
                   </div>
+                  <button
+                    className="user-dd-item"
+                    role="menuitem"
+                    onClick={() => { setUserOpen(false); navigate('/categories') }}
+                  >
+                    <span className="ic">🏷️</span> {t.nav.categories}
+                  </button>
                   <button
                     className="user-dd-item"
                     role="menuitem"

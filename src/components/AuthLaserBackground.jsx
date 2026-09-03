@@ -42,7 +42,7 @@ export default function AuthLaserBackground() {
     <div className="laser-bg" aria-hidden="true">
       <Suspense fallback={null}>
         <LaserFlow
-          color="#3034eb"
+          color="#0f5c4d"
           wispDensity={0.8}
           flowSpeed={0.45}
           verticalSizing={5}

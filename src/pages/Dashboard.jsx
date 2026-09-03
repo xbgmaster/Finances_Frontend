@@ -9,6 +9,7 @@ import PayCardModal from '../components/PayCardModal'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
+import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
@@ -401,6 +402,14 @@ export default function Dashboard() {
   const ccAvailable = ccLimit - ccUsed
   const ccPct = ccLimit > 0 ? Math.min(100, (ccUsed / ccLimit) * 100) : 0
 
+  const pmColor = (id) => paymentMethods.find((p) => p.id === id)?.color
+
+  const activityTint = (m) => {
+    if (m.kind === 'exchange') return '#b8943e'
+    if (m.kind === 'cardpayment') return pmColor(m.creditCardId) || '#0f5c4d'
+    return pmColor(m.paymentMethodId) || m.categoryColor || (m.kind === 'income' ? '#1b7a5c' : '#0f5c4d')
+  }
+
   const spentByCategory = new Map((monthly?.byCategory ?? []).map((c) => [c.categoryId, c.spent]))
   const budgetFor = (c) => c.budgets?.[selCur] ?? null
   const budgets = categories
@@ -462,7 +471,7 @@ export default function Dashboard() {
           value={selEntry.balance}
           currency={selCur}
           icon="💰"
-          color="#6366f1"
+          color="#0f5c4d"
           tone={selEntry.balance >= 0 ? 'pos' : 'neg'}
           hint={isBase ? t.dashboard.balanceHint : t.dashboard.balanceHintCurrency.replace('{cur}', selCur)}
         />
@@ -474,7 +483,7 @@ export default function Dashboard() {
         <div className="card credit-capacity">
           <div className="row">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="badge-icon" style={{ background: '#6366f122', color: '#6366f1' }}>💳</span>
+              <span className="badge-icon" style={{ background: '#0f5c4d22', color: '#0f5c4d' }}>💳</span>
               <div>
                 <div style={{ fontWeight: 600 }}>{t.cards.capacityTitle}</div>
                 <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
@@ -493,7 +502,7 @@ export default function Dashboard() {
           </div>
           {ccLimit > 0 && (
             <div className="progress" style={{ marginTop: 12 }}>
-              <span style={{ width: `${ccPct}%`, background: ccPct >= 100 ? 'var(--danger)' : '#6366f1' }} />
+              <span style={{ width: `${ccPct}%`, background: ccPct >= 100 ? 'var(--danger)' : '#0f5c4d' }} />
             </div>
           )}
         </div>
@@ -505,6 +514,9 @@ export default function Dashboard() {
           <span className="dot" tabIndex={0}>i</span>
           <span className="bubble">{t.dashboard.budgetsHint}</span>
         </span>
+        <button type="button" className="link-btn" onClick={() => navigate('/categories')}>
+          {t.dashboard.manageCategories}
+        </button>
       </h2>
       {budgets.length === 0 ? (
         <div className="empty">{t.dashboard.noBudgets}</div>
@@ -602,8 +614,8 @@ export default function Dashboard() {
             if (m.kind === 'exchange') {
               const incoming = m.dir === 'in'
               return (
-                <div className="list-item" key={`exchange-${m.id}-${m.dir}`}>
-                  <span className="badge-icon" style={{ background: '#a855f722', color: '#a855f7' }}>🔄</span>
+                <div className="list-item tinted" key={`exchange-${m.id}-${m.dir}`} style={tintVars('#b8943e')}>
+                  <span className="badge-icon">🔄</span>
                   <div className="meta">
                     <div className="title">{t.dashboard.exchange}</div>
                     <div className="sub">
@@ -627,8 +639,8 @@ export default function Dashboard() {
             }
             if (m.kind === 'cardpayment') {
               return (
-                <div className="list-item" key={`cardpay-${m.id}`}>
-                  <span className="badge-icon" style={{ background: '#10b98122', color: '#10b981' }}>💳</span>
+                <div className="list-item tinted" key={`cardpay-${m.id}`} style={tintVars(activityTint(m))}>
+                  <span className="badge-icon">💳</span>
                   <div className="meta">
                     <div className="title">{t.cards.paymentTitle}</div>
                     <div className="sub">
@@ -654,12 +666,10 @@ export default function Dashboard() {
             }
             const income = m.kind === 'income'
             const pmIcon = pmTypeIcon(m.paymentMethodType)
+            const tint = activityTint(m)
             return (
-              <div className="list-item" key={`${m.kind}-${m.id}`}>
-                <span className="badge-icon" style={{
-                  background: income ? '#10b98122' : `${m.categoryColor}22`,
-                  color: income ? '#10b981' : m.categoryColor,
-                }}>
+              <div className="list-item tinted" key={`${m.kind}-${m.id}`} style={tintVars(tint)}>
+                <span className="badge-icon">
                   {pmIcon || (income ? '⬆️' : iconFor(m.categoryIcon))}
                 </span>
                 <div className="meta">
@@ -838,10 +848,17 @@ export default function Dashboard() {
               <select
                 required
                 value={expenseForm.categoryId}
-                onChange={(e) => setExpenseForm({ ...expenseForm, categoryId: e.target.value })}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    goCreateCategory()
+                    return
+                  }
+                  setExpenseForm({ ...expenseForm, categoryId: e.target.value })
+                }}
               >
                 <option value="" disabled>{t.common.select}</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
+                <option value="__new__">{t.common.addNewCategory}</option>
               </select>
               {categories.length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>

@@ -103,9 +103,9 @@ void main() {
 const ctxMap = new WeakMap();
 
 const MoltenMetal = ({
-  color1 = '#5227FF',
-  color2 = '#FF9FFC',
-  color3 = '#FFFFFF',
+  color1 = '#D7E4DC',
+  color2 = '#D4B05A',
+  color3 = '#FFF8EE',
   speed = 0.35,
   scale = 4,
   detail = 3,
@@ -197,15 +197,19 @@ const MoltenMetal = ({
 
     const handleMouseMove = e => {
       const rect = canvas.getBoundingClientRect();
-      targetMouse[0] = (e.clientX - rect.left) / rect.width;
-      targetMouse[1] = 1.0 - (e.clientY - rect.top) / rect.height;
+      const w = rect.width || 1;
+      const h = rect.height || 1;
+      targetMouse[0] = (e.clientX - rect.left) / w;
+      targetMouse[1] = 1.0 - (e.clientY - rect.top) / h;
     };
     const handleMouseLeave = () => {
       targetMouse[0] = 0.5;
       targetMouse[1] = 0.5;
     };
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseleave', handleMouseLeave);
+    // The effect sits behind the UI with pointer-events: none, so track the
+    // pointer on the window instead of the canvas.
+    window.addEventListener('pointermove', handleMouseMove, { passive: true });
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     let raf = 0;
     let isVisible = true;
@@ -254,8 +258,8 @@ const MoltenMetal = ({
       ro.disconnect();
       io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('pointermove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
       ctxMap.delete(container);
       try {
         container.removeChild(canvas);

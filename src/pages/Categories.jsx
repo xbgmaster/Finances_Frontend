@@ -8,7 +8,7 @@ import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
-const emptyForm = { name: '', icon: 'tag', color: '#6366f1', monthlyBudget: '' }
+const emptyForm = { name: '', icon: 'tag', color: '#0f5c4d', monthlyBudget: '' }
 
 export default function Categories() {
   const { t, categoryLabel } = useI18n()

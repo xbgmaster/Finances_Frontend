@@ -12,6 +12,8 @@ import { useCurrency } from '../currency/CurrencyContext'
 const today = () => new Date().toISOString().slice(0, 10)
 const currentDay = () => String(new Date().getDate())
 
+const LOAN_TYPES = ['InterestLoan', 'LibreInversion']
+
 const emptyCredit = {
   name: '',
   type: 'LibreInversion',
@@ -187,7 +189,10 @@ export default function Credits() {
       )}
 
       {credits.length === 0 ? (
-        <div className="empty">{t.credits.noCredits}</div>
+        <div className="empty">
+          {t.credits.noCredits}{' '}
+          <Link to="/cards">{t.credits.cardsInsteadLink}</Link>
+        </div>
       ) : (
         <div className="grid grid-2">
           {credits.map((c) => {
@@ -304,17 +309,22 @@ export default function Credits() {
                   setForm((f) => ({
                     ...f,
                     type,
-                    // Credit cards are modeled as flat installment purchases; loans default to French.
                     interestModel: type === 'CreditCard'
                       ? 'SimpleFlat'
                       : (f.type === 'CreditCard' ? 'CompoundFrench' : f.interestModel),
                   }))
                 }}
               >
-                {Object.keys(t.credits.types).map((key) => (
+                {(form.type === 'CreditCard' ? ['CreditCard', ...LOAN_TYPES] : LOAN_TYPES).map((key) => (
                   <option key={key} value={key}>{t.credits.types[key]}</option>
                 ))}
               </select>
+              {form.type !== 'CreditCard' && (
+                <div className="hint" style={{ marginTop: 6 }}>
+                  {t.credits.cardsInstead}{' '}
+                  <Link to="/cards">{t.credits.cardsInsteadLink}</Link>
+                </div>
+              )}
             </div>
 
             {form.type === 'CreditCard' ? (

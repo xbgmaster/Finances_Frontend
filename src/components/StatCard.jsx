@@ -1,6 +1,6 @@
 import { formatMoney } from '../utils/format'
 
-export default function StatCard({ label, value, icon, color = '#6366f1', tone, hint, isMoney = true, currency }) {
+export default function StatCard({ label, value, icon, color = '#0f5c4d', tone, hint, isMoney = true, currency }) {
   return (
     <div className="card stat-card">
       <div className="top">
