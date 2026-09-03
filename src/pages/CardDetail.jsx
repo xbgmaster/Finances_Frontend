@@ -11,7 +11,7 @@ import { useI18n } from '../i18n/I18nContext'
 const typeIcon = (type) => (type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : '🏦')
 
 export default function CardDetail() {
-  const { t } = useI18n()
+  const { t, categoryLabel } = useI18n()
   const { id } = useParams()
   const navigate = useNavigate()
   const [method, setMethod] = useState(null)
@@ -187,8 +187,8 @@ export default function CardDetail() {
                 {iconFor(e.categoryIcon)}
               </span>
               <div className="meta">
-                <div className="title">{e.description || e.categoryName}</div>
-                <div className="sub">{e.categoryName} · {formatDate(e.date)}</div>
+                <div className="title">{e.description || categoryLabel(e.categoryName)}</div>
+                <div className="sub">{categoryLabel(e.categoryName)} · {formatDate(e.date)}</div>
               </div>
               <span className="amount neg">−{formatMoney(e.amount, e.currency || cur)}</span>
             </div>

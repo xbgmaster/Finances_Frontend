@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import { PaymentMethodsApi } from '../api/client'
 import { formatMoney } from '../utils/format'
@@ -7,7 +7,7 @@ import { useI18n } from '../i18n/I18nContext'
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
 // Modal to pay down a credit card. Money can come from a cash/debit account (reduces its
-// balance) or be external (only reduces the card debt). Both free up cupo.
+// balance) or be cash/money outside saved accounts (only reduces the card debt). Both free up cupo.
 export default function PayCardModal({ methods, preselectedCardId, onClose, onDone }) {
   const { t } = useI18n()
 
@@ -30,6 +30,19 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
   const sources = methods.filter(
     (m) => m.type !== 'CreditCard' && !m.archived && m.currency === cardCurrency,
   )
+
+  const fillOwed = () => {
+    if (card?.balance == null) return
+    setForm((f) => ({ ...f, amount: String(card.balance) }))
+  }
+
+  useEffect(() => {
+    fillOwed()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardId, card?.balance])
+
+  const sourceTypeLabel = (type) =>
+    type === 'Cash' ? t.cards.typeCash : type === 'Debit' ? t.cards.typeDebit : type
 
   const submit = async (e) => {
     e.preventDefault()
@@ -70,12 +83,15 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
         </div>
 
         {card && (
-          <div className="insight" style={{ marginBottom: 12, fontSize: 13 }}>
-            {t.cards.owed}: <strong>{formatMoney(card.balance, cardCurrency)}</strong>
+          <button type="button" className="owed-fill" onClick={fillOwed}>
+            <span>
+              {t.cards.owed}: <strong>{formatMoney(card.balance, cardCurrency)}</strong>
+            </span>
             {card.availableCredit != null && (
-              <> · {t.cards.available}: <strong>{formatMoney(card.availableCredit, cardCurrency)}</strong></>
+              <span> · {t.cards.available}: <strong>{formatMoney(card.availableCredit, cardCurrency)}</strong></span>
             )}
-          </div>
+            <span className="owed-fill-hint">{t.cards.useOwedAmount}</span>
+          </button>
         )}
 
         <div className="field">
@@ -94,7 +110,7 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
             <option value="">{t.cards.payExternal}</option>
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} · {formatMoney(s.balance, s.currency)}
+                {sourceTypeLabel(s.type)} · {s.name} · {formatMoney(s.balance, s.currency)}
               </option>
             ))}
           </select>

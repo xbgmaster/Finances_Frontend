@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { translations } from './translations'
 import { setLocale } from '../utils/format'
+import { categoryLabel as resolveCategoryLabel } from './categoryNames'
 
 const I18nContext = createContext(null)
 
@@ -25,13 +26,17 @@ export function I18nProvider({ children }) {
   setLocale(localeFor(language))
 
   const value = useMemo(
-    () => ({
-      language,
-      setLanguage,
-      toggle: () => setLanguage((l) => (l === 'en' ? 'es' : 'en')),
-      t: translations[language],
-      locale: localeFor(language),
-    }),
+    () => {
+      const t = translations[language]
+      return {
+        language,
+        setLanguage,
+        toggle: () => setLanguage((l) => (l === 'en' ? 'es' : 'en')),
+        t,
+        locale: localeFor(language),
+        categoryLabel: (name) => resolveCategoryLabel(name, t),
+      }
+    },
     [language],
   )
 

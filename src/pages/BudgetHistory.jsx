@@ -7,7 +7,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
 export default function BudgetHistory() {
-  const { t } = useI18n()
+  const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [months, setMonths] = useState(6)
@@ -114,15 +114,19 @@ export default function BudgetHistory() {
                           {iconFor(c.categoryIcon)}
                         </span>
                         <div>
-                          <div className="title">{c.categoryName}</div>
-                          <div className="sub">{t.budgetHistory.of} {formatMoney(c.monthlyBudget, activeCurrency)}</div>
+                          <div className="title">{categoryLabel(c.categoryName)}</div>
+                          <div className="sub">
+                            {c.monthlyBudget > 0
+                              ? `${t.budgetHistory.of} ${formatMoney(c.monthlyBudget, activeCurrency)}`
+                              : t.categories.noBudget}
+                          </div>
                         </div>
                       </div>
                     </td>
                     {c.cells.map((cell) => (
                       <td
                         key={`${cell.year}-${cell.month}`}
-                        className={`num bh-cell ${cell.spent === 0 ? 'bh-zero' : cell.over ? 'bh-over' : 'bh-under'}`}
+                        className={`num bh-cell ${cell.spent === 0 ? 'bh-zero' : cell.over ? 'bh-over' : c.monthlyBudget > 0 ? 'bh-under' : ''}`}
                         title={`${cell.percent}%`}
                       >
                         {cell.spent === 0 ? '—' : formatMoney(cell.spent, activeCurrency)}

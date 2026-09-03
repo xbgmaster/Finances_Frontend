@@ -11,7 +11,7 @@ import { useCurrency } from '../currency/CurrencyContext'
 const emptyForm = { name: '', icon: 'tag', color: '#6366f1', monthlyBudget: '' }
 
 export default function Categories() {
-  const { t } = useI18n()
+  const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const location = useLocation()
   const navigate = useNavigate()
@@ -52,7 +52,7 @@ export default function Categories() {
 
   const openEdit = (c) => {
     setEditing(c)
-    setForm({ name: c.name, icon: c.icon, color: c.color, monthlyBudget: budgetOf(c) ?? '' })
+    setForm({ name: categoryLabel(c.name), icon: c.icon, color: c.color, monthlyBudget: budgetOf(c) ?? '' })
     setError('')
     setShowModal(true)
   }
@@ -107,7 +107,7 @@ export default function Categories() {
                 </span>
                 <div>
                   <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {c.isSystem ? t.categories.debtPaymentsName : c.name}
+                    {c.isSystem ? t.categories.debtPaymentsName : categoryLabel(c.name)}
                     {c.isSystem && (
                       <span
                         className="tag"
@@ -134,7 +134,7 @@ export default function Categories() {
                 <button
                   className="btn danger"
                   onClick={() => setConfirm({
-                    message: t.categories.deleteConfirm?.replace('{name}', c.name) || t.common.confirmDelete,
+                    message: t.categories.deleteConfirm?.replace('{name}', categoryLabel(c.name)) || t.common.confirmDelete,
                     run: () => remove(c),
                   })}
                 >

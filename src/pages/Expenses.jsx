@@ -14,7 +14,7 @@ import { useCurrency } from '../currency/CurrencyContext'
 const now = new Date()
 
 export default function Expenses() {
-  const { t } = useI18n()
+  const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
@@ -259,7 +259,7 @@ export default function Expenses() {
                     <span className="badge-icon" style={{ background: `${c.categoryColor}22`, color: c.categoryColor }}>
                       {iconFor(c.categoryIcon)}
                     </span>
-                    <div style={{ fontWeight: 600 }}>{c.categoryName}</div>
+                    <div style={{ fontWeight: 600 }}>{categoryLabel(c.categoryName)}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700 }}>{formatMoney(c.spent, activeCurrency)}</div>
@@ -320,9 +320,9 @@ export default function Expenses() {
                   {iconFor(e.categoryIcon)}
                 </span>
                 <div className="meta">
-                  <div className="title">{e.description || e.categoryName}</div>
+                  <div className="title">{e.description || categoryLabel(e.categoryName)}</div>
                   <div className="sub">
-                    {e.categoryName} · {formatDate(e.date)}
+                    {categoryLabel(e.categoryName)} · {formatDate(e.date)}
                     {e.paymentMethodName ? ` · 💳 ${e.paymentMethodName}` : ''}
                   </div>
                 </div>
@@ -391,7 +391,7 @@ export default function Expenses() {
                 onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
               </select>
               {categories.length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>

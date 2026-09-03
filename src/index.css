@@ -264,6 +264,35 @@ button {
   box-shadow: var(--shadow);
 }
 
+.credit-capacity {
+  margin-top: 28px;
+}
+
+.owed-fill {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: var(--bg-elevated, transparent);
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.owed-fill:hover {
+  border-color: var(--accent, #6366f1);
+}
+
+.owed-fill-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .stat-card .label {
   color: var(--text-muted);
   font-size: 13px;

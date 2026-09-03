@@ -16,7 +16,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10)
 const now = new Date()
 
 export default function Dashboard() {
-  const { t } = useI18n()
+  const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
   const [balance, setBalance] = useState(null)
@@ -366,10 +366,11 @@ export default function Dashboard() {
       const label = m.kind === 'income' ? t.common.income
         : m.kind === 'exchange' ? t.dashboard.exchange
         : m.kind === 'cardpayment' ? t.cards.paymentTitle
-        : (m.categoryName || t.common.expense)
+        : (categoryLabel(m.categoryName) || t.common.expense)
       const haystack = [
         m.description,
         label,
+        categoryLabel(m.categoryName),
         m.categoryName,
         m.paymentMethodName,
         m.otherCurrency,
@@ -516,7 +517,7 @@ export default function Dashboard() {
                   <span className="badge-icon" style={{ background: `${c.color}22`, color: c.color }}>
                     {iconFor(c.icon)}
                   </span>
-                  <div style={{ fontWeight: 600 }}>{c.name}</div>
+                  <div style={{ fontWeight: 600 }}>{categoryLabel(c.name)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="b-amount">{formatMoney(c.spent, selCur)}</div>
@@ -663,10 +664,10 @@ export default function Dashboard() {
                 </span>
                 <div className="meta">
                   <div className="title">
-                    {income ? (m.description || t.common.income) : (m.description || m.categoryName)}
+                    {income ? (m.description || t.common.income) : (m.description || categoryLabel(m.categoryName))}
                   </div>
                   <div className="sub">
-                    {!income ? `${m.categoryName} · ` : ''}{formatDate(m.date)}
+                    {!income ? `${categoryLabel(m.categoryName)} · ` : ''}{formatDate(m.date)}
                     {m.paymentMethodName ? ` · 💳 ${m.paymentMethodName}` : ''}
                   </div>
                 </div>
@@ -840,7 +841,7 @@ export default function Dashboard() {
                 onChange={(e) => setExpenseForm({ ...expenseForm, categoryId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
               </select>
               {categories.length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
