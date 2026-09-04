@@ -24,8 +24,13 @@
   padding: 0;
 }
 
-html, body, #root {
+html, body {
   background: var(--bg);
+  min-height: 100%;
+}
+
+#root {
+  background: transparent;
   min-height: 100%;
 }
 
@@ -57,17 +62,16 @@ button {
   grid-template-columns: 250px 1fr;
   min-height: 100vh;
   min-height: 100dvh;
+  position: relative;
+  z-index: 1;
 }
 
-/* Full-screen animated MoltenMetal background behind the whole app. A negative
-   z-index keeps it below all content (which paints above it automatically), and
-   it never captures pointer events; low opacity keeps the data readable. The
-   opaque sidebar hides it there, while the transparent content area lets the
-   plasma show through the gaps between cards. */
+/* Full-screen animated MoltenMetal behind the app shell. Keep it at z-index 0
+   (not -1): a negative z-index paints behind the opaque body/#root fill. */
 .app-molten-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   width: 100%;
   height: 100%;
