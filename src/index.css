@@ -106,13 +106,7 @@ button {
 }
 
 .sidebar-account {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .nav-link-logout {
@@ -337,6 +331,16 @@ button {
   /* Keep the top toolbar tidy on small screens. Profile lives in the drawer. */
   .topbar { flex-wrap: wrap; gap: 10px; }
   .user-wrap { display: none; }
+
+  .sidebar-account {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
 
   .page-header.row { align-items: stretch; }
   .action-bar {
