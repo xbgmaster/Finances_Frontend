@@ -585,6 +585,60 @@ input:focus, select:focus {
   border-color: var(--primary);
 }
 
+.country-select {
+  position: relative;
+}
+.country-select-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.country-select-empty {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.country-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.country-select-option.is-active,
+.country-select-option:hover {
+  background: var(--primary-soft);
+}
+.country-select-option.is-selected {
+  font-weight: 700;
+}
+.country-select-ccy {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
 .row {
   display: flex;
   gap: 12px;
@@ -1389,6 +1443,7 @@ input:focus, select:focus {
   width: 100%;
   max-width: 420px;
   box-shadow: var(--shadow);
+  overflow: visible;
 }
 
 .auth-brand {

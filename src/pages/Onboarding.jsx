@@ -1,33 +1,55 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ProfileApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
+import CountrySelect from '../components/CountrySelect'
 import { CURRENCIES } from '../utils/currencies'
+import { findCountry } from '../utils/countries'
 
 export default function Onboarding() {
   const { t } = useI18n()
   const { user, updateUser, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const passed = location.state || {}
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
-    country: '',
-    currency: 'CAD',
+    country: passed.country || '',
+    currency: passed.currency || user?.currency || 'CAD',
     monthlyIncomeTarget: '',
   })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    ProfileApi.get()
+      .then((p) => {
+        if (!active) return
+        setForm((f) => ({
+          ...f,
+          fullName: f.fullName || p.fullName || '',
+          country: f.country || p.country || '',
+          currency: f.currency || p.currency || 'CAD',
+          monthlyIncomeTarget: f.monthlyIncomeTarget || p.monthlyIncomeTarget || '',
+        }))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   const submit = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
+      const match = findCountry(form.country)
       const profile = await ProfileApi.update({
         fullName: form.fullName,
-        country: form.country,
-        currency: form.currency,
+        country: match ? match.en : form.country,
+        currency: match?.currency || form.currency,
         monthlyIncomeTarget: form.monthlyIncomeTarget === '' ? null : parseFloat(form.monthlyIncomeTarget),
       })
       updateUser({ fullName: profile.fullName, onboardingCompleted: true, currency: profile.currency })
@@ -56,8 +78,15 @@ export default function Onboarding() {
           </div>
           <div className="field">
             <label>{t.onboarding.country}</label>
-            <input type="text" value={form.country}
-              onChange={(e) => setForm({ ...form, country: e.target.value })} />
+            <CountrySelect
+              value={form.country}
+              onChange={(c) => setForm({
+                ...form,
+                country: c ? c.en : '',
+                currency: c ? c.currency : form.currency,
+              })}
+            />
+            <div className="hint" style={{ marginTop: 6 }}>{t.common.countryHint}</div>
           </div>
           <div className="field">
             <label>{t.onboarding.currency}</label>

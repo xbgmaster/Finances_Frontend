@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 import { CURRENCIES } from '../utils/currencies'
+import { findCountry } from '../utils/countries'
+import CountrySelect from '../components/CountrySelect'
 
 export default function Settings() {
   const { t } = useI18n()
@@ -43,9 +45,10 @@ export default function Settings() {
     setError('')
     try {
       const prevCurrency = user?.currency
+      const match = findCountry(form.country)
       const profile = await ProfileApi.update({
         fullName: form.fullName.trim(),
-        country: form.country.trim(),
+        country: match ? match.en : form.country.trim(),
         currency: form.currency,
         monthlyIncomeTarget: form.monthlyIncomeTarget === '' ? null : parseFloat(form.monthlyIncomeTarget),
       })
@@ -96,11 +99,15 @@ export default function Settings() {
 
           <div className="field">
             <label>{t.settings.country}</label>
-            <input
-              type="text"
+            <CountrySelect
               value={form.country}
-              onChange={(e) => setForm({ ...form, country: e.target.value })}
+              onChange={(c) => setForm({
+                ...form,
+                country: c ? c.en : '',
+                currency: c ? c.currency : form.currency,
+              })}
             />
+            <div className="hint" style={{ marginTop: 6 }}>{t.common.countryHint}</div>
           </div>
 
           <div className="field">
