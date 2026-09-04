@@ -94,7 +94,8 @@ export default function BudgetHistory() {
             </span>
           </div>
 
-          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+          <div className="card table-card">
+            <div className="table-scroll">
             <table className="data-table bh-table">
               <thead>
                 <tr>
@@ -141,6 +142,7 @@ export default function BudgetHistory() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="field-hint" style={{ marginTop: 14 }}>{t.budgetHistory.budgetNote}</div>

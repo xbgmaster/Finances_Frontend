@@ -53,24 +53,22 @@ export default function Projections() {
         <p>{t.projections.subtitle}</p>
       </div>
 
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="row">
-          <div>
-            <div style={{ fontWeight: 600 }}>{t.projections.savingsGoal}</div>
-            <div className="hint">{t.projections.savingsGoalHint}</div>
-          </div>
-          <div className="toolbar">
-            <input
-              type="range" min="0" max="80" step="5"
-              value={savingsRate}
-              onChange={(e) => setSavingsRate(Number(e.target.value))}
-              style={{ width: 200 }}
-            />
-            <strong style={{ minWidth: 48 }}>{savingsRate}%</strong>
-            <button className="btn" onClick={applyRate} disabled={loading}>
-              {loading ? t.projections.calculating : t.projections.recalculate}
-            </button>
-          </div>
+      <div className="card savings-card">
+        <div className="savings-copy">
+          <div className="savings-title">{t.projections.savingsGoal}</div>
+          <div className="hint">{t.projections.savingsGoalHint}</div>
+        </div>
+        <div className="savings-controls">
+          <input
+            className="savings-range"
+            type="range" min="0" max="80" step="5"
+            value={savingsRate}
+            onChange={(e) => setSavingsRate(Number(e.target.value))}
+          />
+          <strong className="savings-pct">{savingsRate}%</strong>
+          <button className="btn" onClick={applyRate} disabled={loading}>
+            {loading ? t.projections.calculating : t.projections.recalculate}
+          </button>
         </div>
       </div>
 

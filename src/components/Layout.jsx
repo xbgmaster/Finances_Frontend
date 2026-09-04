@@ -104,7 +104,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="app">
+    <>
       <div className="app-molten-bg" aria-hidden="true">
         <Suspense fallback={null}>
           <MoltenMetal
@@ -129,6 +129,7 @@ export default function Layout() {
           />
         </Suspense>
       </div>
+      <div className="app">
       <header className="mobile-header">
         <button
           className="hamburger"
@@ -158,18 +159,46 @@ export default function Layout() {
             ✕
           </button>
         </div>
-        {links.map((l) => (
+        <nav className="sidebar-nav">
+          {links.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.end}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              <span className="ic">{l.icon}</span>
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-account">
           <NavLink
-            key={l.to}
-            to={l.to}
-            end={l.end}
+            to="/categories"
             onClick={() => setMenuOpen(false)}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            <span className="ic">{l.icon}</span>
-            {l.label}
+            <span className="ic">🏷️</span>
+            {t.nav.categories}
           </NavLink>
-        ))}
+          <NavLink
+            to="/settings"
+            onClick={() => setMenuOpen(false)}
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          >
+            <span className="ic">⚙️</span>
+            {t.settings.menuItem}
+          </NavLink>
+          <button
+            type="button"
+            className="nav-link nav-link-logout"
+            onClick={onLogout}
+          >
+            <span className="ic">🚪</span>
+            {t.auth.logout}
+          </button>
+        </div>
       </aside>
       <main className="content">
         <div className="topbar">
@@ -259,6 +288,7 @@ export default function Layout() {
         </div>
         <Outlet />
       </main>
-    </div>
+      </div>
+    </>
   )
 }

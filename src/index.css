@@ -24,6 +24,11 @@
   padding: 0;
 }
 
+html, body, #root {
+  background: var(--bg);
+  min-height: 100%;
+}
+
 body {
   background:
     radial-gradient(900px 480px at 88% -8%, rgba(212, 176, 90, 0.10), transparent 55%),
@@ -31,6 +36,9 @@ body {
     var(--bg);
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 a {
@@ -48,6 +56,7 @@ button {
   display: grid;
   grid-template-columns: 250px 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Full-screen animated MoltenMetal background behind the whole app. A negative
@@ -60,6 +69,15 @@ button {
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.app-molten-bg .molten-metal-container {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
 }
 
 .sidebar {
@@ -74,6 +92,34 @@ button {
   gap: 8px;
 }
 
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sidebar-account {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.nav-link-logout {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -81,6 +127,7 @@ button {
   font-size: 20px;
   font-weight: 700;
   padding: 8px 12px 24px;
+  flex-shrink: 0;
 }
 
 .brand .logo {
@@ -118,6 +165,14 @@ button {
 .nav-link.active {
   background: var(--primary-soft);
   color: var(--primary);
+}
+
+.nav-link.nav-link-logout {
+  color: var(--danger);
+}
+.nav-link.nav-link-logout:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--danger);
 }
 
 .nav-link .ic {
@@ -201,19 +256,29 @@ button {
 
 @media (max-width: 1000px) {
   .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
-  .app { grid-template-columns: 1fr; }
 
-  /* Sticky top bar with the hamburger + brand. */
+  /* Flex (not 1-column grid): a position:fixed sidebar still occupies a grid row
+     and leaves a blank band until the WebView finishes measuring the viewport. */
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  /* Sticky top bar with the hamburger + brand. Cap the notch inset so Android
+     cannot report a huge safe-area and shove the UI down the screen. */
   .mobile-header {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
+    padding-top: calc(12px + min(env(safe-area-inset-top, 0px), 48px));
     background: var(--bg-elevated);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 40;
+    flex-shrink: 0;
   }
 
   /* The sidebar becomes an off-canvas drawer that slides in from the left. */
@@ -222,14 +287,15 @@ button {
     top: 0;
     left: 0;
     bottom: 0;
-    height: 100%;
+    height: 100dvh;
     width: 280px;
     max-width: 84vw;
     padding: 20px 14px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-100%);
     transition: transform 0.28s ease;
     z-index: 60;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .sidebar.open {
     transform: translateX(0);
@@ -249,11 +315,37 @@ button {
     animation: overlay-fade 0.2s ease;
   }
 
-  .content { padding: 18px 16px; }
+  .content {
+    padding: 18px 16px;
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+  }
 
-  /* Keep the top toolbar tidy on small screens. */
+  .toolbar {
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .card { min-width: 0; }
+
+  /* Keep the top toolbar tidy on small screens. Profile lives in the drawer. */
   .topbar { flex-wrap: wrap; gap: 10px; }
-  .user-name { display: none; }
+  .user-wrap { display: none; }
+
+  .page-header.row { align-items: stretch; }
+  .action-bar {
+    width: 100%;
+    min-width: 0;
+  }
+  .action-bar .btn { font-size: 13px; }
+
+  .list-item-end {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
 }
 
 @keyframes overlay-fade {
@@ -543,6 +635,28 @@ input:focus, select:focus {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.list-item-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.list-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 9.5rem;
+  flex-shrink: 0;
+}
+.list-item-actions .btn {
+  text-align: center;
+  min-width: 4.75rem;
 }
 
 .list-item.tinted {
@@ -559,10 +673,17 @@ input:focus, select:focus {
   color: var(--tint);
 }
 
-.list-item .meta { flex: 1; }
+.list-item .meta { flex: 1; min-width: 0; }
 .list-item .meta .title { font-weight: 600; }
 .list-item .meta .sub { color: var(--text-muted); font-size: 13px; }
-.list-item .amount { font-weight: 700; font-size: 16px; }
+.list-item .amount {
+  font-weight: 700;
+  font-size: 16px;
+  min-width: 7.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .amount.pos { color: var(--success); }
 .amount.neg { color: var(--danger); }
 
@@ -572,7 +693,7 @@ input:focus, select:focus {
   inset: 0;
   background: rgba(26, 43, 51, 0.38);
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   z-index: 50;
   padding: 20px;
@@ -587,6 +708,7 @@ input:focus, select:focus {
   width: 100%;
   max-width: 460px;
   box-shadow: var(--shadow);
+  margin: auto;
   /* Never grow past the viewport: scroll the content inside instead so long
      forms (e.g. New credit) stay fully reachable, including the save button. */
   max-height: calc(100vh - 40px);
@@ -609,11 +731,14 @@ input:focus, select:focus {
 }
 
 @media (max-width: 640px) {
-  .modal-backdrop { padding: 12px; align-items: flex-start; }
+  .modal-backdrop {
+    padding: 16px 12px;
+    align-items: safe center;
+  }
   .modal {
     padding: 20px;
-    max-height: calc(100vh - 24px);
-    max-height: calc(100dvh - 24px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
   }
   .modal h3 {
     margin: -20px -20px 16px;
@@ -631,6 +756,7 @@ input:focus, select:focus {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .progress {
@@ -980,7 +1106,85 @@ input:focus, select:focus {
 .currency-totals { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
 .currency-totals .pill { font-size: 14px; }
 
-.toolbar { display: flex; gap: 10px; align-items: center; }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.action-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+  flex: 1;
+  min-width: min(100%, 420px);
+}
+
+.action-bar .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+  min-height: 52px;
+  height: 100%;
+  width: 100%;
+  padding: 10px 8px;
+}
+
+.savings-card { margin-bottom: 24px; min-width: 0; }
+.savings-title { font-weight: 600; }
+.savings-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  min-width: 0;
+}
+.savings-range {
+  flex: 1 1 160px;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+}
+.savings-pct { min-width: 3rem; }
+.savings-controls .btn { flex: 0 0 auto; }
+
+.admin-users-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 28px;
+  margin-bottom: 16px;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.filter-bar input,
+.filter-bar select {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.filter-bar .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
 
 /* ===== Topbar & language switcher ===== */
 .topbar {
@@ -1237,6 +1441,7 @@ input:focus, select:focus {
 /* ===== Data table ===== */
 .data-table {
   width: 100%;
+  min-width: 860px;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -1245,6 +1450,7 @@ input:focus, select:focus {
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
 
 .data-table th {

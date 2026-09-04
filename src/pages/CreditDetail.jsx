@@ -243,7 +243,8 @@ export default function CreditDetail() {
       )}
 
       <h2 className="section-title">{t.credits.schedule}</h2>
-      <div className="card" style={{ overflowX: 'auto' }}>
+      <div className="card table-card">
+        <div className="table-scroll">
         <table className="data-table">
           <thead>
             <tr>
@@ -273,6 +274,7 @@ export default function CreditDetail() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modalOpen && (

@@ -303,15 +303,19 @@ export default function Expenses() {
                       {' · '}{formatDate(e.date)}
                     </div>
                   </div>
-                  <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
-                    {incoming ? '+' : '−'}{formatMoney(e.amount, activeCurrency)}
-                  </span>
-                  <button
-                    className="btn danger"
-                    onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removeExchange(e.id) })}
-                  >
-                    {t.common.delete}
-                  </button>
+                  <div className="list-item-end">
+                    <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
+                      {incoming ? '+' : '−'}{formatMoney(e.amount, activeCurrency)}
+                    </span>
+                    <div className="list-item-actions">
+                      <button
+                        className="btn danger"
+                        onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removeExchange(e.id) })}
+                      >
+                        {t.common.delete}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )
             }
@@ -336,26 +340,30 @@ export default function Expenses() {
                     <img className="receipt-thumb" src={assetUrl(e.receiptUrl)} alt="receipt" />
                   </a>
                 )}
-                <span className="amount neg">−{formatMoney(e.amount, e.currency || activeCurrency)}</span>
-                {e.creditId ? (
-                  <button
-                    className="btn secondary"
-                    title={t.expenses.creditLinkedHint}
-                    onClick={() => navigate(`/credits/${e.creditId}`)}
-                  >
-                    {t.expenses.manageInCredits}
-                  </button>
-                ) : (
-                  <>
-                    <button className="btn secondary" onClick={() => openEdit(e)}>{t.common.edit}</button>
-                    <button
-                      className="btn danger"
-                      onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => remove(e.id) })}
-                    >
-                      {t.common.delete}
-                    </button>
-                  </>
-                )}
+                <div className="list-item-end">
+                  <span className="amount neg">−{formatMoney(e.amount, e.currency || activeCurrency)}</span>
+                  <div className="list-item-actions">
+                    {e.creditId ? (
+                      <button
+                        className="btn secondary"
+                        title={t.expenses.creditLinkedHint}
+                        onClick={() => navigate(`/credits/${e.creditId}`)}
+                      >
+                        {t.expenses.manageInCredits}
+                      </button>
+                    ) : (
+                      <>
+                        <button className="btn secondary" onClick={() => openEdit(e)}>{t.common.edit}</button>
+                        <button
+                          className="btn danger"
+                          onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => remove(e.id) })}
+                        >
+                          {t.common.delete}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )
           })}

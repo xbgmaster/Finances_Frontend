@@ -27,8 +27,12 @@ api.interceptors.response.use(
     if (error?.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
-      const path = window.location.pathname
-      if (path !== '/login' && path !== '/register') window.location.href = '/login'
+      const path = `${window.location.pathname}${window.location.hash}`
+      const onAuth = /\/login|\/register|\/password|\/restore-password/.test(path)
+      if (!onAuth) {
+        if (import.meta.env.VITE_NATIVE === 'true') window.location.hash = '#/login'
+        else window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   },

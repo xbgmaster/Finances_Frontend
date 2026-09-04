@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:native": "vite build --mode native",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3",
     "axios": "^1.16.1",
     "ogl": "^1.0.11",
     "react": "^19.2.0",

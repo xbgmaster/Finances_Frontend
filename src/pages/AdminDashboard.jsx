@@ -127,15 +127,14 @@ export default function AdminDashboard() {
         </>
       )}
 
-      <div className="row" style={{ marginTop: 28, marginBottom: 16 }}>
+      <div className="admin-users-head">
         <h2 className="section-title" style={{ margin: 0 }}>{t.admin.usersTitle}</h2>
-        <div className="toolbar">
+        <div className="filter-bar">
           <input
             type="text"
             placeholder={t.admin.search}
             value={filters.search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ minWidth: 220 }}
           />
           <select value={filters.role} onChange={(e) => setRole(e.target.value)}>
             <option value="">{t.admin.allRoles}</option>
@@ -154,7 +153,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card table-card">
+        <div className="table-scroll">
         <table className="data-table">
           <thead>
             <tr>
@@ -205,6 +205,7 @@ export default function AdminDashboard() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {data && (

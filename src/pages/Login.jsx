@@ -24,7 +24,9 @@ export default function Login() {
       const dest = !user.onboardingCompleted ? '/onboarding' : location.state?.from?.pathname || '/'
       navigate(dest, { replace: true })
     } catch (err) {
-      setError(err?.response?.status === 400 ? t.auth.invalidCredentials : t.auth.genericError)
+      if (!err?.response) setError(t.auth.networkError)
+      else if (err.response.status === 400) setError(t.auth.invalidCredentials)
+      else setError(t.auth.genericError)
     } finally {
       setLoading(false)
     }

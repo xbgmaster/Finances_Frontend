@@ -436,7 +436,7 @@ export default function Dashboard() {
           <h1>{t.dashboard.title}</h1>
           <p>{t.dashboard.subtitle}</p>
         </div>
-        <div className="toolbar">
+        <div className="toolbar action-bar">
           {paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived) && (
             <button className="btn secondary" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>
           )}
@@ -625,15 +625,19 @@ export default function Dashboard() {
                       {' · '}{formatDate(m.date)}
                     </div>
                   </div>
-                  <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
-                    {incoming ? '+' : '−'}{formatMoney(m.amount, m.currency)}
-                  </span>
-                  <button
-                    className="btn danger"
-                    onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => deleteExchange(m.id) })}
-                  >
-                    {t.common.delete}
-                  </button>
+                  <div className="list-item-end">
+                    <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
+                      {incoming ? '+' : '−'}{formatMoney(m.amount, m.currency)}
+                    </span>
+                    <div className="list-item-actions">
+                      <button
+                        className="btn danger"
+                        onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => deleteExchange(m.id) })}
+                      >
+                        {t.common.delete}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )
             }
@@ -649,18 +653,22 @@ export default function Dashboard() {
                       {' · '}{formatDate(m.date)}
                     </div>
                   </div>
-                  <span className={`amount ${m.external ? '' : 'neg'}`}>
-                    {m.external ? '' : '−'}{formatMoney(m.amount, m.currency)}
-                  </span>
-                  <button
-                    className="btn danger"
-                    onClick={() => setConfirm({
-                      message: t.common.confirmDelete,
-                      run: () => deleteCardPayment(m.creditCardId, m.id),
-                    })}
-                  >
-                    {t.common.delete}
-                  </button>
+                  <div className="list-item-end">
+                    <span className={`amount ${m.external ? '' : 'neg'}`}>
+                      {m.external ? '' : '−'}{formatMoney(m.amount, m.currency)}
+                    </span>
+                    <div className="list-item-actions">
+                      <button
+                        className="btn danger"
+                        onClick={() => setConfirm({
+                          message: t.common.confirmDelete,
+                          run: () => deleteCardPayment(m.creditCardId, m.id),
+                        })}
+                      >
+                        {t.common.delete}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )
             }
@@ -686,38 +694,42 @@ export default function Dashboard() {
                     <img className="receipt-thumb" src={assetUrl(m.receiptUrl)} alt="receipt" />
                   </a>
                 )}
-                <span className={`amount ${income ? 'pos' : 'neg'}`}>
-                  {income ? '+' : '−'}{formatMoney(m.amount, m.currency)}
-                </span>
-                {!income && m.creditId ? (
-                  <button
-                    className="btn secondary"
-                    title={t.expenses.creditLinkedHint}
-                    onClick={() => navigate(`/credits/${m.creditId}`)}
-                  >
-                    {t.expenses.manageInCredits}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      className="btn secondary"
-                      onClick={() => (income ? openEditIncome(m) : openEditExpense(m))}
-                    >
-                      {t.common.edit}
-                    </button>
-                    <button
-                      className="btn danger"
-                      onClick={() =>
-                        setConfirm({
-                          message: t.common.confirmDelete,
-                          run: () => (income ? deleteIncome(m.id) : deleteExpense(m.id)),
-                        })
-                      }
-                    >
-                      {t.common.delete}
-                    </button>
-                  </>
-                )}
+                <div className="list-item-end">
+                  <span className={`amount ${income ? 'pos' : 'neg'}`}>
+                    {income ? '+' : '−'}{formatMoney(m.amount, m.currency)}
+                  </span>
+                  <div className="list-item-actions">
+                    {!income && m.creditId ? (
+                      <button
+                        className="btn secondary"
+                        title={t.expenses.creditLinkedHint}
+                        onClick={() => navigate(`/credits/${m.creditId}`)}
+                      >
+                        {t.expenses.manageInCredits}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="btn secondary"
+                          onClick={() => (income ? openEditIncome(m) : openEditExpense(m))}
+                        >
+                          {t.common.edit}
+                        </button>
+                        <button
+                          className="btn danger"
+                          onClick={() =>
+                            setConfirm({
+                              message: t.common.confirmDelete,
+                              run: () => (income ? deleteIncome(m.id) : deleteExpense(m.id)),
+                            })
+                          }
+                        >
+                          {t.common.delete}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )
           })}
