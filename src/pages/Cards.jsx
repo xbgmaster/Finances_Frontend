@@ -250,10 +250,14 @@ export default function Cards() {
 
   if (loading) return <div className="loading">{t.common.loading}</div>
 
+  // Only show methods in the active currency lens: paying/adding in another currency is
+  // confusing and error-prone. Switch the currency at the top to see the others.
+  const visibleMethods = methods.filter((m) => m.currency === activeCurrency)
+
   const sections = TYPE_SECTIONS
     .map((section) => ({
       ...section,
-      items: sortMethods(methods.filter((m) => m.type === section.type)),
+      items: sortMethods(visibleMethods.filter((m) => m.type === section.type)),
     }))
     .filter((section) => section.items.length > 0)
 
@@ -271,6 +275,8 @@ export default function Cards() {
 
       {methods.length === 0 ? (
         <div className="empty">{t.cards.empty}</div>
+      ) : visibleMethods.length === 0 ? (
+        <div className="empty">{t.cards.emptyCurrency.replace('{cur}', activeCurrency)}</div>
       ) : (
         sections.map((section) => (
           <section className="method-section" key={section.type}>

@@ -18,8 +18,11 @@ const emptyCredit = {
   name: '',
   type: 'LibreInversion',
   interestModel: 'CompoundFrench',
+  rateConvention: 'EffectiveAnnual',
   prepaymentEffect: 'ReduceTerm',
   prepaymentPenaltyRate: '',
+  monthlyInsuranceRate: '',
+  monthlyFixedFee: '',
   principal: '',
   annualInterestRate: '',
   termMonths: '',
@@ -71,8 +74,11 @@ export default function Credits() {
       name: c.name,
       type: c.type,
       interestModel: c.interestModel,
+      rateConvention: c.rateConvention || 'Nominal',
       prepaymentEffect: c.prepaymentEffect || 'ReduceTerm',
       prepaymentPenaltyRate: c.prepaymentPenaltyRate ? String(c.prepaymentPenaltyRate) : '',
+      monthlyInsuranceRate: c.monthlyInsuranceRate ? String(c.monthlyInsuranceRate) : '',
+      monthlyFixedFee: c.monthlyFixedFee ? String(c.monthlyFixedFee) : '',
       principal: String(c.principal),
       annualInterestRate: String(c.annualInterestRate),
       termMonths: String(c.termMonths),
@@ -93,8 +99,11 @@ export default function Credits() {
         name: form.name.trim(),
         type: form.type,
         interestModel: form.interestModel,
+        rateConvention: form.type === 'CreditCard' ? 'Nominal' : form.rateConvention,
         prepaymentEffect: form.prepaymentEffect,
         prepaymentPenaltyRate: form.prepaymentPenaltyRate === '' ? 0 : parseFloat(form.prepaymentPenaltyRate),
+        monthlyInsuranceRate: form.monthlyInsuranceRate === '' ? 0 : parseFloat(form.monthlyInsuranceRate),
+        monthlyFixedFee: form.monthlyFixedFee === '' ? 0 : parseFloat(form.monthlyFixedFee),
         principal: parseFloat(form.principal),
         annualInterestRate: parseFloat(form.annualInterestRate),
         termMonths: parseInt(form.termMonths, 10),
@@ -341,6 +350,18 @@ export default function Credits() {
               </div>
             )}
 
+            {form.type !== 'CreditCard' && form.interestModel === 'CompoundFrench' && (
+              <div className="field">
+                <label>{t.credits.rateConvention}</label>
+                <select value={form.rateConvention} onChange={(e) => setForm({ ...form, rateConvention: e.target.value })}>
+                  {Object.keys(t.credits.rateConventions).map((key) => (
+                    <option key={key} value={key}>{t.credits.rateConventions[key]}</option>
+                  ))}
+                </select>
+                <div className="hint" style={{ marginTop: 6 }}>{t.credits.rateConventionHint}</div>
+              </div>
+            )}
+
             <div className="field">
               <label>{t.credits.prepaymentEffect}</label>
               <select value={form.prepaymentEffect} onChange={(e) => setForm({ ...form, prepaymentEffect: e.target.value })}>
@@ -424,6 +445,28 @@ export default function Credits() {
               </div>
             </div>
             <div className="hint" style={{ marginBottom: 16 }}>{t.credits.penaltyRateHint}</div>
+
+            <div className="row" style={{ gap: 12 }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.credits.monthlyInsuranceRate}</label>
+                <input
+                  type="number" step="0.0001" min="0" max="100"
+                  value={form.monthlyInsuranceRate}
+                  onChange={(e) => setForm({ ...form, monthlyInsuranceRate: e.target.value })}
+                  placeholder="0.0000"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.credits.monthlyFixedFee}</label>
+                <input
+                  type="number" step="0.01" min="0"
+                  value={form.monthlyFixedFee}
+                  onChange={(e) => setForm({ ...form, monthlyFixedFee: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="hint" style={{ marginBottom: 16 }}>{t.credits.chargesHint}</div>
 
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowCreate(false)}>{t.common.cancel}</button>

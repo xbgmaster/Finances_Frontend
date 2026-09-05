@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BalanceApi } from '../api/client'
 import { formatMoney } from '../utils/format'
@@ -14,6 +14,7 @@ export default function BudgetHistory() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const scrollRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -31,6 +32,13 @@ export default function BudgetHistory() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [months, activeCurrency])
+
+  // Start the horizontal scroll at the newest month (right edge) so mobile users see the
+  // current month first instead of having to scroll all the way over.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [data])
 
   const monthLabel = (m) => `${t.months[m.month - 1].slice(0, 3)} ${String(m.year).slice(2)}`
 
@@ -65,6 +73,7 @@ export default function BudgetHistory() {
         <div className="toolbar">
           <label style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t.budgetHistory.rangeLabel}</label>
           <select value={months} onChange={(e) => setMonths(Number(e.target.value))}>
+            <option value={3}>{t.budgetHistory.months3}</option>
             <option value={6}>{t.budgetHistory.months6}</option>
             <option value={12}>{t.budgetHistory.months12}</option>
           </select>
@@ -95,7 +104,7 @@ export default function BudgetHistory() {
           </div>
 
           <div className="card table-card">
-            <div className="table-scroll">
+            <div className="table-scroll" ref={scrollRef}>
             <table className="data-table bh-table">
               <thead>
                 <tr>

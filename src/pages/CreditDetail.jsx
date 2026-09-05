@@ -94,6 +94,7 @@ export default function CreditDetail() {
 
   const paidOff = summary.status === 'PaidOff'
   const cur = summary.currency
+  const hasCharges = (summary.monthlyInsuranceRate || 0) > 0 || (summary.monthlyFixedFee || 0) > 0
 
   const fillMsg = (tpl) =>
     tpl
@@ -177,7 +178,16 @@ export default function CreditDetail() {
       </div>
 
       <div className="grid grid-4" style={{ marginTop: 16 }}>
-        <StatCard label={t.credits.monthlyInstallment} value={summary.monthlyInstallment} icon="📅" color="#b8943e" currency={cur} />
+        <StatCard
+          label={t.credits.monthlyInstallment}
+          value={summary.monthlyInstallment}
+          icon="📅"
+          color="#b8943e"
+          currency={cur}
+          hint={hasCharges
+            ? `${t.credits.totalWithCharges}: ${formatMoney(summary.monthlyTotalDue, cur)} (+${formatMoney(summary.monthlyCharges, cur)})`
+            : undefined}
+        />
         <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#1a3a4a" currency={cur} />
         <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon="📈" color="#ef4444" currency={cur} />
         <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" currency={cur} />
@@ -253,20 +263,39 @@ export default function CreditDetail() {
               <th className="num">{t.credits.colInstallment}</th>
               <th className="num">{t.credits.colInterest}</th>
               <th className="num">{t.credits.colPrincipal}</th>
+              {hasCharges && <th className="num">{t.credits.colCharges}</th>}
+              {hasCharges && <th className="num">{t.credits.colTotalDue}</th>}
               <th className="num">{t.credits.colBalance}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {schedule.rows.map((r) => {
+            {schedule.rows.map((r, idx) => {
+              if (r.isPrepayment) {
+                return (
+                  <tr key={`p-${idx}`} className="schedule-prepay">
+                    <td>↳</td>
+                    <td>{formatDate(r.dueDate)}</td>
+                    <td className="num">{formatMoney(r.installment, cur)}</td>
+                    <td className="num">—</td>
+                    <td className="num">{formatMoney(r.principal, cur)}</td>
+                    {hasCharges && <td className="num">—</td>}
+                    {hasCharges && <td className="num">{formatMoney(r.installment, cur)}</td>}
+                    <td className="num">{formatMoney(r.remainingBalance, cur)}</td>
+                    <td><span className="pill pill-admin">{t.credits.prepaymentRow}</span></td>
+                  </tr>
+                )
+              }
               const isPaid = r.number <= summary.installmentsCovered
               return (
-                <tr key={r.number}>
+                <tr key={`i-${idx}`}>
                   <td>{r.number}</td>
                   <td>{formatDate(r.dueDate)}</td>
                   <td className="num">{formatMoney(r.installment, cur)}</td>
                   <td className="num">{formatMoney(r.interest, cur)}</td>
                   <td className="num">{formatMoney(r.principal, cur)}</td>
+                  {hasCharges && <td className="num">{formatMoney(r.charges, cur)}</td>}
+                  {hasCharges && <td className="num" style={{ fontWeight: 600 }}>{formatMoney(r.totalDue, cur)}</td>}
                   <td className="num">{formatMoney(r.remainingBalance, cur)}</td>
                   <td>{isPaid && <span className="pill pill-user">{t.credits.paid}</span>}</td>
                 </tr>

@@ -1530,6 +1530,8 @@ input:focus, select:focus {
 .data-table tbody tr:hover { background: var(--bg-elevated); }
 .data-table td.pos { color: var(--success); }
 .data-table td.neg { color: var(--danger); }
+.data-table tr.schedule-prepay td { background: rgba(99, 102, 241, 0.08); font-style: italic; }
+.data-table tr.schedule-prepay:hover td { background: rgba(99, 102, 241, 0.14); }
 
 .pill-admin { background: rgba(122, 46, 46, 0.10); color: #7a2e2e; }
 .pill-user { background: var(--primary-soft); color: var(--primary); }
