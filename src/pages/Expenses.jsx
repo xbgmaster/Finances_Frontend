@@ -5,8 +5,10 @@ import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
+import { useToast } from '../components/Toast'
+import { TrendingUp, TrendingDown, Scale, ArrowLeftRight } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
-import { iconFor } from '../utils/icons'
+import { iconFor, pmTypeIcon } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
@@ -17,16 +19,19 @@ const now = new Date()
 export default function Expenses() {
   const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
+  const toast = useToast()
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [pmFilter, setPmFilter] = useState('') // '' = all accounts
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('') // bound to the input
+  const [search, setSearch] = useState('') // debounced value sent to the server
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [categories, setCategories] = useState([])
   const [summary, setSummary] = useState(null)
-  const [expenses, setExpenses] = useState([])
+  // Server-side paginated expenses: { items, total, page, pageSize, sum }.
+  const [expData, setExpData] = useState({ items: [], total: 0, page: 1, pageSize: 5, sum: 0 })
   const [exchanges, setExchanges] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,7 +39,6 @@ export default function Expenses() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
-  const [listError, setListError] = useState('')
   const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState({
     amount: '', description: '', categoryId: '', date: '', currency: '',
@@ -43,16 +47,21 @@ export default function Expenses() {
 
   const load = async () => {
     setLoading(true)
-    const [cats, sum, exp, exch, pms] = await Promise.all([
+    const [cats, sum, paged, exch, pms] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
-      ExpensesApi.list({ year, month, currency: activeCurrency, paymentMethodId: pmFilter || undefined }),
+      ExpensesApi.listPaged({
+        year, month, currency: activeCurrency,
+        paymentMethodId: pmFilter || undefined,
+        search: search.trim() || undefined,
+        page, pageSize,
+      }),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
     ])
     setCategories(cats)
     setSummary(sum)
-    setExpenses(exp)
+    setExpData(paged)
     setExchanges(exch)
     setPaymentMethods(pms)
     setLoading(false)
@@ -61,12 +70,22 @@ export default function Expenses() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, activeCurrency, pmFilter])
+  }, [year, month, activeCurrency, pmFilter, page, pageSize, search])
 
-  // Reset to the first page whenever the search/filters change.
+  // Debounce the search box so we don't hit the server on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(id)
+  }, [searchInput])
+
+  // Reset to the first page when the currency lens changes (handlers below reset it
+  // for month/year/account/page-size directly to avoid a double fetch).
   useEffect(() => {
     setPage(1)
-  }, [search, pageSize, pmFilter, year, month, activeCurrency])
+  }, [activeCurrency])
 
   const openCreate = () => {
     setEditingId(null)
@@ -125,6 +144,7 @@ export default function Expenses() {
       }
       setShowModal(false)
       await load()
+      toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.expenses.saveError)
     } finally {
@@ -133,22 +153,22 @@ export default function Expenses() {
   }
 
   const remove = async (id) => {
-    setListError('')
     try {
       await ExpensesApi.remove(id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setListError(err?.response?.data?.message || t.expenses.deleteError)
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
   const removeExchange = async (id) => {
-    setListError('')
     try {
       await ExchangesApi.remove(id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setListError(err?.response?.data?.message || t.expenses.deleteError)
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
@@ -162,10 +182,6 @@ export default function Expenses() {
       : p.type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
     return `${p.name} · ${type} · ${p.currency}`
   }
-
-  // Icon that mirrors the /cards view: cash 💵, debit 🏦, credit card 💳.
-  const pmTypeIcon = (type) =>
-    type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : type === 'Debit' ? '🏦' : '💳'
 
   const pmTypeLabel = (type) =>
     type === 'CreditCard' ? t.cards.typeCreditCard
@@ -205,37 +221,13 @@ export default function Expenses() {
     .reduce((s, x) => s + x.toAmount, 0)
   const transfersNet = transfersIn - transfersOut
 
-  // Merge expenses + exchange legs into a single, date-sorted activity list.
-  // When filtering by an account, hide currency exchanges (they aren't tied to a payment method).
-  const details = [
-    ...expenses.map((e) => ({ ...e, kind: 'expense' })),
-    ...(pmFilter ? [] : monthExchanges).map((x) => {
-      const out = x.fromCurrency === activeCurrency
-      return {
-        kind: 'exchange',
-        id: x.id,
-        date: x.date,
-        out,
-        amount: out ? x.fromAmount : x.toAmount,
-        otherCurrency: out ? x.toCurrency : x.fromCurrency,
-        otherAmount: out ? x.toAmount : x.fromAmount,
-      }
-    }),
-  ].sort((a, b) => new Date(b.date) - new Date(a.date))
-
-  // Text search over the visible activity (description, category, account, amount, date).
-  const query = search.trim().toLowerCase()
-  const filteredDetails = details.filter((e) => {
-    if (!query) return true
-    const haystack = e.kind === 'exchange'
-      ? [t.dashboard.exchange, e.otherCurrency, formatDate(e.date)]
-      : [e.description, e.categoryName && categoryLabel(e.categoryName), e.paymentMethodName,
-         e.paymentMethodType && pmTypeLabel(e.paymentMethodType), String(e.amount), formatDate(e.date)]
-    return haystack.filter(Boolean).join(' ').toLowerCase().includes(query)
-  })
-  const totalPages = Math.max(1, Math.ceil(filteredDetails.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const pagedDetails = filteredDetails.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  // Expense rows come already paginated (and text-filtered) from the server.
+  const expenses = expData.items
+  // Exchanges are transfers (not expenses). Show them as their own small list below the
+  // expenses, and only when we're not filtering expenses by account or search text.
+  const showExchanges = !pmFilter && !search.trim() && monthExchanges.length > 0
+  const totalPages = Math.max(1, Math.ceil(expData.total / pageSize))
+  const currentPage = expData.page || 1
 
   return (
     <div>
@@ -245,16 +237,16 @@ export default function Expenses() {
           <p>{t.expenses.subtitle}</p>
         </div>
         <div className="toolbar">
-          <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+          <select value={month} onChange={(e) => { setMonth(Number(e.target.value)); setPage(1) }}>
             {t.months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          <select value={year} onChange={(e) => { setYear(Number(e.target.value)); setPage(1) }}>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-          <select value={pmFilter} onChange={(e) => setPmFilter(e.target.value)} title={t.expenses.filterByAccount}>
+          <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount}>
             <option value="">{t.expenses.allAccounts}</option>
             {paymentMethods.filter((p) => !p.archived).map((p) => (
-              <option key={p.id} value={p.id}>{pmTypeIcon(p.type)} {p.name} · {pmTypeLabel(p.type)}</option>
+              <option key={p.id} value={p.id}>{p.name} · {pmTypeLabel(p.type)}</option>
             ))}
           </select>
           <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
@@ -262,13 +254,13 @@ export default function Expenses() {
       </div>
 
       <div className="grid grid-3">
-        <StatCard label={t.expenses.incomeThisMonth} value={summary.income} currency={activeCurrency} icon="📈" color="#10b981" />
-        <StatCard label={t.expenses.spentThisMonth} value={summary.expense} currency={activeCurrency} icon="💸" color="#ef4444" />
+        <StatCard label={t.expenses.incomeThisMonth} value={summary.income} currency={activeCurrency} icon={<TrendingUp size={20} />} color="#10b981" />
+        <StatCard label={t.expenses.spentThisMonth} value={summary.expense} currency={activeCurrency} icon={<TrendingDown size={20} />} color="#ef4444" />
         <StatCard
           label={t.expenses.remainingThisMonth}
           value={summary.net}
           currency={activeCurrency}
-          icon="🧮"
+          icon={<Scale size={20} />}
           color="#0f5c4d"
           tone={summary.net >= 0 ? 'pos' : 'neg'}
           hint={t.expenses.remainingHint}
@@ -277,7 +269,7 @@ export default function Expenses() {
 
       {transfersNet !== 0 && (
         <div className="insight" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span>🔄</span>
+          <span className="badge-icon"><ArrowLeftRight size={16} /></span>
           <span>{t.expenses.transfersThisMonth}:</span>
           <strong className={transfersNet < 0 ? 'neg' : 'pos'}>
             {transfersNet < 0 ? '−' : '+'}{formatMoney(Math.abs(transfersNet), activeCurrency)}
@@ -326,77 +318,43 @@ export default function Expenses() {
       <h2 className="section-title">{t.expenses.expenseDetails}</h2>
       {pmFilter && (() => {
         const selectedPm = paymentMethods.find((p) => String(p.id) === String(pmFilter))
-        const accountTotal = expenses.reduce((s, e) => s + e.amount, 0)
         return (
           <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span>{pmTypeIcon(selectedPm?.type)}</span>
             <span>{selectedPm ? selectedPm.name : t.expenses.allAccounts}</span>
             <span className="hint" style={{ color: 'var(--text-muted)' }}>· {t.expenses.accountTotal}:</span>
-            <strong className="neg">−{formatMoney(accountTotal, activeCurrency)}</strong>
+            <strong className="neg">−{formatMoney(expData.sum, activeCurrency)}</strong>
           </div>
         )
       })()}
-      {listError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{listError}</div>}
-      {details.length > 0 && (
+      {(expData.total > 0 || search) && (
         <div className="activity-toolbar">
           <input
             type="search"
             className="activity-search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t.dashboard.searchPlaceholder}
           />
-          {search && (
-            <button type="button" className="btn secondary" onClick={() => setSearch('')}>
+          {searchInput && (
+            <button type="button" className="btn secondary" onClick={() => setSearchInput('')}>
               {t.dashboard.clearFilters}
             </button>
           )}
           <div className="activity-spacer" />
           <label className="activity-pagesize">
             {t.dashboard.perPage}
-            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}>
               {[5, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
         </div>
       )}
-      {details.length === 0 ? (
-        <div className="empty">{t.expenses.noExpenses}</div>
-      ) : filteredDetails.length === 0 ? (
-        <div className="empty">{t.dashboard.noResults}</div>
+      {expData.total === 0 ? (
+        <div className="empty">{search ? t.dashboard.noResults : t.expenses.noExpenses}</div>
       ) : (
         <div className="list">
-          {pagedDetails.map((e) => {
-            if (e.kind === 'exchange') {
-              const incoming = !e.out
-              return (
-                <div className="list-item tinted" key={`exchange-${e.id}`} style={tintVars('#b8943e')}>
-                  <span className="badge-icon">🔄</span>
-                  <div className="meta">
-                    <div className="title">{t.dashboard.exchange}</div>
-                    <div className="sub">
-                      {incoming
-                        ? `${t.dashboard.fromLabel} ${formatMoney(e.otherAmount, e.otherCurrency)}`
-                        : `${t.dashboard.toLabel} ${formatMoney(e.otherAmount, e.otherCurrency)}`}
-                      {' · '}{formatDate(e.date)}
-                    </div>
-                  </div>
-                  <div className="list-item-end">
-                    <span className={`amount ${incoming ? 'pos' : 'neg'}`}>
-                      {incoming ? '+' : '−'}{formatMoney(e.amount, activeCurrency)}
-                    </span>
-                    <div className="list-item-actions">
-                      <button
-                        className="btn danger"
-                        onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removeExchange(e.id) })}
-                      >
-                        {t.common.delete}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            }
+          {expenses.map((e) => {
             return (
               <div
                 className="list-item tinted"
@@ -410,7 +368,15 @@ export default function Expenses() {
                   <div className="title">{e.description || categoryLabel(e.categoryName)}</div>
                   <div className="sub">
                     {categoryLabel(e.categoryName)} · {formatDate(e.date)}
-                    {e.paymentMethodName ? ` · ${pmTypeIcon(e.paymentMethodType)} ${e.paymentMethodName} (${pmTypeLabel(e.paymentMethodType)})` : ''}
+                    {e.paymentMethodName && (
+                      <>
+                        {' · '}
+                        <span className="pm-inline">
+                          {pmTypeIcon(e.paymentMethodType, { size: 13 })}
+                          {e.paymentMethodName} ({pmTypeLabel(e.paymentMethodType)})
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 {e.receiptUrl && (
@@ -448,7 +414,7 @@ export default function Expenses() {
         </div>
       )}
 
-      {filteredDetails.length > 0 && totalPages > 1 && (
+      {expData.total > 0 && totalPages > 1 && (
         <div className="activity-pager">
           <button
             type="button"
@@ -470,6 +436,50 @@ export default function Expenses() {
             {t.dashboard.next}
           </button>
         </div>
+      )}
+
+      {showExchanges && (
+        <>
+          <h2 className="section-title">{t.expenses.transfersThisMonth}</h2>
+          <div className="list">
+            {monthExchanges
+              .slice()
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map((x) => {
+                const out = x.fromCurrency === activeCurrency
+                const amount = out ? x.fromAmount : x.toAmount
+                const otherAmount = out ? x.toAmount : x.fromAmount
+                const otherCurrency = out ? x.toCurrency : x.fromCurrency
+                return (
+                  <div className="list-item tinted" key={`exchange-${x.id}`} style={tintVars('#b8943e')}>
+                    <span className="badge-icon"><ArrowLeftRight size={16} /></span>
+                    <div className="meta">
+                      <div className="title">{t.dashboard.exchange}</div>
+                      <div className="sub">
+                        {out
+                          ? `${t.dashboard.toLabel} ${formatMoney(otherAmount, otherCurrency)}`
+                          : `${t.dashboard.fromLabel} ${formatMoney(otherAmount, otherCurrency)}`}
+                        {' · '}{formatDate(x.date)}
+                      </div>
+                    </div>
+                    <div className="list-item-end">
+                      <span className={`amount ${out ? 'neg' : 'pos'}`}>
+                        {out ? '−' : '+'}{formatMoney(amount, activeCurrency)}
+                      </span>
+                      <div className="list-item-actions">
+                        <button
+                          className="btn danger"
+                          onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removeExchange(x.id) })}
+                        >
+                          {t.common.delete}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+        </>
       )}
 
       {showModal && (

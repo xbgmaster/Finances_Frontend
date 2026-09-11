@@ -4,18 +4,20 @@ import { PaymentMethodsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PayCardModal from '../components/PayCardModal'
+import { useToast } from '../components/Toast'
 import { tintVars, normalizeHex, sameColor, CARD_BANK_COLORS, CARD_EXTRA_COLORS } from '../utils/color'
 import { formatMoney } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
+import { pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
 const TYPES = ['Debit', 'Cash', 'CreditCard']
 
 const TYPE_SECTIONS = [
-  { type: 'Debit', titleKey: 'sectionDebit', icon: '🏦' },
-  { type: 'Cash', titleKey: 'sectionCash', icon: '💵' },
-  { type: 'CreditCard', titleKey: 'sectionCreditCard', icon: '💳' },
+  { type: 'Debit', titleKey: 'sectionDebit' },
+  { type: 'Cash', titleKey: 'sectionCash' },
+  { type: 'CreditCard', titleKey: 'sectionCreditCard' },
 ]
 
 const emptyForm = {
@@ -29,8 +31,6 @@ const emptyForm = {
   archived: false,
   isFavorite: false,
 }
-
-const typeIcon = (type) => (type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : '🏦')
 
 function sortMethods(list) {
   return list.slice().sort((a, b) => {
@@ -64,7 +64,7 @@ function MethodCard({
       <div className="row">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="badge-icon">
-            {typeIcon(m.type)}
+            {pmTypeIcon(m.type, { size: 22 })}
           </span>
           <div>
             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -148,6 +148,7 @@ export default function Cards() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const { currency: activeCurrency } = useCurrency()
+  const toast = useToast()
   const [methods, setMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -222,29 +223,29 @@ export default function Cards() {
       else await PaymentMethodsApi.create(payload)
       setShowModal(false)
       await load()
+      toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.cards.saveError)
     }
   }
 
   const remove = async (m) => {
-    setListError('')
     try {
       await PaymentMethodsApi.remove(m.id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setListError(err?.response?.data?.message || t.cards.deleteError)
+      toast.error(err?.response?.data?.message || t.cards.deleteError)
     }
   }
 
   // One favorite at a time (the backend clears any previous favorite).
   const toggleFavorite = async (m) => {
-    setListError('')
     try {
       await PaymentMethodsApi.setFavorite(m.id, !m.isFavorite)
       await load()
     } catch (err) {
-      setListError(err?.response?.data?.message || t.cards.saveError)
+      toast.error(err?.response?.data?.message || t.cards.saveError)
     }
   }
 
@@ -281,7 +282,7 @@ export default function Cards() {
         sections.map((section) => (
           <section className="method-section" key={section.type}>
             <h2 className="section-title">
-              <span aria-hidden="true">{section.icon}</span>
+              <span aria-hidden="true" className="section-icon">{pmTypeIcon(section.type, { size: 18 })}</span>
               {t.cards[section.titleKey]}
               <span className="count">{section.items.length}</span>
             </h2>
@@ -312,7 +313,7 @@ export default function Cards() {
           methods={methods}
           preselectedCardId={payCardId}
           onClose={() => setPayCardId(null)}
-          onDone={async () => { setPayCardId(null); await load() }}
+          onDone={async () => { setPayCardId(null); await load(); toast.success(t.common.savedOk) }}
         />
       )}
 

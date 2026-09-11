@@ -6,8 +6,10 @@ import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import PayCardModal from '../components/PayCardModal'
+import { useToast } from '../components/Toast'
+import { Wallet, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowLeftRight, AlertTriangle, Clock } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
-import { iconFor } from '../utils/icons'
+import { iconFor, pmTypeIcon } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
@@ -19,6 +21,7 @@ const now = new Date()
 export default function Dashboard() {
   const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
+  const toast = useToast()
   const navigate = useNavigate()
   const [balance, setBalance] = useState(null)
   const [incomes, setIncomes] = useState([])
@@ -36,7 +39,6 @@ export default function Dashboard() {
   const [editingExpenseId, setEditingExpenseId] = useState(null)
   const [editingIncomeId, setEditingIncomeId] = useState(null)
   const [expenseError, setExpenseError] = useState('')
-  const [movementError, setMovementError] = useState('')
   const [confirm, setConfirm] = useState(null)
   // Recent activity: text search, date range + pagination.
   const [actSearch, setActSearch] = useState('')
@@ -142,10 +144,6 @@ export default function Dashboard() {
     navigate('/categories', { state: { openCreate: true } })
   }
 
-  // Icon that mirrors the /cards view: cash 💵, debit 🏦, credit card 💳.
-  const pmTypeIcon = (type) =>
-    type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : type === 'Debit' ? '🏦' : null
-
   // Label a payment method with its type so debit/credit/cash are distinguishable.
   const pmLabel = (p) => {
     const type = p.type === 'CreditCard' ? t.cards.typeCreditCard
@@ -196,14 +194,22 @@ export default function Dashboard() {
       })
       setModal(null)
       await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.saveError)
     } finally {
       setSaving(false)
     }
   }
 
   const deleteExchange = async (id) => {
-    await ExchangesApi.remove(id)
-    await load()
+    try {
+      await ExchangesApi.remove(id)
+      await load()
+      toast.success(t.common.deletedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   const addIncome = async (e) => {
@@ -224,6 +230,7 @@ export default function Dashboard() {
         })
         setModal(null)
         await load()
+        toast.success(t.common.savedOk)
         return
       }
       const payload = {
@@ -237,18 +244,21 @@ export default function Dashboard() {
       else await IncomesApi.create(payload)
       setModal(null)
       await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.saveError)
     } finally {
       setSaving(false)
     }
   }
 
   const deleteCardPayment = async (cardId, paymentId) => {
-    setMovementError('')
     try {
       await PaymentMethodsApi.removePayment(cardId, paymentId)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
@@ -278,6 +288,7 @@ export default function Dashboard() {
       }
       setModal(null)
       await load()
+      toast.success(t.common.savedOk)
     } catch (err) {
       setExpenseError(err?.response?.data?.message || t.expenses.saveError)
     } finally {
@@ -286,22 +297,22 @@ export default function Dashboard() {
   }
 
   const deleteIncome = async (id) => {
-    setMovementError('')
     try {
       await IncomesApi.remove(id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
   const deleteExpense = async (id) => {
-    setMovementError('')
     try {
       await ExpensesApi.remove(id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setMovementError(err?.response?.data?.message || t.expenses.deleteError)
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
     }
   }
 
@@ -452,7 +463,7 @@ export default function Dashboard() {
           style={{ cursor: 'pointer' }}
           onClick={() => navigate('/credits')}
         >
-          <span className="alert-icon">{creditAlerts.overdueCount > 0 ? '⚠️' : '⏰'}</span>
+          <span className="alert-icon">{creditAlerts.overdueCount > 0 ? <AlertTriangle size={18} /> : <Clock size={18} />}</span>
           <div style={{ flex: 1 }}>
             <strong>{t.notifications.bannerTitle}.</strong>{' '}
             {creditAlerts.overdueCount > 0 &&
@@ -470,20 +481,20 @@ export default function Dashboard() {
           label={`${t.dashboard.availableBalance} (${selCur})`}
           value={selEntry.balance}
           currency={selCur}
-          icon="💰"
+          icon={<Wallet size={20} />}
           color="#0f5c4d"
           tone={selEntry.balance >= 0 ? 'pos' : 'neg'}
           hint={isBase ? t.dashboard.balanceHint : t.dashboard.balanceHintCurrency.replace('{cur}', selCur)}
         />
-        <StatCard label={t.dashboard.totalIncome} value={selEntry.totalIncome} currency={selCur} icon="📈" color="#10b981" />
-        <StatCard label={t.dashboard.totalExpenses} value={selEntry.totalExpense} currency={selCur} icon="📉" color="#ef4444" />
+        <StatCard label={t.dashboard.totalIncome} value={selEntry.totalIncome} currency={selCur} icon={<TrendingUp size={20} />} color="#10b981" />
+        <StatCard label={t.dashboard.totalExpenses} value={selEntry.totalExpense} currency={selCur} icon={<TrendingDown size={20} />} color="#ef4444" />
       </div>
 
       {creditCardsCur.length > 0 && (
         <div className="card credit-capacity">
           <div className="row">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="badge-icon" style={{ background: '#0f5c4d22', color: '#0f5c4d' }}>💳</span>
+              <span className="badge-icon" style={{ background: '#0f5c4d22', color: '#0f5c4d' }}><CreditCard size={22} /></span>
               <div>
                 <div style={{ fontWeight: 600 }}>{t.cards.capacityTitle}</div>
                 <div className="hint" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
@@ -552,9 +563,6 @@ export default function Dashboard() {
       )}
 
       <h2 className="section-title">{t.dashboard.recentActivity}</h2>
-      {movementError && (
-        <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{movementError}</div>
-      )}
 
       {movements.length > 0 && (
         <div className="activity-toolbar">
@@ -615,7 +623,7 @@ export default function Dashboard() {
               const incoming = m.dir === 'in'
               return (
                 <div className="list-item tinted" key={`exchange-${m.id}-${m.dir}`} style={tintVars('#b8943e')}>
-                  <span className="badge-icon">🔄</span>
+                  <span className="badge-icon"><ArrowLeftRight size={20} /></span>
                   <div className="meta">
                     <div className="title">{t.dashboard.exchange}</div>
                     <div className="sub">
@@ -644,7 +652,7 @@ export default function Dashboard() {
             if (m.kind === 'cardpayment') {
               return (
                 <div className="list-item tinted" key={`cardpay-${m.id}`} style={tintVars(activityTint(m))}>
-                  <span className="badge-icon">💳</span>
+                  <span className="badge-icon"><CreditCard size={20} /></span>
                   <div className="meta">
                     <div className="title">{t.cards.paymentTitle}</div>
                     <div className="sub">
@@ -673,12 +681,12 @@ export default function Dashboard() {
               )
             }
             const income = m.kind === 'income'
-            const pmIcon = pmTypeIcon(m.paymentMethodType)
+            const pmIcon = m.paymentMethodType ? pmTypeIcon(m.paymentMethodType, { size: 20 }) : null
             const tint = activityTint(m)
             return (
               <div className="list-item tinted" key={`${m.kind}-${m.id}`} style={tintVars(tint)}>
                 <span className="badge-icon">
-                  {pmIcon || (income ? '⬆️' : iconFor(m.categoryIcon))}
+                  {pmIcon || (income ? <ArrowUpRight size={20} /> : iconFor(m.categoryIcon))}
                 </span>
                 <div className="meta">
                   <div className="title">
@@ -686,7 +694,15 @@ export default function Dashboard() {
                   </div>
                   <div className="sub">
                     {!income ? `${categoryLabel(m.categoryName)} · ` : ''}{formatDate(m.date)}
-                    {m.paymentMethodName ? ` · 💳 ${m.paymentMethodName}` : ''}
+                    {m.paymentMethodName && (
+                      <>
+                        {' · '}
+                        <span className="pm-inline">
+                          {pmTypeIcon(m.paymentMethodType, { size: 13 })}
+                          {m.paymentMethodName}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 {!income && m.receiptUrl && (
@@ -1057,7 +1073,7 @@ export default function Dashboard() {
         <PayCardModal
           methods={paymentMethods}
           onClose={() => setShowPay(false)}
-          onDone={async () => { setShowPay(false); await load() }}
+          onDone={async () => { setShowPay(false); await load(); toast.success(t.common.savedOk) }}
         />
       )}
 

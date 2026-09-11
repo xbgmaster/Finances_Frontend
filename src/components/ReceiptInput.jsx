@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Receipt } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 
 // Selector de imagen con vista previa para adjuntar el recibo/factura.
@@ -42,8 +43,8 @@ export default function ReceiptInput({ file, onChange }) {
           <button type="button" className="btn danger" onClick={clear}>{t.common.remove}</button>
         </div>
       ) : (
-        <button type="button" className="btn secondary block" onClick={() => inputRef.current?.click()}>
-          🧾 {t.common.chooseImage}
+        <button type="button" className="btn secondary block" onClick={() => inputRef.current?.click()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Receipt size={16} /> {t.common.chooseImage}
         </button>
       )}
     </div>

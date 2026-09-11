@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { I18nProvider } from './i18n/I18nContext.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import { CurrencyProvider } from './currency/CurrencyContext.jsx'
+import { ToastProvider } from './components/Toast.jsx'
 import { initNativeShell } from './native.js'
 import './index.css'
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')).render(
       <Router>
         <AuthProvider>
           <CurrencyProvider>
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </CurrencyProvider>
         </AuthProvider>
       </Router>

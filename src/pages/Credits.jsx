@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AlertTriangle, Clock, CalendarDays } from 'lucide-react'
 import { CreditsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
 import { CURRENCIES } from '../utils/currencies'
 import { useAuth } from '../auth/AuthContext'
@@ -34,6 +36,7 @@ const emptyCredit = {
 export default function Credits() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const toast = useToast()
   const { currency: activeCurrency } = useCurrency()
   const baseCurrency = user?.currency || getBaseCurrency()
   const [credits, setCredits] = useState([])
@@ -115,6 +118,9 @@ export default function Credits() {
       else await CreditsApi.create(payload)
       setShowCreate(false)
       await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      setError(err?.response?.data?.message || t.common.saveError)
     } finally {
       setCreating(false)
     }
@@ -142,18 +148,21 @@ export default function Credits() {
       })
       setPayFor(null)
       await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      setError(err?.response?.data?.message || t.common.saveError)
     } finally {
       setPaying(false)
     }
   }
 
   const remove = async (credit) => {
-    setError('')
     try {
       await CreditsApi.remove(credit.id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setError(err?.response?.data?.detail || t.credits.deleteError)
+      toast.error(err?.response?.data?.detail || t.credits.deleteError)
     }
   }
 
@@ -180,7 +189,7 @@ export default function Credits() {
     <div>
       <div className="page-header row">
         <div>
-          <h1>{t.credits.title} 🏦</h1>
+          <h1>{t.credits.title}</h1>
           <p>{t.credits.subtitle}</p>
         </div>
         <button className="btn" onClick={openCreate}>{t.credits.newCredit}</button>
@@ -257,7 +266,9 @@ export default function Credits() {
                       color: c.isOverdue ? 'var(--danger)' : c.isDueSoon ? '#f59e0b' : 'var(--text-muted)',
                     }}
                   >
-                    {c.isOverdue ? '⚠️ ' : c.isDueSoon ? '⏰ ' : '📅 '}
+                    <span className="pm-inline" style={{ marginRight: 4 }}>
+                      {c.isOverdue ? <AlertTriangle size={14} /> : c.isDueSoon ? <Clock size={14} /> : <CalendarDays size={14} />}
+                    </span>
                     {t.credits.alerts.nextDue}: {formatDate(c.nextDueDate)}
                     {c.isOverdue
                       ? ` · ${t.credits.alerts.overdue} (${Math.abs(c.daysUntilDue)})`

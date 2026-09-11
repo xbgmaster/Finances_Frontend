@@ -160,6 +160,8 @@ export const PaymentMethodsApi = {
 
 export const ExpensesApi = {
   list: (params) => api.get('/expenses', { params }).then((r) => r.data),
+  // Server-side pagination (items + total + sum) for large histories.
+  listPaged: (params) => api.get('/expenses/paged', { params }).then((r) => r.data),
   // Envia multipart/form-data para admitir la imagen del recibo (opcional).
   create: ({ amount, description, categoryId, date, receipt, currency, paymentMethodId }) => {
     const form = new FormData()

@@ -3,6 +3,7 @@ import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from 'recharts'
+import { Sparkles, PiggyBank, CheckCircle2, Wallet, BarChart3 } from 'lucide-react'
 import { ProjectionApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import { formatMoney } from '../utils/format'
@@ -77,21 +78,21 @@ export default function Projections() {
           label={t.projections.projectedNextMonth}
           value={data.projectedExpenseNextMonth}
           currency={activeCurrency}
-          icon="🔮"
+          icon={<Sparkles size={20} />}
           color={trendColor}
           hint={`${t.projections.trend}: ${trendLabel}`}
         />
-        <StatCard label={t.projections.recommendedSavings} value={data.recommendedSavings} currency={activeCurrency} icon="🐷" color="#10b981" />
+        <StatCard label={t.projections.recommendedSavings} value={data.recommendedSavings} currency={activeCurrency} icon={<PiggyBank size={20} />} color="#10b981" />
         <StatCard
           label={t.projections.canSpend}
           value={data.safeToSpend}
           currency={activeCurrency}
-          icon="✅"
+          icon={<CheckCircle2 size={20} />}
           color="#0f5c4d"
           tone="pos"
           hint={`≈ ${formatMoney(data.safeToSpendPerDayRemaining, activeCurrency)}/${t.projections.perDay} (${data.daysRemainingInMonth} ${t.projections.daysLeft})`}
         />
-        <StatCard label={t.projections.currentBalance} value={data.currentBalance} currency={activeCurrency} icon="💰" color="#b8943e" />
+        <StatCard label={t.projections.currentBalance} value={data.currentBalance} currency={activeCurrency} icon={<Wallet size={20} />} color="#b8943e" />
       </div>
 
       <h2 className="section-title">{t.projections.trendSection}</h2>
@@ -132,8 +133,8 @@ export default function Projections() {
       </div>
 
       <div className="grid grid-2" style={{ marginTop: 24 }}>
-        <StatCard label={t.projections.avgIncome} value={data.avgMonthlyIncome} currency={activeCurrency} icon="📊" color="#10b981" />
-        <StatCard label={t.projections.avgExpense} value={data.avgMonthlyExpense} currency={activeCurrency} icon="📊" color="#ef4444" />
+        <StatCard label={t.projections.avgIncome} value={data.avgMonthlyIncome} currency={activeCurrency} icon={<BarChart3 size={20} />} color="#10b981" />
+        <StatCard label={t.projections.avgExpense} value={data.avgMonthlyExpense} currency={activeCurrency} icon={<BarChart3 size={20} />} color="#ef4444" />
       </div>
     </div>
   )

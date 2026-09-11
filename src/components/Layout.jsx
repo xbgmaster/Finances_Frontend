@@ -1,5 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboard, CreditCard, TrendingDown, Landmark, CalendarDays,
+  Sparkles, ShieldCheck, Tag, Settings, LogOut,
+} from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { CreditsApi } from '../api/client'
@@ -72,14 +76,14 @@ export default function Layout() {
   }, [menuOpen])
 
   const links = [
-    { to: '/', label: t.nav.summary, icon: '📊', end: true },
-    { to: '/cards', label: t.nav.cards, icon: '💳' },
-    { to: '/expenses', label: t.nav.expenses, icon: '💸' },
-    { to: '/credits', label: t.nav.credits, icon: '🏦' },
-    { to: '/budget-history', label: t.nav.budgetHistory, icon: '📅' },
-    { to: '/projections', label: t.nav.projections, icon: '🤖' },
+    { to: '/', label: t.nav.summary, icon: <LayoutDashboard size={18} />, end: true },
+    { to: '/cards', label: t.nav.cards, icon: <CreditCard size={18} /> },
+    { to: '/expenses', label: t.nav.expenses, icon: <TrendingDown size={18} /> },
+    { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} /> },
+    { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} /> },
+    { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} /> },
   ]
-  if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: '🛡️' })
+  if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: <ShieldCheck size={18} /> })
 
   const onLogout = () => {
     logout()
@@ -179,7 +183,7 @@ export default function Layout() {
             onClick={() => setMenuOpen(false)}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            <span className="ic">🏷️</span>
+            <span className="ic"><Tag size={18} /></span>
             {t.nav.categories}
           </NavLink>
           <NavLink
@@ -187,7 +191,7 @@ export default function Layout() {
             onClick={() => setMenuOpen(false)}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            <span className="ic">⚙️</span>
+            <span className="ic"><Settings size={18} /></span>
             {t.settings.menuItem}
           </NavLink>
           <button
@@ -195,7 +199,7 @@ export default function Layout() {
             className="nav-link nav-link-logout"
             onClick={onLogout}
           >
-            <span className="ic">🚪</span>
+            <span className="ic"><LogOut size={18} /></span>
             {t.auth.logout}
           </button>
         </div>
@@ -276,10 +280,10 @@ export default function Layout() {
                     role="menuitem"
                     onClick={() => { setUserOpen(false); navigate('/settings') }}
                   >
-                    <span className="ic">⚙️</span> {t.settings.menuItem}
+                    <span className="ic"><Settings size={16} /></span> {t.settings.menuItem}
                   </button>
                   <button className="user-dd-item danger" role="menuitem" onClick={onLogout}>
-                    <span className="ic">🚪</span> {t.auth.logout}
+                    <span className="ic"><LogOut size={16} /></span> {t.auth.logout}
                   </button>
                 </div>
               )}

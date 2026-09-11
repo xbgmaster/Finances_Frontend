@@ -4,12 +4,11 @@ import { PaymentMethodsApi, ExpensesApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PayCardModal from '../components/PayCardModal'
+import { CreditCard, Wallet, TrendingDown, ArrowUpRight, Receipt, CheckCircle2, Banknote } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
-import { iconFor } from '../utils/icons'
+import { iconFor, pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { tintVars } from '../utils/color'
-
-const typeIcon = (type) => (type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : '🏦')
 
 export default function CardDetail() {
   const { t, categoryLabel } = useI18n()
@@ -80,7 +79,7 @@ export default function CardDetail() {
         <div className="page-header row" style={{ marginBottom: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <span className="badge-icon">
-              {typeIcon(method.type)}
+              {pmTypeIcon(method.type, { size: 22 })}
             </span>
           <div>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -97,13 +96,13 @@ export default function CardDetail() {
       <div className="grid grid-3">
         {isCard ? (
           <>
-            <StatCard label={t.cards.limit} value={limit} currency={cur} icon="💳" color={method.color} />
-            <StatCard label={t.cards.used} value={method.balance} currency={cur} icon="🧾" color="#f59e0b" tone="neg" />
+            <StatCard label={t.cards.limit} value={limit} currency={cur} icon={<CreditCard size={20} />} color={method.color} />
+            <StatCard label={t.cards.used} value={method.balance} currency={cur} icon={<Receipt size={20} />} color="#f59e0b" tone="neg" />
             <StatCard
               label={t.cards.available}
               value={method.availableCredit ?? 0}
               currency={cur}
-              icon="✅"
+              icon={<CheckCircle2 size={20} />}
               color="#10b981"
               tone={(method.availableCredit ?? 0) < 0 ? 'neg' : 'pos'}
             />
@@ -114,12 +113,12 @@ export default function CardDetail() {
               label={t.cards.balance}
               value={method.balance}
               currency={cur}
-              icon="💰"
+              icon={<Wallet size={20} />}
               color={method.color}
               tone={method.balance < 0 ? 'neg' : 'pos'}
             />
-            <StatCard label={t.cards.spentThisMonth} value={method.spentThisMonth} currency={cur} icon="💸" color="#ef4444" />
-            <StatCard label={t.cards.receivedThisMonth} value={method.receivedThisMonth} currency={cur} icon="⬆️" color="#10b981" tone="pos" />
+            <StatCard label={t.cards.spentThisMonth} value={method.spentThisMonth} currency={cur} icon={<TrendingDown size={20} />} color="#ef4444" />
+            <StatCard label={t.cards.receivedThisMonth} value={method.receivedThisMonth} currency={cur} icon={<ArrowUpRight size={20} />} color="#10b981" tone="pos" />
           </>
         )}
       </div>
@@ -155,7 +154,7 @@ export default function CardDetail() {
             <div className="list">
               {payments.map((p) => (
                 <div className="list-item" key={p.id}>
-                  <span className="badge-icon" style={{ background: '#10b98122', color: '#10b981' }}>✅</span>
+                  <span className="badge-icon" style={{ background: '#10b98122', color: '#10b981' }}><Banknote size={20} /></span>
                   <div className="meta">
                     <div className="title">{p.note || t.cards.paymentTitle}</div>
                     <div className="sub">

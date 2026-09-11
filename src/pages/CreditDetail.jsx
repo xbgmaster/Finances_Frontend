@@ -4,6 +4,11 @@ import { CreditsApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
+import {
+  CheckCircle2, Target, PiggyBank, Hourglass, CalendarDays, Receipt,
+  TrendingUp, Landmark, Zap, Banknote, AlertTriangle, Clock,
+} from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -13,6 +18,7 @@ const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment',
 export default function CreditDetail() {
   const { id } = useParams()
   const { t } = useI18n()
+  const toast = useToast()
   const [summary, setSummary] = useState(null)
   const [schedule, setSchedule] = useState(null)
   const [payments, setPayments] = useState([])
@@ -80,14 +86,22 @@ export default function CreditDetail() {
       else await CreditsApi.addPayment(id, payload)
       setModalOpen(false)
       await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.common.saveError)
     } finally {
       setSaving(false)
     }
   }
 
   const removePayment = async (p) => {
-    await CreditsApi.removePayment(id, p.id)
-    await load()
+    try {
+      await CreditsApi.removePayment(id, p.id)
+      await load()
+      toast.success(t.common.deletedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   if (loading || !summary) return <div className="loading">{t.common.loading}</div>
@@ -107,7 +121,7 @@ export default function CreditDetail() {
     if (summary.isOverdue) {
       return (
         <div className="alert-banner alert-overdue">
-          <span className="alert-icon">⚠️</span>
+          <span className="alert-icon"><AlertTriangle size={18} /></span>
           <div><strong>{a.overdue}.</strong> {fillMsg(a.overdueMsg)}</div>
         </div>
       )
@@ -116,7 +130,7 @@ export default function CreditDetail() {
       const dueToday = summary.daysUntilDue === 0
       return (
         <div className="alert-banner alert-duesoon">
-          <span className="alert-icon">⏰</span>
+          <span className="alert-icon"><Clock size={18} /></span>
           <div>
             <strong>{dueToday ? a.dueToday : a.dueSoon}.</strong>{' '}
             {fillMsg(dueToday ? a.dueTodayMsg : a.dueSoonMsg)}
@@ -126,7 +140,7 @@ export default function CreditDetail() {
     }
     return (
       <div className="alert-banner alert-ok">
-        <span className="alert-icon">✅</span>
+        <span className="alert-icon"><CheckCircle2 size={18} /></span>
         <div><strong>{a.upToDate}.</strong> {a.nextDue}: {formatDate(summary.nextDueDate)}</div>
       </div>
     )
@@ -156,7 +170,7 @@ export default function CreditDetail() {
         <StatCard
           label={t.credits.payoffToday}
           value={summary.payoffAmountToday}
-          icon="🎯"
+          icon={<Target size={20} />}
           color="#ef4444"
           tone="neg"
           currency={cur}
@@ -167,30 +181,30 @@ export default function CreditDetail() {
         <StatCard
           label={t.credits.savingsIfPaidOff}
           value={summary.netSavingsIfPaidOffToday}
-          icon="💚"
+          icon={<PiggyBank size={20} />}
           color="#10b981"
           tone="pos"
           currency={cur}
           hint={t.credits.savingsHint}
         />
-        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon="✅" color="#0f5c4d" currency={cur} />
-        <StatCard label={t.credits.remainingTotal} value={summary.remainingTotal} icon="⏳" color="#f59e0b" currency={cur} />
+        <StatCard label={t.credits.totalPaid} value={summary.totalPaid} icon={<CheckCircle2 size={20} />} color="#0f5c4d" currency={cur} />
+        <StatCard label={t.credits.remainingTotal} value={summary.remainingTotal} icon={<Hourglass size={20} />} color="#f59e0b" currency={cur} />
       </div>
 
       <div className="grid grid-4" style={{ marginTop: 16 }}>
         <StatCard
           label={t.credits.monthlyInstallment}
           value={summary.monthlyInstallment}
-          icon="📅"
+          icon={<CalendarDays size={20} />}
           color="#b8943e"
           currency={cur}
           hint={hasCharges
             ? `${t.credits.totalWithCharges}: ${formatMoney(summary.monthlyTotalDue, cur)} (+${formatMoney(summary.monthlyCharges, cur)})`
             : undefined}
         />
-        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon="🧾" color="#1a3a4a" currency={cur} />
-        <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon="📈" color="#ef4444" currency={cur} />
-        <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon="🏦" color="#10b981" currency={cur} />
+        <StatCard label={t.credits.totalToPay} value={summary.totalToPay} icon={<Receipt size={20} />} color="#1a3a4a" currency={cur} />
+        <StatCard label={t.credits.totalInterest} value={summary.totalInterest} icon={<TrendingUp size={20} />} color="#ef4444" currency={cur} />
+        <StatCard label={t.credits.principalPaid} value={summary.principalPaid} icon={<Landmark size={20} />} color="#10b981" currency={cur} />
       </div>
 
       {summary.prepaidPrincipal > 0 && (
@@ -198,7 +212,7 @@ export default function CreditDetail() {
           <StatCard
             label={t.credits.prepaidPrincipal}
             value={summary.prepaidPrincipal}
-            icon="⚡"
+            icon={<Zap size={20} />}
             color="#b8943e"
             currency={cur}
             hint={t.credits.prepaidHint}
@@ -225,7 +239,7 @@ export default function CreditDetail() {
         <div className="list">
           {payments.map((p) => (
             <div className="list-item" key={p.id}>
-              <span className="badge-icon" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>💵</span>
+              <span className="badge-icon" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}><Banknote size={20} /></span>
               <div className="meta">
                 <div className="title">
                   {formatMoney(p.amount, cur)}

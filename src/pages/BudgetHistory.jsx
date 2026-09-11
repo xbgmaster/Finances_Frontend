@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { BalanceApi } from '../api/client'
 import { formatMoney } from '../utils/format'
 import { iconFor } from '../utils/icons'
@@ -95,7 +96,7 @@ export default function BudgetHistory() {
             className="insight"
             style={{ marginBottom: 20, borderColor: data.totalOverCount > 0 ? 'var(--danger)' : 'var(--success)' }}
           >
-            <span>{data.totalOverCount > 0 ? '⚠️' : '✅'}</span>
+            <span>{data.totalOverCount > 0 ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}</span>
             <span>
               {data.totalOverCount > 0
                 ? t.budgetHistory.totalOver.replace('{count}', data.totalOverCount)

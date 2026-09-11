@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { CategoriesApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 import { ICON_KEYS, iconFor, COLOR_PALETTE } from '../utils/icons'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
@@ -13,6 +14,7 @@ const emptyForm = { name: '', icon: 'tag', color: '#0f5c4d', monthlyBudget: '' }
 export default function Categories() {
   const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
+  const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
   const [categories, setCategories] = useState([])
@@ -67,19 +69,24 @@ export default function Categories() {
       monthlyBudget: form.monthlyBudget === '' ? null : parseFloat(form.monthlyBudget),
       budgetCurrency: activeCurrency,
     }
-    if (editing) await CategoriesApi.update(editing.id, payload)
-    else await CategoriesApi.create(payload)
-    setShowModal(false)
-    await load()
+    try {
+      if (editing) await CategoriesApi.update(editing.id, payload)
+      else await CategoriesApi.create(payload)
+      setShowModal(false)
+      await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      setError(err?.response?.data?.message || t.common.saveError)
+    }
   }
 
   const remove = async (c) => {
-    setError('')
     try {
       await CategoriesApi.remove(c.id)
       await load()
+      toast.success(t.common.deletedOk)
     } catch (err) {
-      setError(err?.response?.data?.message || t.categories.deleteError)
+      toast.error(err?.response?.data?.message || t.categories.deleteError)
     }
   }
 

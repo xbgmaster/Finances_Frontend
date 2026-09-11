@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
+import { Users, UserCheck, UserPlus, ShieldCheck, DoorClosed, Moon, Wand2, Pin } from 'lucide-react'
 import { AdminApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import { formatDate } from '../utils/format'
@@ -84,28 +85,28 @@ export default function AdminDashboard() {
       {stats && (
         <>
           <div className="grid grid-4">
-            <StatCard label={t.admin.totalUsers} value={stats.totalUsers} icon="👥" color="#0f5c4d" isMoney={false} />
+            <StatCard label={t.admin.totalUsers} value={stats.totalUsers} icon={<Users size={20} />} color="#0f5c4d" isMoney={false} />
             <button type="button" className="stat-as-btn" onClick={() => toggleStatus('Active')}>
-              <StatCard label={t.admin.activeUsers} value={stats.activeUsers} icon="✅" color="#10b981" isMoney={false} hint={t.admin.activeUsersHint} />
+              <StatCard label={t.admin.activeUsers} value={stats.activeUsers} icon={<UserCheck size={20} />} color="#10b981" isMoney={false} hint={t.admin.activeUsersHint} />
             </button>
-            <StatCard label={t.admin.newThisMonth} value={stats.newUsersThisMonth} icon="🆕" color="#f59e0b" isMoney={false} />
-            <StatCard label={t.admin.admins} value={stats.adminUsers} icon="🛡️" color="#7a2e2e" isMoney={false} />
+            <StatCard label={t.admin.newThisMonth} value={stats.newUsersThisMonth} icon={<UserPlus size={20} />} color="#f59e0b" isMoney={false} />
+            <StatCard label={t.admin.admins} value={stats.adminUsers} icon={<ShieldCheck size={20} />} color="#7a2e2e" isMoney={false} />
           </div>
 
           <div className="grid grid-4" style={{ marginTop: 20 }}>
             <button type="button" className="stat-as-btn" onClick={() => toggleStatus('Never')}>
-              <StatCard label={t.admin.neverLoggedIn} value={stats.neverLoggedIn} icon="🚪" color="#5c6b73" isMoney={false} hint={t.admin.neverLoggedInHint} />
+              <StatCard label={t.admin.neverLoggedIn} value={stats.neverLoggedIn} icon={<DoorClosed size={20} />} color="#5c6b73" isMoney={false} hint={t.admin.neverLoggedInHint} />
             </button>
             <button type="button" className="stat-as-btn" onClick={() => toggleStatus('Inactive')}>
-              <StatCard label={t.admin.inactiveUsers} value={stats.inactiveUsers} icon="😴" color="#b45309" isMoney={false} hint={t.admin.inactiveUsersHint} />
+              <StatCard label={t.admin.inactiveUsers} value={stats.inactiveUsers} icon={<Moon size={20} />} color="#b45309" isMoney={false} hint={t.admin.inactiveUsersHint} />
             </button>
             <button type="button" className="stat-as-btn" onClick={() => toggleStatus('Pending')}>
-              <StatCard label={t.admin.pendingOnboarding} value={stats.pendingOnboarding} icon="🪄" color="#b8943e" isMoney={false} hint={t.admin.pendingOnboardingHint} />
+              <StatCard label={t.admin.pendingOnboarding} value={stats.pendingOnboarding} icon={<Wand2 size={20} />} color="#b8943e" isMoney={false} hint={t.admin.pendingOnboardingHint} />
             </button>
             <StatCard
               label={t.admin.usersWithActivity}
               value={stats.usersWithActivity}
-              icon="📌"
+              icon={<Pin size={20} />}
               color="#0f5c4d"
               isMoney={false}
               hint={t.admin.usersWithActivityHint}
