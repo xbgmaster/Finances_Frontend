@@ -12,6 +12,66 @@ export const assetUrl = (path) => (path && assetBase ? `${assetBase}${path}` : p
 
 export const TOKEN_KEY = 'finances.token'
 export const USER_KEY = 'finances.user'
+export const REFRESH_KEY = 'finances.refresh'
+export const EXP_KEY = 'finances.expiresAt'
+
+// ---- Session storage helpers (single source of truth in localStorage) ----
+
+export const getStoredRefreshToken = () => localStorage.getItem(REFRESH_KEY)
+
+// Access-token expiry as epoch ms (0 when unknown).
+export const getAccessExpiry = () => {
+  const v = localStorage.getItem(EXP_KEY)
+  const t = v ? new Date(v).getTime() : 0
+  return Number.isFinite(t) ? t : 0
+}
+
+export const saveSession = (result) => {
+  if (result?.token) localStorage.setItem(TOKEN_KEY, result.token)
+  if (result?.user) localStorage.setItem(USER_KEY, JSON.stringify(result.user))
+  if (result?.refreshToken) localStorage.setItem(REFRESH_KEY, result.refreshToken)
+  if (result?.expiresAt) localStorage.setItem(EXP_KEY, result.expiresAt)
+}
+
+export const clearSession = () => {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(EXP_KEY)
+}
+
+const redirectToLogin = () => {
+  const path = `${window.location.pathname}${window.location.hash}`
+  const onAuth = /\/login|\/register|\/password|\/restore-password/.test(path)
+  if (!onAuth) {
+    if (import.meta.env.VITE_NATIVE === 'true') window.location.hash = '#/login'
+    else window.location.href = '/login'
+  }
+}
+
+// Clears the session and lets the app (AuthContext) react + redirect.
+export const emitLogout = () => {
+  clearSession()
+  window.dispatchEvent(new Event('finances:logout'))
+}
+
+// De-duplicated refresh: concurrent callers share one in-flight request.
+let refreshPromise = null
+export const refreshAccessToken = () => {
+  const rt = getStoredRefreshToken()
+  if (!rt) return Promise.reject(new Error('no-refresh-token'))
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post('/auth/refresh', { refreshToken: rt })
+      .then((r) => {
+        saveSession(r.data)
+        window.dispatchEvent(new Event('finances:refreshed'))
+        return r.data
+      })
+      .finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
+}
 
 // Adjunta el token JWT a cada peticion.
 api.interceptors.request.use((config) => {
@@ -20,19 +80,30 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Si el token expira o es invalido (401), cierra sesion y va al login.
+// On 401 for a protected call, try ONE silent refresh + retry. If that fails
+// (or there is no refresh token), sign out and go to the login page.
 api.interceptors.response.use(
   (r) => r,
-  (error) => {
-    if (error?.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(USER_KEY)
-      const path = `${window.location.pathname}${window.location.hash}`
-      const onAuth = /\/login|\/register|\/password|\/restore-password/.test(path)
-      if (!onAuth) {
-        if (import.meta.env.VITE_NATIVE === 'true') window.location.hash = '#/login'
-        else window.location.href = '/login'
+  async (error) => {
+    const original = error?.config || {}
+    const status = error?.response?.status
+    const isAuthCall = /\/auth\//.test(original.url || '')
+
+    if (status === 401 && !isAuthCall) {
+      if (!original._retried && getStoredRefreshToken()) {
+        original._retried = true
+        try {
+          const data = await refreshAccessToken()
+          original.headers = { ...(original.headers || {}), Authorization: `Bearer ${data.token}` }
+          return api(original)
+        } catch {
+          emitLogout()
+          redirectToLogin()
+          return Promise.reject(error)
+        }
       }
+      emitLogout()
+      redirectToLogin()
     }
     return Promise.reject(error)
   },
@@ -41,6 +112,8 @@ api.interceptors.response.use(
 export const AuthApi = {
   login: (data) => api.post('/auth/login', data).then((r) => r.data),
   register: (data) => api.post('/auth/register', data).then((r) => r.data),
+  refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }).then((r) => r.data),
+  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }).then((r) => r.data),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }).then((r) => r.data),
   resetPassword: (data) => api.post('/auth/reset-password', data).then((r) => r.data),
 }
