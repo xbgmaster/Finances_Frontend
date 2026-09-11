@@ -49,6 +49,9 @@ export const translations = {
       viewCurrencyHint: 'Currency lens: the whole app shows one currency at a time. No conversion.',
       none: 'None',
       paymentMethod: 'Payment method',
+      theme: 'Theme',
+      themeLight: 'Light',
+      themeDark: 'Dark',
     },
     dashboard: {
       title: 'Summary',
@@ -565,6 +568,9 @@ export const translations = {
       viewCurrencyHint: 'Lente de moneda: toda la app muestra una moneda a la vez. Sin conversion.',
       none: 'Ninguno',
       paymentMethod: 'Medio de pago',
+      theme: 'Tema',
+      themeLight: 'Claro',
+      themeDark: 'Oscuro',
     },
     dashboard: {
       title: 'Resumen',

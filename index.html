@@ -8,7 +8,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>Finances</title>
-    <style>html,body{background:#f3f0e8;margin:0;min-height:100%;}#root{min-height:100%;}</style>
+    <style>
+      html,body{background:#f3f0e8;margin:0;min-height:100%;}
+      html[data-theme="dark"],html[data-theme="dark"] body{background:#0f1512;}
+      #root{min-height:100%;}
+    </style>
+    <script>
+      // Apply the saved/system theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var s = localStorage.getItem('finances.theme');
+          var t = (s === 'light' || s === 'dark') ? s
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

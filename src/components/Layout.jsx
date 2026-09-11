@@ -10,7 +10,9 @@ import { CreditsApi } from '../api/client'
 import { formatDate } from '../utils/format'
 import LanguageSwitcher from './LanguageSwitcher'
 import CurrencySwitcher from './CurrencySwitcher'
+import ThemeSwitcher from './ThemeSwitcher'
 import BrandLogo from './BrandLogo'
+import { useTheme } from '../theme/ThemeContext'
 
 // Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
 const MoltenMetal = lazy(() => import('./MoltenMetal'))
@@ -19,6 +21,7 @@ const POLL_MS = 5 * 60 * 1000
 
 export default function Layout() {
   const { t } = useI18n()
+  const { theme } = useTheme()
   const { user, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -112,20 +115,20 @@ export default function Layout() {
       <div className="app-molten-bg" aria-hidden="true">
         <Suspense fallback={null}>
           <MoltenMetal
-            color1="#D7E4DC"
-            color2="#D4B05A"
-            color3="#FFF8EE"
+            color1={theme === 'dark' ? '#0e2a24' : '#D7E4DC'}
+            color2={theme === 'dark' ? '#8a6b22' : '#D4B05A'}
+            color3={theme === 'dark' ? '#0a1512' : '#FFF8EE'}
             colorMode="molten"
             speed={0.32}
             scale={4}
             detail={3}
-            glow={1.55}
+            glow={theme === 'dark' ? 1.3 : 1.55}
             coreSize={0.12}
             swirl={0.95}
             fold={-0.18}
             blackPoint={0.04}
-            brightness={1.28}
-            opacity={0.52}
+            brightness={theme === 'dark' ? 1.0 : 1.28}
+            opacity={theme === 'dark' ? 0.4 : 0.52}
             grain
             grainIntensity={0.035}
             mouseInteraction
@@ -177,6 +180,10 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-footer">
+          <span className="sidebar-footer-label">{t.common.theme}</span>
+          <ThemeSwitcher />
+        </div>
         <div className="sidebar-account">
           <NavLink
             to="/categories"
