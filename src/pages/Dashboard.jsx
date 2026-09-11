@@ -114,7 +114,7 @@ export default function Dashboard() {
     setEditingExpenseId(null)
     setExpenseError('')
     setExpenseForm({
-      amount: '', description: '', categoryId: categories[0]?.id ?? '', date: todayIso(),
+      amount: '', description: '', categoryId: categories.find((c) => !c.isSystem)?.id ?? '', date: todayIso(),
       currency: activeCurrency, paymentMethodId: defaultPmId(), receipt: null, existingReceiptUrl: null, removeReceipt: false,
     })
     setModal('expense')
@@ -869,10 +869,10 @@ export default function Dashboard() {
                 }}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
+                {categories.filter((c) => !c.isSystem).map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
                 <option value="__new__">{t.common.addNewCategory}</option>
               </select>
-              {categories.length === 0 && (
+              {categories.filter((c) => !c.isSystem).length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
                   {t.dashboard.noCategories}{' '}
                   <button type="button" className="link-btn" onClick={goCreateCategory}>

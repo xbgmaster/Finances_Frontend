@@ -20,6 +20,10 @@ export default function Expenses() {
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
+  const [pmFilter, setPmFilter] = useState('') // '' = all accounts
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [categories, setCategories] = useState([])
   const [summary, setSummary] = useState(null)
   const [expenses, setExpenses] = useState([])
@@ -42,7 +46,7 @@ export default function Expenses() {
     const [cats, sum, exp, exch, pms] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
-      ExpensesApi.list({ year, month, currency: activeCurrency }),
+      ExpensesApi.list({ year, month, currency: activeCurrency, paymentMethodId: pmFilter || undefined }),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
     ])
@@ -57,7 +61,12 @@ export default function Expenses() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, activeCurrency])
+  }, [year, month, activeCurrency, pmFilter])
+
+  // Reset to the first page whenever the search/filters change.
+  useEffect(() => {
+    setPage(1)
+  }, [search, pageSize, pmFilter, year, month, activeCurrency])
 
   const openCreate = () => {
     setEditingId(null)
@@ -65,7 +74,7 @@ export default function Expenses() {
     setForm({
       amount: '',
       description: '',
-      categoryId: categories[0]?.id ?? '',
+      categoryId: categories.find((c) => !c.isSystem)?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
       currency: activeCurrency,
       paymentMethodId: defaultPmId(),
@@ -154,6 +163,17 @@ export default function Expenses() {
     return `${p.name} · ${type} · ${p.currency}`
   }
 
+  // Icon that mirrors the /cards view: cash 💵, debit 🏦, credit card 💳.
+  const pmTypeIcon = (type) =>
+    type === 'CreditCard' ? '💳' : type === 'Cash' ? '💵' : type === 'Debit' ? '🏦' : '💳'
+
+  const pmTypeLabel = (type) =>
+    type === 'CreditCard' ? t.cards.typeCreditCard
+      : type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
+
+  // Categories the user can pick manually (system ones like "Debt payments" are hidden).
+  const pickableCategories = categories.filter((c) => !c.isSystem)
+
   const defaultPmId = () => {
     const active = paymentMethods.filter((p) => !p.archived)
     return String(
@@ -186,9 +206,10 @@ export default function Expenses() {
   const transfersNet = transfersIn - transfersOut
 
   // Merge expenses + exchange legs into a single, date-sorted activity list.
+  // When filtering by an account, hide currency exchanges (they aren't tied to a payment method).
   const details = [
     ...expenses.map((e) => ({ ...e, kind: 'expense' })),
-    ...monthExchanges.map((x) => {
+    ...(pmFilter ? [] : monthExchanges).map((x) => {
       const out = x.fromCurrency === activeCurrency
       return {
         kind: 'exchange',
@@ -201,6 +222,20 @@ export default function Expenses() {
       }
     }),
   ].sort((a, b) => new Date(b.date) - new Date(a.date))
+
+  // Text search over the visible activity (description, category, account, amount, date).
+  const query = search.trim().toLowerCase()
+  const filteredDetails = details.filter((e) => {
+    if (!query) return true
+    const haystack = e.kind === 'exchange'
+      ? [t.dashboard.exchange, e.otherCurrency, formatDate(e.date)]
+      : [e.description, e.categoryName && categoryLabel(e.categoryName), e.paymentMethodName,
+         e.paymentMethodType && pmTypeLabel(e.paymentMethodType), String(e.amount), formatDate(e.date)]
+    return haystack.filter(Boolean).join(' ').toLowerCase().includes(query)
+  })
+  const totalPages = Math.max(1, Math.ceil(filteredDetails.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedDetails = filteredDetails.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div>
@@ -215,6 +250,12 @@ export default function Expenses() {
           </select>
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select value={pmFilter} onChange={(e) => setPmFilter(e.target.value)} title={t.expenses.filterByAccount}>
+            <option value="">{t.expenses.allAccounts}</option>
+            {paymentMethods.filter((p) => !p.archived).map((p) => (
+              <option key={p.id} value={p.id}>{pmTypeIcon(p.type)} {p.name} · {pmTypeLabel(p.type)}</option>
+            ))}
           </select>
           <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
         </div>
@@ -283,12 +324,49 @@ export default function Expenses() {
       )}
 
       <h2 className="section-title">{t.expenses.expenseDetails}</h2>
+      {pmFilter && (() => {
+        const selectedPm = paymentMethods.find((p) => String(p.id) === String(pmFilter))
+        const accountTotal = expenses.reduce((s, e) => s + e.amount, 0)
+        return (
+          <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span>{pmTypeIcon(selectedPm?.type)}</span>
+            <span>{selectedPm ? selectedPm.name : t.expenses.allAccounts}</span>
+            <span className="hint" style={{ color: 'var(--text-muted)' }}>· {t.expenses.accountTotal}:</span>
+            <strong className="neg">−{formatMoney(accountTotal, activeCurrency)}</strong>
+          </div>
+        )
+      })()}
       {listError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{listError}</div>}
+      {details.length > 0 && (
+        <div className="activity-toolbar">
+          <input
+            type="search"
+            className="activity-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t.dashboard.searchPlaceholder}
+          />
+          {search && (
+            <button type="button" className="btn secondary" onClick={() => setSearch('')}>
+              {t.dashboard.clearFilters}
+            </button>
+          )}
+          <div className="activity-spacer" />
+          <label className="activity-pagesize">
+            {t.dashboard.perPage}
+            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+              {[5, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
       {details.length === 0 ? (
         <div className="empty">{t.expenses.noExpenses}</div>
+      ) : filteredDetails.length === 0 ? (
+        <div className="empty">{t.dashboard.noResults}</div>
       ) : (
         <div className="list">
-          {details.map((e) => {
+          {pagedDetails.map((e) => {
             if (e.kind === 'exchange') {
               const incoming = !e.out
               return (
@@ -332,7 +410,7 @@ export default function Expenses() {
                   <div className="title">{e.description || categoryLabel(e.categoryName)}</div>
                   <div className="sub">
                     {categoryLabel(e.categoryName)} · {formatDate(e.date)}
-                    {e.paymentMethodName ? ` · 💳 ${e.paymentMethodName}` : ''}
+                    {e.paymentMethodName ? ` · ${pmTypeIcon(e.paymentMethodType)} ${e.paymentMethodName} (${pmTypeLabel(e.paymentMethodType)})` : ''}
                   </div>
                 </div>
                 {e.receiptUrl && (
@@ -367,6 +445,30 @@ export default function Expenses() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {filteredDetails.length > 0 && totalPages > 1 && (
+        <div className="activity-pager">
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            {t.dashboard.prev}
+          </button>
+          <span className="activity-pageinfo">
+            {t.dashboard.pageOf.replace('{page}', currentPage).replace('{total}', totalPages)}
+          </span>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            {t.dashboard.next}
+          </button>
         </div>
       )}
 
@@ -410,10 +512,10 @@ export default function Expenses() {
                 }}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
+                {pickableCategories.map((c) => <option key={c.id} value={c.id}>{categoryLabel(c.name)}</option>)}
                 <option value="__new__">{t.common.addNewCategory}</option>
               </select>
-              {categories.length === 0 && (
+              {pickableCategories.length === 0 && (
                 <div className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>
                   {t.dashboard.noCategories}{' '}
                   <button type="button" className="link-btn" onClick={goCreateCategory}>
