@@ -127,6 +127,7 @@ export const AdminApi = {
   stats: () => api.get('/admin/stats').then((r) => r.data),
   users: (params) => api.get('/admin/users', { params }).then((r) => r.data),
   user: (id) => api.get(`/admin/users/${id}`).then((r) => r.data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
   exportCsv: (params) => api.get('/admin/reports/export', { params, responseType: 'blob' }).then((r) => r.data),
 }
 

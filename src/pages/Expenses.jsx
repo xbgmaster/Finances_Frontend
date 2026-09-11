@@ -9,7 +9,6 @@ import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor, pmTypeIcon } from '../utils/icons'
-import { CURRENCIES } from '../utils/currencies'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -517,16 +516,9 @@ export default function Expenses() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.common.currency}</label>
-                <select
-                  value={form.currency}
-                  onChange={async (e) => {
-                    const cur = e.target.value
-                    const pms = await ensureCashAccount(cur)
-                    setForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur) }))
-                  }}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.dashboard.currencyLensHint}>
+                  {form.currency || activeCurrency}
+                </div>
               </div>
             </div>
             <div className="field">

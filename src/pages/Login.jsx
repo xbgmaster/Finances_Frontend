@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 
@@ -35,7 +36,7 @@ export default function Login() {
   return (
     <div className="auth-page auth-page--laser">
       <AuthLaserBackground />
-      <div className="auth-topbar"><LanguageSwitcher /></div>
+      <div className="auth-topbar"><ThemeSwitcher compact /><LanguageSwitcher /></div>
       <div className="auth-card">
         <div className="auth-brand"><BrandLogo className="logo" size={40} /><span>{t.appName}</span></div>
         <h1>{t.auth.loginTitle}</h1>
@@ -59,6 +60,7 @@ export default function Login() {
         <p className="auth-switch">{t.auth.noAccount} <Link to="/register">{t.auth.signUp}</Link></p>
         <p className="auth-switch"><Link to="/password">{t.auth.changePassword}</Link></p>
       </div>
+      <p className="auth-tagline">{t.auth.tagline}</p>
     </div>
   )
 }

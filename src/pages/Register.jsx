@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 import CountrySelect from '../components/CountrySelect'
@@ -38,7 +39,7 @@ export default function Register() {
   return (
     <div className="auth-page auth-page--laser">
       <AuthLaserBackground />
-      <div className="auth-topbar"><LanguageSwitcher /></div>
+      <div className="auth-topbar"><ThemeSwitcher compact /><LanguageSwitcher /></div>
       <div className="auth-card">
         <div className="auth-brand"><BrandLogo className="logo" size={40} /><span>{t.appName}</span></div>
         <h1>{t.auth.registerTitle}</h1>

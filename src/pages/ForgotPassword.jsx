@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AuthApi } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 import AuthIcon from '../components/AuthIcon'
 
@@ -30,7 +31,7 @@ export default function ForgotPassword() {
   return (
     <div className="auth-page auth-page--laser">
       <AuthLaserBackground />
-      <div className="auth-topbar"><LanguageSwitcher /></div>
+      <div className="auth-topbar"><ThemeSwitcher compact /><LanguageSwitcher /></div>
       <div className="auth-card">
         <div className="auth-brand"><AuthIcon /><span>{t.auth.restorePassword}</span></div>
 

@@ -822,16 +822,9 @@ export default function Dashboard() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.common.currency}</label>
-                <select
-                  value={incomeForm.currency}
-                  onChange={async (e) => {
-                    const cur = e.target.value
-                    const pms = await ensureCashAccount(cur)
-                    setIncomeForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur, { excludeCredit: !!editingIncomeId }) }))
-                  }}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.dashboard.currencyLensHint}>
+                  {incomeForm.currency || activeCurrency}
+                </div>
               </div>
             </div>
             <div className="field">
@@ -897,16 +890,9 @@ export default function Dashboard() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.common.currency}</label>
-                <select
-                  value={expenseForm.currency}
-                  onChange={async (e) => {
-                    const cur = e.target.value
-                    const pms = await ensureCashAccount(cur)
-                    setExpenseForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur) }))
-                  }}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.dashboard.currencyLensHint}>
+                  {expenseForm.currency || activeCurrency}
+                </div>
               </div>
             </div>
             <div className="field">
@@ -1020,15 +1006,9 @@ export default function Dashboard() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.common.currency}</label>
-                <select
-                  value={exchangeForm.fromCurrency}
-                  onChange={(e) => {
-                    const cur = e.target.value
-                    setExchangeForm((f) => ({ ...f, fromCurrency: cur, fromPaymentMethodId: bestPm(paymentMethods, cur, { excludeCredit: true }) }))
-                  }}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.dashboard.currencyLensHint}>
+                  {exchangeForm.fromCurrency || activeCurrency}
+                </div>
               </div>
             </div>
             <div className="field">
@@ -1077,7 +1057,9 @@ export default function Dashboard() {
                     setExchangeForm((f) => ({ ...f, toCurrency: cur, toPaymentMethodId: bestPm(paymentMethods, cur, { excludeCredit: true }) }))
                   }}
                 >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {CURRENCIES.filter((c) => c !== exchangeForm.fromCurrency).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
             </div>

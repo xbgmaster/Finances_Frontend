@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { Users, UserCheck, UserPlus, ShieldCheck, DoorClosed, Moon, Wand2, Pin } from 'lucide-react'
+import { Users, UserCheck, UserPlus, ShieldCheck, DoorClosed, Moon, Wand2, Pin, Trash2 } from 'lucide-react'
 import { AdminApi } from '../api/client'
 import StatCard from '../components/StatCard'
+import Modal from '../components/Modal'
+import { useToast } from '../components/Toast'
 import { formatDate } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -19,14 +21,21 @@ function loginStatus(user, t) {
 
 export default function AdminDashboard() {
   const { t } = useI18n()
+  const toast = useToast()
   const [stats, setStats] = useState(null)
   const [data, setData] = useState(null)
   const [filters, setFilters] = useState({ search: '', role: '', status: '', page: 1 })
   const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [confirmText, setConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const pageSize = 10
 
+  const refreshStats = () => AdminApi.stats().then(setStats)
+
   useEffect(() => {
-    AdminApi.stats().then(setStats)
+    refreshStats()
   }, [])
 
   useEffect(() => {
@@ -43,7 +52,29 @@ export default function AdminDashboard() {
         .finally(() => setLoading(false))
     }, 350)
     return () => clearTimeout(handler)
-  }, [filters])
+  }, [filters, reloadKey])
+
+  const openDelete = (user) => {
+    setDeleteTarget(user)
+    setConfirmText('')
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await AdminApi.deleteUser(deleteTarget.id)
+      toast.success(t.admin.deleteUserOk.replace('{email}', deleteTarget.email))
+      setDeleteTarget(null)
+      setConfirmText('')
+      setReloadKey((k) => k + 1)
+      refreshStats()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.admin.deleteUserError)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1
 
@@ -167,14 +198,15 @@ export default function AdminDashboard() {
               <th>{t.admin.colCreated}</th>
               <th>{t.admin.colLastLogin}</th>
               <th className="num">{t.admin.colActivity}</th>
+              <th className="num">{t.admin.colActions}</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="loading">{t.common.loading}</td></tr>
+              <tr><td colSpan={9} className="loading">{t.common.loading}</td></tr>
             )}
             {!loading && data?.items.length === 0 && (
-              <tr><td colSpan={8} className="loading">{t.admin.noUsers}</td></tr>
+              <tr><td colSpan={9} className="loading">{t.admin.noUsers}</td></tr>
             )}
             {!loading && data?.items.map((u) => {
               const status = loginStatus(u, t)
@@ -201,6 +233,21 @@ export default function AdminDashboard() {
                   <td>{formatDate(u.createdAt)}</td>
                   <td>{u.lastLoginAt ? formatDate(u.lastLoginAt) : t.admin.neverLoggedInShort}</td>
                   <td className="num">{u.expenseCount}</td>
+                  <td className="num">
+                    {u.role === 'Admin' ? (
+                      <span className="hint" title={t.admin.deleteUserAdminBlocked}>—</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="icon-btn danger"
+                        title={t.admin.deleteUser}
+                        aria-label={t.admin.deleteUser}
+                        onClick={() => openDelete(u)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               )
             })}
@@ -219,6 +266,39 @@ export default function AdminDashboard() {
             {t.admin.next}
           </button>
         </div>
+      )}
+
+      {deleteTarget && (
+        <Modal title={t.admin.deleteUserTitle} onClose={() => (deleting ? null : setDeleteTarget(null))}>
+          <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 14 }}>
+            {t.admin.deleteUserWarn.replace('{email}', deleteTarget.email)}
+          </div>
+          <div className="field">
+            <label>{t.admin.deleteUserConfirmLabel.replace('{email}', deleteTarget.email)}</label>
+            <input
+              type="text"
+              autoFocus
+              spellCheck={false}
+              autoComplete="off"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={deleteTarget.email}
+            />
+          </div>
+          <div className="row">
+            <button type="button" className="btn secondary" disabled={deleting} onClick={() => setDeleteTarget(null)}>
+              {t.common.cancel}
+            </button>
+            <button
+              type="button"
+              className="btn danger"
+              disabled={deleting || confirmText.trim().toLowerCase() !== deleteTarget.email.toLowerCase()}
+              onClick={confirmDelete}
+            >
+              {deleting ? t.common.saving : t.admin.deleteUserButton}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   )

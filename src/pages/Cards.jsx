@@ -5,9 +5,8 @@ import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PayCardModal from '../components/PayCardModal'
 import { useToast } from '../components/Toast'
-import { tintVars, normalizeHex, sameColor, CARD_BANK_COLORS, CARD_EXTRA_COLORS } from '../utils/color'
+import { tintVars, normalizeHex, sameColor, CARD_BANK_COLORS } from '../utils/color'
 import { formatMoney } from '../utils/format'
-import { CURRENCIES } from '../utils/currencies'
 import { pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -351,9 +350,9 @@ export default function Cards() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.common.currency}</label>
-                <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.cards.currencyLensHint}>
+                  {form.currency || activeCurrency}
+                </div>
               </div>
             </div>
 
@@ -398,21 +397,6 @@ export default function Cards() {
                 <span className="color-group-label">{t.cards.colorBank}</span>
                 <div className="color-grid">
                   {CARD_BANK_COLORS.map((color) => (
-                    <button
-                      type="button"
-                      key={color}
-                      className={`color-pick ${sameColor(form.color, color) ? 'active' : ''}`}
-                      style={{ background: color }}
-                      title={color}
-                      onClick={() => setForm({ ...form, color })}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="color-group">
-                <span className="color-group-label">{t.cards.colorPalette}</span>
-                <div className="color-grid">
-                  {CARD_EXTRA_COLORS.map((color) => (
                     <button
                       type="button"
                       key={color}
