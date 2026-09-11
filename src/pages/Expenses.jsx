@@ -87,16 +87,17 @@ export default function Expenses() {
     setPage(1)
   }, [activeCurrency])
 
-  const openCreate = () => {
+  const openCreate = async () => {
     setEditingId(null)
     setError('')
+    const pms = await ensureCashAccount(activeCurrency)
     setForm({
       amount: '',
       description: '',
       categoryId: categories.find((c) => !c.isSystem)?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
       currency: activeCurrency,
-      paymentMethodId: defaultPmId(),
+      paymentMethodId: bestPm(pms, activeCurrency),
       receipt: null,
       existingReceiptUrl: null,
       removeReceipt: false,
@@ -113,7 +114,7 @@ export default function Expenses() {
       categoryId: e.categoryId ?? '',
       date: e.date ? new Date(e.date).toISOString().slice(0, 10) : '',
       currency: e.currency || activeCurrency,
-      paymentMethodId: e.paymentMethodId ?? defaultPmId(),
+      paymentMethodId: e.paymentMethodId ?? defaultPmId(e.currency || activeCurrency),
       receipt: null,
       existingReceiptUrl: e.receiptUrl || null,
       removeReceipt: false,
@@ -190,13 +191,27 @@ export default function Expenses() {
   // Categories the user can pick manually (system ones like "Debt payments" are hidden).
   const pickableCategories = categories.filter((c) => !c.isSystem)
 
-  const defaultPmId = () => {
-    const active = paymentMethods.filter((p) => !p.archived)
-    return String(
-      active.find((p) => p.isFavorite)?.id
-      ?? active.find((p) => p.currency === activeCurrency)?.id
-      ?? active[0]?.id ?? '',
-    )
+  // Best method to preselect within a currency: favorite first, else the first one.
+  const bestPm = (pms, cur) => {
+    const active = pms.filter((p) => !p.archived && p.currency === cur)
+    return String(active.find((p) => p.isFavorite)?.id ?? active[0]?.id ?? '')
+  }
+
+  const defaultPmId = (cur = activeCurrency) => bestPm(paymentMethods, cur)
+
+  // Ensure a currency always has an account (create a default Cash one if it has none),
+  // so the required payment-method field always has a valid option. Returns the fresh list.
+  const ensureCashAccount = async (cur) => {
+    const c = cur || activeCurrency
+    if (!c || paymentMethods.some((p) => !p.archived && p.currency === c)) return paymentMethods
+    try {
+      await PaymentMethodsApi.create({ name: t.cards.typeCash, type: 'Cash', currency: c })
+      const pms = await PaymentMethodsApi.list()
+      setPaymentMethods(pms)
+      return pms
+    } catch {
+      return paymentMethods
+    }
   }
 
   const years = useMemo(() => {
@@ -450,6 +465,7 @@ export default function Expenses() {
                 const amount = out ? x.fromAmount : x.toAmount
                 const otherAmount = out ? x.toAmount : x.fromAmount
                 const otherCurrency = out ? x.toCurrency : x.fromCurrency
+                const accountName = out ? x.fromPaymentMethodName : x.toPaymentMethodName
                 return (
                   <div className="list-item tinted" key={`exchange-${x.id}`} style={tintVars('#b8943e')}>
                     <span className="badge-icon"><ArrowLeftRight size={16} /></span>
@@ -459,6 +475,7 @@ export default function Expenses() {
                         {out
                           ? `${t.dashboard.toLabel} ${formatMoney(otherAmount, otherCurrency)}`
                           : `${t.dashboard.fromLabel} ${formatMoney(otherAmount, otherCurrency)}`}
+                        {accountName ? ` · ${accountName}` : ''}
                         {' · '}{formatDate(x.date)}
                       </div>
                     </div>
@@ -502,7 +519,11 @@ export default function Expenses() {
                 <label>{t.common.currency}</label>
                 <select
                   value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  onChange={async (e) => {
+                    const cur = e.target.value
+                    const pms = await ensureCashAccount(cur)
+                    setForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur) }))
+                  }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -542,9 +563,12 @@ export default function Expenses() {
                 onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods.filter((p) => !p.archived).map((p) => (
-                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                ))}
+                {paymentMethods
+                  .filter((p) => !p.archived
+                    && (p.currency === form.currency || String(p.id) === String(form.paymentMethodId)))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                  ))}
               </select>
             </div>
             <div className="field">

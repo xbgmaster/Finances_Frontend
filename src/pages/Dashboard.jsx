@@ -51,7 +51,7 @@ export default function Dashboard() {
     amount: '', description: '', categoryId: '', date: '', currency: '',
     paymentMethodId: '', receipt: null, existingReceiptUrl: null, removeReceipt: false,
   })
-  const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '' })
+  const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '', fromPaymentMethodId: '', toPaymentMethodId: '' })
 
   const load = async () => {
     setLoading(true)
@@ -94,9 +94,13 @@ export default function Dashboard() {
     setActPage(1)
   }, [actSearch, actFrom, actTo, actPageSize, activeCurrency])
 
-  const openIncome = () => {
+  const openIncome = async () => {
     setEditingIncomeId(null)
-    setIncomeForm({ amount: '', description: '', date: todayIso(), currency: activeCurrency, paymentMethodId: defaultPmId() })
+    const pms = await ensureCashAccount(activeCurrency)
+    setIncomeForm({
+      amount: '', description: '', date: todayIso(), currency: activeCurrency,
+      paymentMethodId: bestPm(pms, activeCurrency),
+    })
     setModal('income')
   }
 
@@ -112,12 +116,13 @@ export default function Dashboard() {
     setModal('income')
   }
 
-  const openExpense = () => {
+  const openExpense = async () => {
     setEditingExpenseId(null)
     setExpenseError('')
+    const pms = await ensureCashAccount(activeCurrency)
     setExpenseForm({
       amount: '', description: '', categoryId: categories.find((c) => !c.isSystem)?.id ?? '', date: todayIso(),
-      currency: activeCurrency, paymentMethodId: defaultPmId(), receipt: null, existingReceiptUrl: null, removeReceipt: false,
+      currency: activeCurrency, paymentMethodId: bestPm(pms, activeCurrency), receipt: null, existingReceiptUrl: null, removeReceipt: false,
     })
     setModal('expense')
   }
@@ -131,7 +136,7 @@ export default function Dashboard() {
       categoryId: m.categoryId ?? '',
       date: m.date ? new Date(m.date).toISOString().slice(0, 10) : '',
       currency: m.currency || activeCurrency,
-      paymentMethodId: m.paymentMethodId ?? defaultPmId(),
+      paymentMethodId: m.paymentMethodId ?? defaultPmId(m.currency || activeCurrency),
       receipt: null,
       existingReceiptUrl: m.receiptUrl || null,
       removeReceipt: false,
@@ -151,20 +156,39 @@ export default function Dashboard() {
     return `${p.name} · ${type} · ${p.currency}`
   }
 
-  // Preselect a method: favorite first, then one in the active currency, else the first.
-  const defaultPmId = () => {
-    const active = paymentMethods.filter((p) => !p.archived)
-    return String(
-      active.find((p) => p.isFavorite)?.id
-      ?? active.find((p) => p.currency === activeCurrency)?.id
-      ?? active[0]?.id ?? '',
-    )
+  // Best method to preselect within a currency: favorite first, else the first one.
+  const bestPm = (pms, cur, { excludeCredit = false } = {}) => {
+    const active = pms.filter((p) => !p.archived && p.currency === cur
+      && (!excludeCredit || p.type !== 'CreditCard'))
+    return String(active.find((p) => p.isFavorite)?.id ?? active[0]?.id ?? '')
+  }
+
+  const defaultPmId = (cur = activeCurrency) => bestPm(paymentMethods, cur)
+
+  // A currency must always have somewhere for money to land. If it has no (non-archived)
+  // account, create a default "Cash" one for it so income/expenses/transfers can be tracked.
+  // Returns the up-to-date payment-methods list.
+  const ensureCashAccount = async (cur) => {
+    const c = cur || activeCurrency
+    if (!c || paymentMethods.some((p) => !p.archived && p.currency === c)) return paymentMethods
+    try {
+      await PaymentMethodsApi.create({ name: t.cards.typeCash, type: 'Cash', currency: c })
+      const pms = await PaymentMethodsApi.list()
+      setPaymentMethods(pms)
+      return pms
+    } catch {
+      return paymentMethods
+    }
   }
 
   const openExchange = () => {
     const from = activeCurrency
     const to = CURRENCIES.find((c) => c !== from) || from
-    setExchangeForm({ fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: todayIso(), note: '' })
+    setExchangeForm({
+      fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: todayIso(), note: '',
+      fromPaymentMethodId: bestPm(paymentMethods, from, { excludeCredit: true }),
+      toPaymentMethodId: bestPm(paymentMethods, to, { excludeCredit: true }),
+    })
     setModal('exchange')
   }
 
@@ -191,6 +215,8 @@ export default function Dashboard() {
         toAmount,
         date: exchangeForm.date ? new Date(exchangeForm.date).toISOString() : undefined,
         note: exchangeForm.note.trim() || undefined,
+        fromPaymentMethodId: exchangeForm.fromPaymentMethodId ? Number(exchangeForm.fromPaymentMethodId) : undefined,
+        toPaymentMethodId: exchangeForm.toPaymentMethodId ? Number(exchangeForm.toPaymentMethodId) : undefined,
       })
       setModal(null)
       await load()
@@ -347,6 +373,7 @@ export default function Dashboard() {
           currency: selCur,
           otherCurrency: out ? x.toCurrency : x.fromCurrency,
           otherAmount: out ? x.toAmount : x.fromAmount,
+          accountName: out ? x.fromPaymentMethodName : x.toPaymentMethodName,
         }
       }),
     ...cardPayments
@@ -630,6 +657,7 @@ export default function Dashboard() {
                       {incoming
                         ? `${t.dashboard.fromLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`
                         : `${t.dashboard.toLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`}
+                      {m.accountName ? ` · ${m.accountName}` : ''}
                       {' · '}{formatDate(m.date)}
                     </div>
                   </div>
@@ -796,7 +824,11 @@ export default function Dashboard() {
                 <label>{t.common.currency}</label>
                 <select
                   value={incomeForm.currency}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, currency: e.target.value })}
+                  onChange={async (e) => {
+                    const cur = e.target.value
+                    const pms = await ensureCashAccount(cur)
+                    setIncomeForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur, { excludeCredit: !!editingIncomeId }) }))
+                  }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -827,7 +859,9 @@ export default function Dashboard() {
               >
                 <option value="">{t.common.none}</option>
                 {paymentMethods
-                  .filter((p) => !p.archived && (!editingIncomeId || p.type !== 'CreditCard'))
+                  .filter((p) => !p.archived
+                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId))
+                    && (!editingIncomeId || p.type !== 'CreditCard'))
                   .map((p) => (
                     <option key={p.id} value={p.id}>{pmLabel(p)}</option>
                   ))}
@@ -865,7 +899,11 @@ export default function Dashboard() {
                 <label>{t.common.currency}</label>
                 <select
                   value={expenseForm.currency}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, currency: e.target.value })}
+                  onChange={async (e) => {
+                    const cur = e.target.value
+                    const pms = await ensureCashAccount(cur)
+                    setExpenseForm((f) => ({ ...f, currency: cur, paymentMethodId: bestPm(pms, cur) }))
+                  }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -905,9 +943,12 @@ export default function Dashboard() {
                 onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods.filter((p) => !p.archived).map((p) => (
-                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                ))}
+                {paymentMethods
+                  .filter((p) => !p.archived
+                    && (p.currency === expenseForm.currency || String(p.id) === String(expenseForm.paymentMethodId)))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                  ))}
               </select>
             </div>
             <div className="field">
@@ -981,11 +1022,26 @@ export default function Dashboard() {
                 <label>{t.common.currency}</label>
                 <select
                   value={exchangeForm.fromCurrency}
-                  onChange={(e) => setExchangeForm({ ...exchangeForm, fromCurrency: e.target.value })}
+                  onChange={(e) => {
+                    const cur = e.target.value
+                    setExchangeForm((f) => ({ ...f, fromCurrency: cur, fromPaymentMethodId: bestPm(paymentMethods, cur, { excludeCredit: true }) }))
+                  }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+            <div className="field">
+              <label>{t.dashboard.fromAccountLabel}</label>
+              <select
+                value={exchangeForm.fromPaymentMethodId}
+                onChange={(e) => setExchangeForm({ ...exchangeForm, fromPaymentMethodId: e.target.value })}
+              >
+                <option value="">{t.common.none}</option>
+                {paymentMethods
+                  .filter((p) => !p.archived && p.type !== 'CreditCard' && p.currency === exchangeForm.fromCurrency)
+                  .map((p) => <option key={p.id} value={p.id}>{pmLabel(p)}</option>)}
+              </select>
             </div>
             <div className="field">
               <label>{t.dashboard.rateLabel}</label>
@@ -1016,11 +1072,27 @@ export default function Dashboard() {
                 <label>{t.common.currency}</label>
                 <select
                   value={exchangeForm.toCurrency}
-                  onChange={(e) => setExchangeForm({ ...exchangeForm, toCurrency: e.target.value })}
+                  onChange={(e) => {
+                    const cur = e.target.value
+                    setExchangeForm((f) => ({ ...f, toCurrency: cur, toPaymentMethodId: bestPm(paymentMethods, cur, { excludeCredit: true }) }))
+                  }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+            <div className="field">
+              <label>{t.dashboard.toAccountLabel}</label>
+              <select
+                value={exchangeForm.toPaymentMethodId}
+                onChange={(e) => setExchangeForm({ ...exchangeForm, toPaymentMethodId: e.target.value })}
+              >
+                <option value="">{t.dashboard.toAccountAuto}</option>
+                {paymentMethods
+                  .filter((p) => !p.archived && p.type !== 'CreditCard' && p.currency === exchangeForm.toCurrency)
+                  .map((p) => <option key={p.id} value={p.id}>{pmLabel(p)}</option>)}
+              </select>
+              <div className="hint" style={{ marginTop: 4 }}>{t.dashboard.toAccountHint}</div>
             </div>
             {exchangeForm.fromCurrency === exchangeForm.toCurrency && (
               <div className="field-hint" style={{ color: 'var(--danger)' }}>{t.dashboard.exchangeSameCurrency}</div>
