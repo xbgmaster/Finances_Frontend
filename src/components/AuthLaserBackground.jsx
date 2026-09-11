@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
+import { useTheme } from '../theme/ThemeContext'
 
 // Heavy WebGL/three.js effect: load it only when an auth page renders.
 const LaserFlow = lazy(() => import('./LaserFlow'))
@@ -12,6 +13,9 @@ const LaserFlow = lazy(() => import('./LaserFlow'))
 // mirroring the ReactBits LaserFlow "Usage" example.
 export default function AuthLaserBackground() {
   const revealRef = useRef(null)
+  const { theme } = useTheme()
+  // Dark mode leans into the Tishe brand: a gold beam over near-black.
+  const beamColor = theme === 'dark' ? '#d4af37' : '#0f5c4d'
 
   useEffect(() => {
     const el = revealRef.current
@@ -42,7 +46,8 @@ export default function AuthLaserBackground() {
     <div className="laser-bg" aria-hidden="true">
       <Suspense fallback={null}>
         <LaserFlow
-          color="#0f5c4d"
+          key={theme}
+          color={beamColor}
           wispDensity={0.8}
           flowSpeed={0.45}
           verticalSizing={5}

@@ -1516,6 +1516,20 @@ input:focus, select:focus {
     #eef4f1;
 }
 
+/* Dark mode: black + gold, matching the Tishe logo. */
+html[data-theme="dark"] .laser-bg {
+  background:
+    radial-gradient(920px 560px at 50% 4%, rgba(212, 175, 55, 0.26), transparent 60%),
+    radial-gradient(560px 380px at 50% 32%, rgba(184, 148, 62, 0.12), transparent 66%),
+    radial-gradient(1200px 720px at 50% 122%, rgba(212, 175, 55, 0.16), transparent 60%),
+    #070604;
+}
+
+html[data-theme="dark"] .laser-reveal {
+  mix-blend-mode: screen;
+  opacity: 0.22;
+}
+
 /* Guarantee the WebGL mount fills the fixed background immediately. We size it
    from inset (top/bottom/left/right) rather than width/height:100% because a
    percentage height against an inset-sized parent is "flaky": it may resolve to
