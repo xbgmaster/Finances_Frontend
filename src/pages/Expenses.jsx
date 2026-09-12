@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExpensesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
+import { ExpensesApi, IncomesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
+import ExpenseCalendar from '../components/ExpenseCalendar'
 import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
@@ -16,21 +17,26 @@ import { useCurrency } from '../currency/CurrencyContext'
 const now = new Date()
 
 export default function Expenses() {
-  const { t, categoryLabel } = useI18n()
+  const { t, categoryLabel, accountLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [pmFilter, setPmFilter] = useState('') // '' = all accounts
-  const [searchInput, setSearchInput] = useState('') // bound to the input
-  const [search, setSearch] = useState('') // debounced value sent to the server
+  const [catFilter, setCatFilter] = useState('') // '' = all categories
+  const [searchInput, setSearchInput] = useState('') // bound to the input (filtered client-side)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
+  // The month's expenses live in the calendar above; the flat list is complementary and
+  // stays collapsed until the user searches/filters by account or expands it on demand.
+  const [showList, setShowList] = useState(false)
   const [categories, setCategories] = useState([])
   const [summary, setSummary] = useState(null)
-  // Server-side paginated expenses: { items, total, page, pageSize, sum }.
-  const [expData, setExpData] = useState({ items: [], total: 0, page: 1, pageSize: 5, sum: 0 })
+  // All of the month's expenses / incomes (unpaginated). The calendar plots them and the
+  // detail list is derived from these in the browser, so filtering never hits the backend.
+  const [monthExpenses, setMonthExpenses] = useState([])
+  const [allIncomes, setAllIncomes] = useState([])
   const [exchanges, setExchanges] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,24 +49,33 @@ export default function Expenses() {
     amount: '', description: '', categoryId: '', date: '', currency: '',
     paymentMethodId: '', receipt: null, existingReceiptUrl: null, removeReceipt: false,
   })
+  // Income editor (used from the calendar's per-day view).
+  const [showIncomeModal, setShowIncomeModal] = useState(false)
+  const [savingIncome, setSavingIncome] = useState(false)
+  const [editingIncomeId, setEditingIncomeId] = useState(null)
+  const [incomeError, setIncomeError] = useState('')
+  const [incomeForm, setIncomeForm] = useState({
+    amount: '', description: '', date: '', currency: '', paymentMethodId: '',
+  })
 
+  // Only period + currency trigger a backend load. Filtering by account / category / text
+  // and paging are all derived from these results in the browser (no request, no spinner).
   const load = async () => {
     setLoading(true)
-    const [cats, sum, paged, exch, pms] = await Promise.all([
+    const [cats, sum, monthAll, monthInc, exch, pms] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
-      ExpensesApi.listPaged({
-        year, month, currency: activeCurrency,
-        paymentMethodId: pmFilter || undefined,
-        search: search.trim() || undefined,
-        page, pageSize,
-      }),
+      // Whole month of expenses (drives both the calendar and the detail list).
+      ExpensesApi.listPaged({ year, month, currency: activeCurrency, page: 1, pageSize: 1000 })
+        .then((r) => r.items).catch(() => []),
+      IncomesApi.list().catch(() => []),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
     ])
     setCategories(cats)
     setSummary(sum)
-    setExpData(paged)
+    setMonthExpenses(monthAll)
+    setAllIncomes(monthInc)
     setExchanges(exch)
     setPaymentMethods(pms)
     setLoading(false)
@@ -69,22 +84,12 @@ export default function Expenses() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, activeCurrency, pmFilter, page, pageSize, search])
+  }, [year, month, activeCurrency])
 
-  // Debounce the search box so we don't hit the server on every keystroke.
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setSearch(searchInput)
-      setPage(1)
-    }, 350)
-    return () => clearTimeout(id)
-  }, [searchInput])
-
-  // Reset to the first page when the currency lens changes (handlers below reset it
-  // for month/year/account/page-size directly to avoid a double fetch).
+  // Reset to the first page whenever the client-side filters change (no refetch).
   useEffect(() => {
     setPage(1)
-  }, [activeCurrency])
+  }, [pmFilter, catFilter, searchInput, activeCurrency, year, month, pageSize])
 
   const openCreate = async () => {
     setEditingId(null)
@@ -119,6 +124,82 @@ export default function Expenses() {
       removeReceipt: false,
     })
     setShowModal(true)
+  }
+
+  // From the calendar: credit-linked expenses are managed in Credits; others open the editor.
+  const onCalendarSelect = (e) => {
+    if (e.creditId) navigate(`/credits/${e.creditId}`)
+    else openEdit(e)
+  }
+
+  // From the calendar "add" button: open a new expense pre-dated to the picked day.
+  const openCreateForDate = async (dateStr) => {
+    await openCreate()
+    if (dateStr) setForm((f) => ({ ...f, date: dateStr }))
+  }
+
+  // --- Incomes (managed from the calendar's per-day view) ---
+  const openIncomeForDate = async (dateStr) => {
+    setEditingIncomeId(null)
+    setIncomeError('')
+    const pms = await ensureCashAccount(activeCurrency)
+    setIncomeForm({
+      amount: '',
+      description: '',
+      date: dateStr || new Date().toISOString().slice(0, 10),
+      currency: activeCurrency,
+      paymentMethodId: bestNonCreditPm(pms, activeCurrency),
+    })
+    setShowIncomeModal(true)
+  }
+
+  const openEditIncome = (i) => {
+    setEditingIncomeId(i.id)
+    setIncomeError('')
+    setIncomeForm({
+      amount: String(i.amount ?? ''),
+      description: i.description || '',
+      date: i.date ? new Date(i.date).toISOString().slice(0, 10) : '',
+      currency: i.currency || activeCurrency,
+      paymentMethodId: i.paymentMethodId ?? bestNonCreditPm(paymentMethods, i.currency || activeCurrency),
+    })
+    setShowIncomeModal(true)
+  }
+
+  const submitIncome = async (e) => {
+    e.preventDefault()
+    const amount = parseFloat(incomeForm.amount)
+    if (!amount || amount <= 0) return
+    setSavingIncome(true)
+    setIncomeError('')
+    try {
+      const payload = {
+        amount,
+        description: incomeForm.description,
+        date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
+        currency: incomeForm.currency || activeCurrency,
+        paymentMethodId: incomeForm.paymentMethodId ? Number(incomeForm.paymentMethodId) : undefined,
+      }
+      if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
+      else await IncomesApi.create(payload)
+      setShowIncomeModal(false)
+      await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      setIncomeError(err?.response?.data?.message || t.expenses.saveError)
+    } finally {
+      setSavingIncome(false)
+    }
+  }
+
+  const removeIncome = async (id) => {
+    try {
+      await IncomesApi.remove(id)
+      await load()
+      toast.success(t.common.deletedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.deleteError)
+    }
   }
 
   const submit = async (e) => {
@@ -180,7 +261,7 @@ export default function Expenses() {
   const pmLabel = (p) => {
     const type = p.type === 'CreditCard' ? t.cards.typeCreditCard
       : p.type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
-    return `${p.name} · ${type} · ${p.currency}`
+    return `${accountLabel(p.name)} · ${type} · ${p.currency}`
   }
 
   const pmTypeLabel = (type) =>
@@ -190,9 +271,21 @@ export default function Expenses() {
   // Categories the user can pick manually (system ones like "Debt payments" are hidden).
   const pickableCategories = categories.filter((c) => !c.isSystem)
 
+  // Click a category card to filter the detail list by it; click again to clear.
+  const toggleCategory = (id) => {
+    setCatFilter((c) => (String(c) === String(id) ? '' : String(id)))
+    setPage(1)
+  }
+
   // Best method to preselect within a currency: favorite first, else the first one.
   const bestPm = (pms, cur) => {
     const active = pms.filter((p) => !p.archived && p.currency === cur)
+    return String(active.find((p) => p.isFavorite)?.id ?? active[0]?.id ?? '')
+  }
+
+  // Income lands in a cash/debit account (never a credit card), so pick the best non-credit one.
+  const bestNonCreditPm = (pms, cur) => {
+    const active = pms.filter((p) => !p.archived && p.currency === cur && p.type !== 'CreditCard')
     return String(active.find((p) => p.isFavorite)?.id ?? active[0]?.id ?? '')
   }
 
@@ -235,13 +328,41 @@ export default function Expenses() {
     .reduce((s, x) => s + x.toAmount, 0)
   const transfersNet = transfersIn - transfersOut
 
-  // Expense rows come already paginated (and text-filtered) from the server.
-  const expenses = expData.items
+  // The month's incomes for the active currency (plotted in green on the calendar).
+  const monthIncomes = allIncomes.filter((i) => {
+    const d = new Date(i.date)
+    const inMonth = d.getFullYear() === year && d.getMonth() + 1 === month
+    return inMonth && (i.currency || activeCurrency) === activeCurrency
+  })
+
+  // Detail list: filtered + paginated entirely in the browser from the month's expenses,
+  // so selecting a category / account / search never triggers a backend request or spinner.
+  const q = searchInput.trim().toLowerCase()
+  const filteredExpenses = monthExpenses.filter((e) => {
+    if (pmFilter && String(e.paymentMethodId) !== String(pmFilter)) return false
+    if (catFilter && String(e.categoryId) !== String(catFilter)) return false
+    if (q) {
+      const hay = `${e.description || ''} ${e.categoryName || ''} ${categoryLabel(e.categoryName) || ''}`.toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    return true
+  })
+  const filteredSum = filteredExpenses.reduce((s, e) => s + e.amount, 0)
+  const filteredTotal = filteredExpenses.length
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const expenses = filteredExpenses
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   // Exchanges are transfers (not expenses). Show them as their own small list below the
   // expenses, and only when we're not filtering expenses by account or search text.
-  const showExchanges = !pmFilter && !search.trim() && monthExchanges.length > 0
-  const totalPages = Math.max(1, Math.ceil(expData.total / pageSize))
-  const currentPage = expData.page || 1
+  const showExchanges = !pmFilter && !catFilter && !searchInput.trim() && monthExchanges.length > 0
+  // The flat list opens automatically when a filter/search is active (the calendar can't
+  // do those), or when the user expands it manually.
+  const listFiltered = !!pmFilter || !!catFilter || !!searchInput.trim()
+  const listExpanded = listFiltered || showList
 
   return (
     <div>
@@ -260,7 +381,7 @@ export default function Expenses() {
           <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount}>
             <option value="">{t.expenses.allAccounts}</option>
             {paymentMethods.filter((p) => !p.archived).map((p) => (
-              <option key={p.id} value={p.id}>{p.name} · {pmTypeLabel(p.type)}</option>
+              <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
             ))}
           </select>
           <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
@@ -292,6 +413,24 @@ export default function Expenses() {
         </div>
       )}
 
+      <h2 className="section-title">{t.expenses.calendarTitle}</h2>
+      <div className="card">
+        <ExpenseCalendar
+          year={year}
+          month={month}
+          expenses={monthExpenses}
+          incomes={monthIncomes}
+          currency={activeCurrency}
+          t={t}
+          categoryLabel={categoryLabel}
+          accountLabel={accountLabel}
+          onEditExpense={onCalendarSelect}
+          onAddExpense={openCreateForDate}
+          onEditIncome={openEditIncome}
+          onAddIncome={openIncomeForDate}
+        />
+      </div>
+
       <h2 className="section-title">{t.expenses.spendingByCategory}</h2>
       {summary.byCategory.length === 0 ? (
         <div className="empty">{t.expenses.noExpensesMonth} {t.months[month - 1]} {year}.</div>
@@ -300,8 +439,17 @@ export default function Expenses() {
           {summary.byCategory.map((c) => {
             const pct = c.monthlyBudget ? Math.min(100, (c.spent / c.monthlyBudget) * 100) : null
             const over = c.monthlyBudget && c.spent > c.monthlyBudget
+            const selected = String(catFilter) === String(c.categoryId)
             return (
-              <div className="card" key={c.categoryId}>
+              <div
+                className={`card cat-card ${selected ? 'selected' : ''}`}
+                key={c.categoryId}
+                role="button"
+                tabIndex={0}
+                title={selected ? t.expenses.categoryFilterClear : t.expenses.categoryFilterHint}
+                onClick={() => toggleCategory(c.categoryId)}
+                onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleCategory(c.categoryId) } }}
+              >
                 <div className="row">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span className="badge-icon" style={{ background: `${c.categoryColor}22`, color: c.categoryColor }}>
@@ -330,18 +478,41 @@ export default function Expenses() {
       )}
 
       <h2 className="section-title">{t.expenses.expenseDetails}</h2>
+      {!listExpanded ? (
+        <div className="empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span>{t.expenses.listCollapsedHint}</span>
+          <button type="button" className="link-btn" onClick={() => setShowList(true)}>{t.expenses.showList}</button>
+        </div>
+      ) : (
+       <>
       {pmFilter && (() => {
         const selectedPm = paymentMethods.find((p) => String(p.id) === String(pmFilter))
         return (
           <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span>{pmTypeIcon(selectedPm?.type)}</span>
-            <span>{selectedPm ? selectedPm.name : t.expenses.allAccounts}</span>
+            <span>{selectedPm ? accountLabel(selectedPm.name) : t.expenses.allAccounts}</span>
             <span className="hint" style={{ color: 'var(--text-muted)' }}>· {t.expenses.accountTotal}:</span>
-            <strong className="neg">−{formatMoney(expData.sum, activeCurrency)}</strong>
+            <strong className="neg">−{formatMoney(filteredSum, activeCurrency)}</strong>
           </div>
         )
       })()}
-      {(expData.total > 0 || search) && (
+      {catFilter && (() => {
+        const selCat = summary.byCategory.find((c) => String(c.categoryId) === String(catFilter))
+        return (
+          <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span className="badge-icon" style={{ background: `${selCat?.categoryColor || '#0f5c4d'}22`, color: selCat?.categoryColor || '#0f5c4d' }}>
+              {iconFor(selCat?.categoryIcon)}
+            </span>
+            <span>{selCat ? categoryLabel(selCat.categoryName) : ''}</span>
+            <span className="hint" style={{ color: 'var(--text-muted)' }}>· {t.expenses.categoryTotal}:</span>
+            <strong className="neg">−{formatMoney(filteredSum, activeCurrency)}</strong>
+            <button type="button" className="btn secondary" style={{ marginLeft: 'auto' }} onClick={() => toggleCategory(catFilter)}>
+              {t.expenses.showAllCategories}
+            </button>
+          </div>
+        )
+      })()}
+      {(filteredTotal > 0 || searchInput) && (
         <div className="activity-toolbar">
           <input
             type="search"
@@ -364,8 +535,8 @@ export default function Expenses() {
           </label>
         </div>
       )}
-      {expData.total === 0 ? (
-        <div className="empty">{search ? t.dashboard.noResults : t.expenses.noExpenses}</div>
+      {filteredTotal === 0 ? (
+        <div className="empty">{searchInput ? t.dashboard.noResults : t.expenses.noExpenses}</div>
       ) : (
         <div className="list">
           {expenses.map((e) => {
@@ -387,7 +558,7 @@ export default function Expenses() {
                         {' · '}
                         <span className="pm-inline">
                           {pmTypeIcon(e.paymentMethodType, { size: 13 })}
-                          {e.paymentMethodName} ({pmTypeLabel(e.paymentMethodType)})
+                          {accountLabel(e.paymentMethodName)} ({pmTypeLabel(e.paymentMethodType)})
                         </span>
                       </>
                     )}
@@ -428,7 +599,7 @@ export default function Expenses() {
         </div>
       )}
 
-      {expData.total > 0 && totalPages > 1 && (
+      {filteredTotal > 0 && totalPages > 1 && (
         <div className="activity-pager">
           <button
             type="button"
@@ -450,6 +621,16 @@ export default function Expenses() {
             {t.dashboard.next}
           </button>
         </div>
+      )}
+
+      {showList && !listFiltered && (
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button type="button" className="btn secondary" onClick={() => setShowList(false)}>
+            {t.expenses.hideList}
+          </button>
+        </div>
+      )}
+      </>
       )}
 
       {showExchanges && (
@@ -607,6 +788,84 @@ export default function Expenses() {
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowModal(false)}>{t.common.cancel}</button>
               <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showIncomeModal && (
+        <Modal
+          title={editingIncomeId ? t.dashboard.editIncomeTitle : t.dashboard.incomeModalTitle}
+          onClose={() => setShowIncomeModal(false)}
+        >
+          <form onSubmit={submitIncome}>
+            <div className="field-row">
+              <div className="field" style={{ flex: 2 }}>
+                <label>{t.common.amount}</label>
+                <input
+                  type="number" step="0.01" min="0" autoFocus required
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t.common.currency}</label>
+                <div className="static-field" title={t.dashboard.currencyLensHint}>
+                  {incomeForm.currency || activeCurrency}
+                </div>
+              </div>
+            </div>
+            <div className="field">
+              <label>{t.common.description}</label>
+              <input
+                type="text"
+                value={incomeForm.description}
+                onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
+                placeholder={t.dashboard.incomePlaceholder}
+              />
+            </div>
+            <div className="field">
+              <label>{t.common.date}</label>
+              <input
+                type="date"
+                value={incomeForm.date}
+                onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>{t.common.paymentMethod}</label>
+              <select
+                value={incomeForm.paymentMethodId}
+                onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
+              >
+                <option value="">{t.common.select}</option>
+                {paymentMethods
+                  .filter((p) => !p.archived && p.type !== 'CreditCard'
+                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
+                  ))}
+              </select>
+            </div>
+            {incomeError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{incomeError}</div>}
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              {editingIncomeId ? (
+                <button
+                  type="button"
+                  className="btn danger"
+                  onClick={() => setConfirm({
+                    message: t.common.confirmDelete,
+                    run: () => { setShowIncomeModal(false); return removeIncome(editingIncomeId) },
+                  })}
+                >
+                  {t.common.delete}
+                </button>
+              ) : <span />}
+              <div className="row" style={{ margin: 0 }}>
+                <button type="button" className="btn secondary" onClick={() => setShowIncomeModal(false)}>{t.common.cancel}</button>
+                <button type="submit" className="btn" disabled={savingIncome}>{savingIncome ? t.common.saving : t.common.save}</button>
+              </div>
             </div>
           </form>
         </Modal>

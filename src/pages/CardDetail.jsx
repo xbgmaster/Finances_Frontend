@@ -11,7 +11,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { tintVars } from '../utils/color'
 
 export default function CardDetail() {
-  const { t, categoryLabel } = useI18n()
+  const { t, categoryLabel, accountLabel } = useI18n()
   const { id } = useParams()
   const navigate = useNavigate()
   const [method, setMethod] = useState(null)
@@ -84,7 +84,7 @@ export default function CardDetail() {
           <div>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {method.isFavorite && <span title={t.cards.favorite}>⭐</span>}
-              {method.name}
+              {accountLabel(method.name)}
             </h1>
             <p>{typeLabel(method.type)} · {cur}</p>
           </div>
@@ -159,7 +159,7 @@ export default function CardDetail() {
                     <div className="title">{p.note || t.cards.paymentTitle}</div>
                     <div className="sub">
                       {p.sourcePaymentMethodName
-                        ? `${t.cards.payFrom}: ${p.sourcePaymentMethodName}`
+                        ? `${t.cards.payFrom}: ${accountLabel(p.sourcePaymentMethodName)}`
                         : t.cards.externalPayment}
                       {' · '}{formatDate(p.date)}
                     </div>

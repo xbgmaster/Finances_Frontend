@@ -19,7 +19,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10)
 const now = new Date()
 
 export default function Dashboard() {
-  const { t, categoryLabel } = useI18n()
+  const { t, categoryLabel, accountLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
@@ -153,7 +153,7 @@ export default function Dashboard() {
   const pmLabel = (p) => {
     const type = p.type === 'CreditCard' ? t.cards.typeCreditCard
       : p.type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
-    return `${p.name} · ${type} · ${p.currency}`
+    return `${accountLabel(p.name)} · ${type} · ${p.currency}`
   }
 
   // Best method to preselect within a currency: favorite first, else the first one.
@@ -657,7 +657,7 @@ export default function Dashboard() {
                       {incoming
                         ? `${t.dashboard.fromLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`
                         : `${t.dashboard.toLabel} ${formatMoney(m.otherAmount, m.otherCurrency)}`}
-                      {m.accountName ? ` · ${m.accountName}` : ''}
+                      {m.accountName ? ` · ${accountLabel(m.accountName)}` : ''}
                       {' · '}{formatDate(m.date)}
                     </div>
                   </div>
@@ -727,7 +727,7 @@ export default function Dashboard() {
                         {' · '}
                         <span className="pm-inline">
                           {pmTypeIcon(m.paymentMethodType, { size: 13 })}
-                          {m.paymentMethodName}
+                          {accountLabel(m.paymentMethodName)}
                         </span>
                       </>
                     )}

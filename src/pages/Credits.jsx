@@ -6,7 +6,6 @@ import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
-import { CURRENCIES } from '../utils/currencies'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -437,13 +436,9 @@ export default function Credits() {
             <div className="row" style={{ gap: 12 }}>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.currency}</label>
-                <select
-                  value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                  required
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="static-field" title={t.credits.currencyLensHint}>
+                  {form.currency || activeCurrency}
+                </div>
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.penaltyRate}</label>

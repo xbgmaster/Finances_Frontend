@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { translations } from './translations'
 import { setLocale } from '../utils/format'
-import { categoryLabel as resolveCategoryLabel } from './categoryNames'
+import { categoryLabel as resolveCategoryLabel, accountLabel as resolveAccountLabel } from './categoryNames'
 
 const I18nContext = createContext(null)
 
@@ -35,6 +35,7 @@ export function I18nProvider({ children }) {
         t,
         locale: localeFor(language),
         categoryLabel: (name) => resolveCategoryLabel(name, t),
+        accountLabel: (name) => resolveAccountLabel(name, t),
       }
     },
     [language],

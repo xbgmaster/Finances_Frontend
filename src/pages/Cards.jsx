@@ -40,7 +40,7 @@ function sortMethods(list) {
 }
 
 function MethodCard({
-  m, t, typeLabel, onFavorite, onPay, onDetails, onEdit, onDelete,
+  m, t, typeLabel, accountLabel, onFavorite, onPay, onDetails, onEdit, onDelete,
 }) {
   const isCard = m.type === 'CreditCard'
   const limit = m.creditLimit ?? 0
@@ -67,7 +67,7 @@ function MethodCard({
           </span>
           <div>
             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-              {m.name}
+              {accountLabel(m.name)}
               {m.archived && (
                 <span
                   className="tag"
@@ -144,7 +144,7 @@ function MethodCard({
 }
 
 export default function Cards() {
-  const { t } = useI18n()
+  const { t, accountLabel } = useI18n()
   const navigate = useNavigate()
   const { currency: activeCurrency } = useCurrency()
   const toast = useToast()
@@ -292,12 +292,13 @@ export default function Cards() {
                   m={m}
                   t={t}
                   typeLabel={typeLabel}
+                  accountLabel={accountLabel}
                   onFavorite={toggleFavorite}
                   onPay={setPayCardId}
                   onDetails={(id) => navigate(`/cards/${id}`)}
                   onEdit={openEdit}
                   onDelete={(method) => setConfirm({
-                    message: t.cards.deleteConfirm.replace('{name}', method.name),
+                    message: t.cards.deleteConfirm.replace('{name}', accountLabel(method.name)),
                     run: () => remove(method),
                   })}
                 />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ProfileApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { useCurrency } from '../currency/CurrencyContext'
 import { useI18n } from '../i18n/I18nContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import BrandLogo from '../components/BrandLogo'
@@ -13,6 +14,7 @@ import { findCountry } from '../utils/countries'
 export default function Onboarding() {
   const { t } = useI18n()
   const { user, updateUser, logout } = useAuth()
+  const { setCurrency } = useCurrency()
   const navigate = useNavigate()
   const location = useLocation()
   const passed = location.state || {}
@@ -53,6 +55,8 @@ export default function Onboarding() {
         monthlyIncomeTarget: form.monthlyIncomeTarget === '' ? null : parseFloat(form.monthlyIncomeTarget),
       })
       updateUser({ fullName: profile.fullName, onboardingCompleted: true, currency: profile.currency })
+      // Open the app already looking through the currency the user just chose.
+      if (profile.currency) setCurrency(profile.currency)
       navigate('/', { replace: true })
     } finally {
       setLoading(false)

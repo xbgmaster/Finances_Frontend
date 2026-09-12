@@ -9,7 +9,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10)
 // Modal to pay down a credit card. Money can come from a cash/debit account (reduces its
 // balance) or be cash/money outside saved accounts (only reduces the card debt). Both free up cupo.
 export default function PayCardModal({ methods, preselectedCardId, onClose, onDone }) {
-  const { t } = useI18n()
+  const { t, accountLabel } = useI18n()
 
   const cards = useMemo(
     () => methods.filter((m) => m.type === 'CreditCard' && !m.archived),
@@ -77,7 +77,7 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
             disabled={!!preselectedCardId}
           >
             {cards.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} · {c.currency}</option>
+              <option key={c.id} value={c.id}>{accountLabel(c.name)} · {c.currency}</option>
             ))}
           </select>
         </div>
@@ -110,7 +110,7 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
             <option value="">{t.cards.payExternal}</option>
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
-                {sourceTypeLabel(s.type)} · {s.name} · {formatMoney(s.balance, s.currency)}
+                {sourceTypeLabel(s.type)} · {accountLabel(s.name)} · {formatMoney(s.balance, s.currency)}
               </option>
             ))}
           </select>
