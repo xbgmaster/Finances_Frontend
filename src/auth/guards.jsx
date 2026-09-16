@@ -20,3 +20,10 @@ export function AdminRoute() {
   if (!isAdmin) return <Navigate to="/" replace />
   return <Outlet />
 }
+
+// Exige que la funcion este habilitada para el usuario (control de acceso por modulo).
+export function FeatureRoute({ feature }) {
+  const { canAccess } = useAuth()
+  if (!canAccess(feature)) return <Navigate to="/" replace />
+  return <Outlet />
+}

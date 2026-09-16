@@ -10,6 +10,7 @@ import {
   getAccessExpiry,
 } from '../api/client'
 import { setBaseCurrency } from '../utils/format'
+import { isFeatureVisible } from '../features/registry'
 
 // Sign the user out after this long without any interaction.
 const INACTIVITY_MS = 10 * 60 * 1000
@@ -95,7 +96,8 @@ export function AuthProvider({ children }) {
 
     // React to logouts / refreshes triggered outside React (axios interceptor).
     const onLogout = () => { setToken(null); setUser(null) }
-    const onRefreshed = () => setToken(localStorage.getItem(TOKEN_KEY))
+    // Refresh persists a fresh user too (incl. feature flags); mirror it into state.
+    const onRefreshed = () => { setToken(localStorage.getItem(TOKEN_KEY)); setUser(readUser()) }
     window.addEventListener('finances:logout', onLogout)
     window.addEventListener('finances:refreshed', onRefreshed)
 
@@ -117,17 +119,26 @@ export function AuthProvider({ children }) {
     })
   }
 
+  const isAdmin = user?.role === 'Admin'
+  // The stored set holds hidden opt-out modules and granted opt-in modules (see registry).
+  const featureOverrides = user?.disabledFeatures || []
+  // Admins are never gated (so they can't lock themselves out of a module they manage).
+  const canAccess = (key) => !key || isAdmin || isFeatureVisible(key, featureOverrides)
+
   const value = useMemo(
     () => ({
       token,
       user,
       isAuthenticated: !!token,
-      isAdmin: user?.role === 'Admin',
+      isAdmin,
+      featureOverrides,
+      canAccess,
       login,
       register,
       logout,
       updateUser,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [token, user],
   )
 

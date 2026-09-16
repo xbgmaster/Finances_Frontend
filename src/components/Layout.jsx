@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CreditCard, TrendingDown, Landmark, CalendarDays,
-  Sparkles, ShieldCheck, Tag, Settings, LogOut,
+  Sparkles, ShieldCheck, Tag, Settings, LogOut, Briefcase, Users, SlidersHorizontal, ChevronDown,
 } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
@@ -22,13 +22,16 @@ const POLL_MS = 5 * 60 * 1000
 export default function Layout() {
   const { t } = useI18n()
   const { theme } = useTheme()
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, canAccess, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   const [alerts, setAlerts] = useState(null)
   const [bellOpen, setBellOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(
+    () => location.pathname.startsWith('/admin') || location.pathname === '/payroll',
+  )
   const [userOpen, setUserOpen] = useState(false)
   const bellRef = useRef(null)
   const userRef = useRef(null)
@@ -80,13 +83,22 @@ export default function Layout() {
 
   const links = [
     { to: '/', label: t.nav.summary, icon: <LayoutDashboard size={18} />, end: true },
-    { to: '/cards', label: t.nav.cards, icon: <CreditCard size={18} /> },
-    { to: '/expenses', label: t.nav.expenses, icon: <TrendingDown size={18} /> },
-    { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} /> },
-    { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} /> },
-    { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} /> },
-  ]
-  if (isAdmin) links.push({ to: '/admin', label: t.nav.admin, icon: <ShieldCheck size={18} /> })
+    { to: '/cards', label: t.nav.cards, icon: <CreditCard size={18} />, feature: 'cards' },
+    { to: '/expenses', label: t.nav.expenses, icon: <TrendingDown size={18} />, feature: 'expenses' },
+    { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} />, feature: 'credits' },
+    { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} />, feature: 'budget' },
+    { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} />, feature: 'projections' },
+    // Jobs & pay is opt-in: shown here only to non-admins who were granted access
+    // (admins always have it, listed inside the Administration submenu instead).
+    { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} />, feature: 'payroll', adminHidden: true },
+  ].filter((l) => (!l.feature || canAccess(l.feature)) && !(l.adminHidden && isAdmin))
+
+  // All admin-only options live together under a collapsible "Administration" group.
+  const adminLinks = isAdmin ? [
+    { to: '/admin', label: t.nav.users, icon: <Users size={18} />, end: true },
+    { to: '/admin/features', label: t.nav.featureAccess, icon: <SlidersHorizontal size={18} /> },
+    { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} /> },
+  ] : []
 
   const onLogout = () => {
     logout()
@@ -179,6 +191,37 @@ export default function Layout() {
               {l.label}
             </NavLink>
           ))}
+
+          {isAdmin && (
+            <div className="nav-group">
+              <button
+                type="button"
+                className="nav-link nav-group-toggle"
+                onClick={() => setAdminOpen((o) => !o)}
+                aria-expanded={adminOpen}
+              >
+                <span className="ic"><ShieldCheck size={18} /></span>
+                {t.nav.admin}
+                <ChevronDown size={16} className={`nav-caret ${adminOpen ? 'open' : ''}`} />
+              </button>
+              {adminOpen && (
+                <div className="nav-subgroup">
+                  {adminLinks.map((l) => (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      end={l.end}
+                      onClick={() => setMenuOpen(false)}
+                      className={({ isActive }) => `nav-link nav-sublink ${isActive ? 'active' : ''}`}
+                    >
+                      <span className="ic">{l.icon}</span>
+                      {l.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
         <div className="sidebar-footer">
           <span className="sidebar-footer-label">{t.common.theme}</span>

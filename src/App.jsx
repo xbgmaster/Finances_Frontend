@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
-import { ProtectedRoute, AdminRoute } from './auth/guards'
+import { ProtectedRoute, AdminRoute, FeatureRoute } from './auth/guards'
 
 // Route-level code splitting: each page ships in its own chunk so the initial
 // load (e.g. the login screen) no longer pulls every page + recharts at once.
@@ -21,6 +21,8 @@ const Password = lazy(() => import('./pages/ForgotPassword'))
 const RestorePassword = lazy(() => import('./pages/RestorePassword'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const AdminFeatures = lazy(() => import('./pages/AdminFeatures'))
+const Payroll = lazy(() => import('./pages/Payroll'))
 
 export default function App() {
   return (
@@ -36,16 +38,31 @@ export default function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="categories" element={<Categories />} />
-            <Route path="expenses" element={<Expenses />} />
-            <Route path="credits" element={<Credits />} />
-            <Route path="credits/:id" element={<CreditDetail />} />
-            <Route path="cards" element={<Cards />} />
-            <Route path="cards/:id" element={<CardDetail />} />
-            <Route path="budget-history" element={<BudgetHistory />} />
-            <Route path="projections" element={<Projections />} />
+            <Route element={<FeatureRoute feature="expenses" />}>
+              <Route path="expenses" element={<Expenses />} />
+            </Route>
+            <Route element={<FeatureRoute feature="credits" />}>
+              <Route path="credits" element={<Credits />} />
+              <Route path="credits/:id" element={<CreditDetail />} />
+            </Route>
+            <Route element={<FeatureRoute feature="cards" />}>
+              <Route path="cards" element={<Cards />} />
+              <Route path="cards/:id" element={<CardDetail />} />
+            </Route>
+            <Route element={<FeatureRoute feature="budget" />}>
+              <Route path="budget-history" element={<BudgetHistory />} />
+            </Route>
+            <Route element={<FeatureRoute feature="projections" />}>
+              <Route path="projections" element={<Projections />} />
+            </Route>
+            {/* Opt-in module: hidden by default, granted per user from Feature access. */}
+            <Route element={<FeatureRoute feature="payroll" />}>
+              <Route path="payroll" element={<Payroll />} />
+            </Route>
             <Route path="settings" element={<Settings />} />
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminDashboard />} />
+              <Route path="admin/features" element={<AdminFeatures />} />
             </Route>
           </Route>
         </Route>

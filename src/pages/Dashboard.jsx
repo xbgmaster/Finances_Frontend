@@ -170,7 +170,10 @@ export default function Dashboard() {
   // Returns the up-to-date payment-methods list.
   const ensureCashAccount = async (cur) => {
     const c = cur || activeCurrency
-    if (!c || paymentMethods.some((p) => !p.archived && p.currency === c)) return paymentMethods
+    // A null-currency account "follows the base currency", so it counts for the base lens; without
+    // this we'd keep creating duplicate "Cash" accounts for the base currency.
+    const existsFor = (p) => !p.archived && (p.currency === c || (!p.currency && c === baseCurrency))
+    if (!c || paymentMethods.some(existsFor)) return paymentMethods
     try {
       await PaymentMethodsApi.create({ name: t.cards.typeCash, type: 'Cash', currency: c })
       const pms = await PaymentMethodsApi.list()

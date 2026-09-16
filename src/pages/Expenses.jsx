@@ -18,7 +18,7 @@ const now = new Date()
 
 export default function Expenses() {
   const { t, categoryLabel, accountLabel } = useI18n()
-  const { currency: activeCurrency } = useCurrency()
+  const { currency: activeCurrency, baseCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
   const [year, setYear] = useState(now.getFullYear())
@@ -295,7 +295,10 @@ export default function Expenses() {
   // so the required payment-method field always has a valid option. Returns the fresh list.
   const ensureCashAccount = async (cur) => {
     const c = cur || activeCurrency
-    if (!c || paymentMethods.some((p) => !p.archived && p.currency === c)) return paymentMethods
+    // A null-currency account "follows the base currency", so it counts as an account for the base
+    // currency; without this check we'd keep creating duplicate "Cash" accounts for the base lens.
+    const existsFor = (p) => !p.archived && (p.currency === c || (!p.currency && c === baseCurrency))
+    if (!c || paymentMethods.some(existsFor)) return paymentMethods
     try {
       await PaymentMethodsApi.create({ name: t.cards.typeCash, type: 'Cash', currency: c })
       const pms = await PaymentMethodsApi.list()
@@ -320,10 +323,18 @@ export default function Expenses() {
     const inMonth = d.getFullYear() === year && d.getMonth() + 1 === month
     return inMonth && (x.fromCurrency === activeCurrency || x.toCurrency === activeCurrency)
   })
-  const transfersOut = monthExchanges
+  // The account this exchange moves in the active lens: its source when money leaves this currency,
+  // or its destination when money arrives. Used so the account filter can include the transfer.
+  const exchangeAccountId = (x) => (x.fromCurrency === activeCurrency ? x.fromPaymentMethodId : x.toPaymentMethodId)
+  // A transfer is a real movement of the involved account, so it shows under "All accounts" and when
+  // that account is selected (source in this lens, destination in the other).
+  const visibleExchanges = pmFilter
+    ? monthExchanges.filter((x) => String(exchangeAccountId(x)) === String(pmFilter))
+    : monthExchanges
+  const transfersOut = visibleExchanges
     .filter((x) => x.fromCurrency === activeCurrency)
     .reduce((s, x) => s + x.fromAmount, 0)
-  const transfersIn = monthExchanges
+  const transfersIn = visibleExchanges
     .filter((x) => x.toCurrency === activeCurrency)
     .reduce((s, x) => s + x.toAmount, 0)
   const transfersNet = transfersIn - transfersOut
@@ -356,9 +367,38 @@ export default function Expenses() {
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  // Exchanges are transfers (not expenses). Show them as their own small list below the
-  // expenses, and only when we're not filtering expenses by account or search text.
-  const showExchanges = !pmFilter && !catFilter && !searchInput.trim() && monthExchanges.length > 0
+  // The account filter cascades beyond the detail list: with "All accounts" everything is shown;
+  // when a method is picked, the calendar and the category breakdown show only that account's data.
+  const calendarExpenses = pmFilter
+    ? monthExpenses.filter((e) => String(e.paymentMethodId) === String(pmFilter))
+    : monthExpenses
+  const calendarIncomes = pmFilter
+    ? monthIncomes.filter((i) => String(i.paymentMethodId) === String(pmFilter))
+    : monthIncomes
+  // Category breakdown: reuse the backend summary for "All accounts"; recompute from the selected
+  // account's expenses otherwise (budgets are per-category totals, so they're omitted when scoped).
+  const displayByCategory = pmFilter
+    ? Object.values(calendarExpenses.reduce((acc, e) => {
+        const id = e.categoryId
+        if (!acc[id]) {
+          acc[id] = {
+            categoryId: id,
+            categoryName: e.categoryName,
+            categoryColor: e.categoryColor,
+            categoryIcon: e.categoryIcon,
+            spent: 0,
+            monthlyBudget: null,
+          }
+        }
+        acc[id].spent += e.amount
+        return acc
+      }, {})).sort((a, b) => b.spent - a.spent)
+    : summary.byCategory
+
+  // Exchanges are transfers (not expenses). Show them as their own small list below the expenses.
+  // They respect the account filter (via visibleExchanges) but are hidden while filtering by
+  // category or searching text, since transfers have neither.
+  const showExchanges = !catFilter && !searchInput.trim() && visibleExchanges.length > 0
   // The flat list opens automatically when a filter/search is active (the calendar can't
   // do those), or when the user expands it manually.
   const listFiltered = !!pmFilter || !!catFilter || !!searchInput.trim()
@@ -380,9 +420,11 @@ export default function Expenses() {
           </select>
           <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount}>
             <option value="">{t.expenses.allAccounts}</option>
-            {paymentMethods.filter((p) => !p.archived).map((p) => (
-              <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
-            ))}
+            {paymentMethods
+              .filter((p) => !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
+              .map((p) => (
+                <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
+              ))}
           </select>
           <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
         </div>
@@ -418,8 +460,8 @@ export default function Expenses() {
         <ExpenseCalendar
           year={year}
           month={month}
-          expenses={monthExpenses}
-          incomes={monthIncomes}
+          expenses={calendarExpenses}
+          incomes={calendarIncomes}
           currency={activeCurrency}
           t={t}
           categoryLabel={categoryLabel}
@@ -432,11 +474,11 @@ export default function Expenses() {
       </div>
 
       <h2 className="section-title">{t.expenses.spendingByCategory}</h2>
-      {summary.byCategory.length === 0 ? (
+      {displayByCategory.length === 0 ? (
         <div className="empty">{t.expenses.noExpensesMonth} {t.months[month - 1]} {year}.</div>
       ) : (
         <div className="grid grid-2">
-          {summary.byCategory.map((c) => {
+          {displayByCategory.map((c) => {
             const pct = c.monthlyBudget ? Math.min(100, (c.spent / c.monthlyBudget) * 100) : null
             const over = c.monthlyBudget && c.spent > c.monthlyBudget
             const selected = String(catFilter) === String(c.categoryId)
@@ -497,7 +539,7 @@ export default function Expenses() {
         )
       })()}
       {catFilter && (() => {
-        const selCat = summary.byCategory.find((c) => String(c.categoryId) === String(catFilter))
+        const selCat = displayByCategory.find((c) => String(c.categoryId) === String(catFilter))
         return (
           <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="badge-icon" style={{ background: `${selCat?.categoryColor || '#0f5c4d'}22`, color: selCat?.categoryColor || '#0f5c4d' }}>
@@ -637,7 +679,7 @@ export default function Expenses() {
         <>
           <h2 className="section-title">{t.expenses.transfersThisMonth}</h2>
           <div className="list">
-            {monthExchanges
+            {visibleExchanges
               .slice()
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .map((x) => {

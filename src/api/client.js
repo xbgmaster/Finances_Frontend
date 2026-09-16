@@ -128,6 +128,9 @@ export const AdminApi = {
   users: (params) => api.get('/admin/users', { params }).then((r) => r.data),
   user: (id) => api.get(`/admin/users/${id}`).then((r) => r.data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  // Set the modules a user is NOT allowed to see (feature blocklist).
+  setUserFeatures: (id, disabledFeatures) =>
+    api.put(`/admin/users/${id}/features`, { disabledFeatures }).then((r) => r.data),
   exportCsv: (params) => api.get('/admin/reports/export', { params, responseType: 'blob' }).then((r) => r.data),
 }
 
@@ -143,6 +146,23 @@ export const IncomesApi = {
   create: (data) => api.post('/incomes', data).then((r) => r.data),
   update: (id, data) => api.put(`/incomes/${id}`, data).then((r) => r.data),
   remove: (id) => api.delete(`/incomes/${id}`),
+}
+
+// Recurring incomes ("jobs") with a monthly pay day. Admin-only for now.
+export const IncomeSchedulesApi = {
+  list: () => api.get('/income-schedules').then((r) => r.data),
+  create: (data) => api.post('/income-schedules', data).then((r) => r.data),
+  update: (id, data) => api.put(`/income-schedules/${id}`, data).then((r) => r.data),
+  remove: (id) => api.delete(`/income-schedules/${id}`),
+  // Posts any due pay right now (catch-up), returns { posted }.
+  postDue: () => api.post('/income-schedules/post-due').then((r) => r.data),
+  // Work shifts for hourly jobs (hours x rate; totaled into income at the pay cut).
+  shifts: (year, month) => api.get('/income-schedules/shifts', { params: { year, month } }).then((r) => r.data),
+  createShift: (data) => api.post('/income-schedules/shifts', data).then((r) => r.data),
+  updateShift: (id, data) => api.put(`/income-schedules/shifts/${id}`, data).then((r) => r.data),
+  removeShift: (id) => api.delete(`/income-schedules/shifts/${id}`),
+  // Direct one-off payment attributed to a job (posted as income that day).
+  createPayment: (jobId, data) => api.post(`/income-schedules/${jobId}/payments`, data).then((r) => r.data),
 }
 
 export const PaymentMethodsApi = {

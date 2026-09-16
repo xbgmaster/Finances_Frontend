@@ -274,6 +274,29 @@ button {
   font-size: 18px;
 }
 
+/* Collapsible admin group in the sidebar */
+.nav-group { display: flex; flex-direction: column; }
+.nav-group-toggle {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.nav-caret { margin-left: auto; transition: transform 0.15s ease; }
+.nav-caret.open { transform: rotate(180deg); }
+.nav-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 4px 14px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+.nav-sublink { padding: 10px 12px; font-size: 14px; }
+
 .content {
   padding: 32px 40px;
   overflow-y: auto;
@@ -783,6 +806,7 @@ input:focus, select:focus {
 .cal-amt { font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.25; }
 .cal-amt.inc { color: #10b981; }
 .cal-amt.exp { color: var(--danger); }
+.cal-amt.shift { color: #0f5c4d; }
 .cal-items { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
 .cal-chip {
   font-size: 11px;
@@ -1060,6 +1084,27 @@ input:focus, select:focus {
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Payroll / recurring jobs */
+.pill-auto { background: rgba(16, 185, 129, 0.14); color: #0f7a5a; }
+.pill-manual { background: var(--surface-2, rgba(120,120,120,0.12)); color: var(--text-muted); }
+.pill-paused { background: rgba(180, 83, 9, 0.14); color: #92400e; }
+.job-badges { display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap; }
+.job-card.paused { opacity: 0.72; }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.checkbox-row input { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+.cal-chip.sched {
+  border-style: dashed;
+  border-left-width: 3px;
+  font-style: italic;
 }
 
 .progress {
