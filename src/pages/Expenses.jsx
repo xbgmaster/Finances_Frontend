@@ -16,6 +16,9 @@ import { useCurrency } from '../currency/CurrencyContext'
 
 const now = new Date()
 
+// Sentinel category id for the built-in, non-deletable "Exchange" bucket (currency transfers).
+const EXCHANGE_CAT = '__exchange__'
+
 export default function Expenses() {
   const { t, categoryLabel, accountLabel } = useI18n()
   const { currency: activeCurrency, baseCurrency } = useCurrency()
@@ -95,13 +98,17 @@ export default function Expenses() {
     setEditingId(null)
     setError('')
     const pms = await ensureCashAccount(activeCurrency)
+    // If the list is filtered by an account, default the new expense to that same account.
+    const preferredPm = pmFilter && pms.some((p) => String(p.id) === String(pmFilter))
+      ? pmFilter
+      : bestPm(pms, activeCurrency)
     setForm({
       amount: '',
       description: '',
       categoryId: categories.find((c) => !c.isSystem)?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
       currency: activeCurrency,
-      paymentMethodId: bestPm(pms, activeCurrency),
+      paymentMethodId: preferredPm,
       receipt: null,
       existingReceiptUrl: null,
       removeReceipt: false,
@@ -353,7 +360,8 @@ export default function Expenses() {
     if (pmFilter && String(e.paymentMethodId) !== String(pmFilter)) return false
     if (catFilter && String(e.categoryId) !== String(catFilter)) return false
     if (q) {
-      const hay = `${e.description || ''} ${e.categoryName || ''} ${categoryLabel(e.categoryName) || ''}`.toLowerCase()
+      // Search matches description, category and the amount (so "45.65" or "45" find it too).
+      const hay = `${e.description || ''} ${e.categoryName || ''} ${categoryLabel(e.categoryName) || ''} ${e.amount ?? ''}`.toLowerCase()
       if (!hay.includes(q)) return false
     }
     return true
@@ -394,6 +402,14 @@ export default function Expenses() {
         return acc
       }, {})).sort((a, b) => b.spent - a.spent)
     : summary.byCategory
+
+  // "Exchange" behaves like a built-in, non-deletable system category: it groups all the currency
+  // exchanges (transfers) so they appear in the breakdown and can be drilled into, without ever
+  // being counted as spending. It only shows when there is at least one transfer to represent.
+  const exchangeTotal = visibleExchanges.reduce(
+    (s, x) => s + (x.fromCurrency === activeCurrency ? x.fromAmount : x.toAmount), 0,
+  )
+  const hasExchangeCard = visibleExchanges.length > 0
 
   // Exchanges are transfers (not expenses). Show them as their own small list below the expenses.
   // They respect the account filter (via visibleExchanges) but are hidden while filtering by
@@ -462,6 +478,7 @@ export default function Expenses() {
           month={month}
           expenses={calendarExpenses}
           incomes={calendarIncomes}
+          exchanges={visibleExchanges}
           currency={activeCurrency}
           t={t}
           categoryLabel={categoryLabel}
@@ -474,7 +491,7 @@ export default function Expenses() {
       </div>
 
       <h2 className="section-title">{t.expenses.spendingByCategory}</h2>
-      {displayByCategory.length === 0 ? (
+      {displayByCategory.length === 0 && !hasExchangeCard ? (
         <div className="empty">{t.expenses.noExpensesMonth} {t.months[month - 1]} {year}.</div>
       ) : (
         <div className="grid grid-2">
@@ -516,6 +533,32 @@ export default function Expenses() {
               </div>
             )
           })}
+          {hasExchangeCard && (() => {
+            const selected = catFilter === EXCHANGE_CAT
+            return (
+              <div
+                className={`card cat-card ${selected ? 'selected' : ''}`}
+                key="cat-exchange"
+                role="button"
+                tabIndex={0}
+                title={selected ? t.expenses.categoryFilterClear : t.expenses.categoryFilterHint}
+                onClick={() => toggleCategory(EXCHANGE_CAT)}
+                onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleCategory(EXCHANGE_CAT) } }}
+              >
+                <div className="row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span className="badge-icon" style={{ background: '#b8943e22', color: '#b8943e' }}>
+                      <ArrowLeftRight size={16} />
+                    </span>
+                    <div style={{ fontWeight: 600 }}>{t.dashboard.exchange}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700 }}>{formatMoney(exchangeTotal, activeCurrency)}</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -527,7 +570,7 @@ export default function Expenses() {
         </div>
       ) : (
        <>
-      {pmFilter && (() => {
+      {pmFilter && catFilter !== EXCHANGE_CAT && (() => {
         const selectedPm = paymentMethods.find((p) => String(p.id) === String(pmFilter))
         return (
           <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -538,7 +581,20 @@ export default function Expenses() {
           </div>
         )
       })()}
-      {catFilter && (() => {
+      {catFilter === EXCHANGE_CAT && (
+        <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span className="badge-icon" style={{ background: '#b8943e22', color: '#b8943e' }}>
+            <ArrowLeftRight size={16} />
+          </span>
+          <span>{t.dashboard.exchange}</span>
+          <span className="hint" style={{ color: 'var(--text-muted)' }}>· {t.expenses.categoryTotal}:</span>
+          <strong style={{ color: '#b8943e' }}>{formatMoney(exchangeTotal, activeCurrency)}</strong>
+          <button type="button" className="btn secondary" style={{ marginLeft: 'auto' }} onClick={() => toggleCategory(EXCHANGE_CAT)}>
+            {t.expenses.showAllCategories}
+          </button>
+        </div>
+      )}
+      {catFilter && catFilter !== EXCHANGE_CAT && (() => {
         const selCat = displayByCategory.find((c) => String(c.categoryId) === String(catFilter))
         return (
           <div className="insight" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -554,7 +610,7 @@ export default function Expenses() {
           </div>
         )
       })()}
-      {(filteredTotal > 0 || searchInput) && (
+      {catFilter !== EXCHANGE_CAT && (filteredTotal > 0 || searchInput) && (
         <div className="activity-toolbar">
           <input
             type="search"
@@ -577,7 +633,52 @@ export default function Expenses() {
           </label>
         </div>
       )}
-      {filteredTotal === 0 ? (
+      {catFilter === EXCHANGE_CAT ? (
+        visibleExchanges.length === 0 ? (
+          <div className="empty">{t.expenses.noExpenses}</div>
+        ) : (
+          <div className="list">
+            {visibleExchanges
+              .slice()
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map((x) => {
+                const out = x.fromCurrency === activeCurrency
+                const amount = out ? x.fromAmount : x.toAmount
+                const otherAmount = out ? x.toAmount : x.fromAmount
+                const otherCurrency = out ? x.toCurrency : x.fromCurrency
+                const accountName = out ? x.fromPaymentMethodName : x.toPaymentMethodName
+                return (
+                  <div className="list-item tinted" key={`exch-${x.id}`} style={tintVars('#b8943e')}>
+                    <span className="badge-icon"><ArrowLeftRight size={16} /></span>
+                    <div className="meta">
+                      <div className="title">{t.dashboard.exchange}</div>
+                      <div className="sub">
+                        {out
+                          ? `${t.dashboard.toLabel} ${formatMoney(otherAmount, otherCurrency)}`
+                          : `${t.dashboard.fromLabel} ${formatMoney(otherAmount, otherCurrency)}`}
+                        {accountName ? ` · ${accountLabel(accountName)}` : ''}
+                        {' · '}{formatDate(x.date)}
+                      </div>
+                    </div>
+                    <div className="list-item-end">
+                      <span className={`amount ${out ? 'neg' : 'pos'}`}>
+                        {out ? '−' : '+'}{formatMoney(amount, activeCurrency)}
+                      </span>
+                      <div className="list-item-actions">
+                        <button
+                          className="btn danger"
+                          onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => removeExchange(x.id) })}
+                        >
+                          {t.common.delete}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+        )
+      ) : filteredTotal === 0 ? (
         <div className="empty">{searchInput ? t.dashboard.noResults : t.expenses.noExpenses}</div>
       ) : (
         <div className="list">

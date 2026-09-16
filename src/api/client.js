@@ -176,6 +176,7 @@ export const PaymentMethodsApi = {
   // Credit card payments (reduce debt / free cupo).
   payments: (id) => api.get(`/paymentmethods/${id}/payments`).then((r) => r.data),
   payCard: (id, data) => api.post(`/paymentmethods/${id}/payments`, data).then((r) => r.data),
+  updatePayment: (id, paymentId, data) => api.put(`/paymentmethods/${id}/payments/${paymentId}`, data).then((r) => r.data),
   removePayment: (id, paymentId) => api.delete(`/paymentmethods/${id}/payments/${paymentId}`),
 }
 
@@ -220,6 +221,7 @@ export const BalanceApi = {
 export const ExchangesApi = {
   list: () => api.get('/exchanges').then((r) => r.data),
   create: (data) => api.post('/exchanges', data).then((r) => r.data),
+  update: (id, data) => api.put(`/exchanges/${id}`, data).then((r) => r.data),
   remove: (id) => api.delete(`/exchanges/${id}`),
 }
 

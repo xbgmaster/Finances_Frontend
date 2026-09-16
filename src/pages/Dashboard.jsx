@@ -16,6 +16,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
+const pad = (n) => String(n).padStart(2, '0')
 const now = new Date()
 
 export default function Dashboard() {
@@ -38,6 +39,9 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false)
   const [editingExpenseId, setEditingExpenseId] = useState(null)
   const [editingIncomeId, setEditingIncomeId] = useState(null)
+  const [editingExchangeId, setEditingExchangeId] = useState(null)
+  const [editingCardPaymentId, setEditingCardPaymentId] = useState(null)
+  const [cardPaymentForm, setCardPaymentForm] = useState({ cardId: '', amount: '', date: '', note: '', sourcePaymentMethodId: '' })
   const [expenseError, setExpenseError] = useState('')
   const [confirm, setConfirm] = useState(null)
   // Recent activity: text search, date range + pagination.
@@ -185,12 +189,29 @@ export default function Dashboard() {
   }
 
   const openExchange = () => {
+    setEditingExchangeId(null)
     const from = activeCurrency
     const to = CURRENCIES.find((c) => c !== from) || from
     setExchangeForm({
       fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: todayIso(), note: '',
       fromPaymentMethodId: bestPm(paymentMethods, from, { excludeCredit: true }),
       toPaymentMethodId: bestPm(paymentMethods, to, { excludeCredit: true }),
+    })
+    setModal('exchange')
+  }
+
+  const openEditExchange = (x) => {
+    setEditingExchangeId(x.id)
+    const d = x.date ? new Date(x.date) : new Date()
+    setExchangeForm({
+      fromCurrency: x.fromCurrency,
+      fromAmount: String(x.fromAmount ?? ''),
+      toCurrency: x.toCurrency,
+      rate: String(x.rate ?? ''),
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      note: x.note || '',
+      fromPaymentMethodId: String(x.fromPaymentMethodId ?? ''),
+      toPaymentMethodId: String(x.toPaymentMethodId ?? ''),
     })
     setModal('exchange')
   }
@@ -211,7 +232,7 @@ export default function Dashboard() {
     if (exchangeForm.fromCurrency === exchangeForm.toCurrency) return
     setSaving(true)
     try {
-      await ExchangesApi.create({
+      const payload = {
         fromCurrency: exchangeForm.fromCurrency,
         fromAmount,
         toCurrency: exchangeForm.toCurrency,
@@ -220,7 +241,9 @@ export default function Dashboard() {
         note: exchangeForm.note.trim() || undefined,
         fromPaymentMethodId: exchangeForm.fromPaymentMethodId ? Number(exchangeForm.fromPaymentMethodId) : undefined,
         toPaymentMethodId: exchangeForm.toPaymentMethodId ? Number(exchangeForm.toPaymentMethodId) : undefined,
-      })
+      }
+      if (editingExchangeId) await ExchangesApi.update(editingExchangeId, payload)
+      else await ExchangesApi.create(payload)
       setModal(null)
       await load()
       toast.success(t.common.savedOk)
@@ -288,6 +311,41 @@ export default function Dashboard() {
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
+    }
+  }
+
+  const openEditCardPayment = (p) => {
+    setEditingCardPaymentId(p.id)
+    const d = p.date ? new Date(p.date) : new Date()
+    setCardPaymentForm({
+      cardId: String(p.creditCardId),
+      amount: String(p.amount ?? ''),
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      note: p.note || '',
+      sourcePaymentMethodId: String(p.sourcePaymentMethodId ?? ''),
+    })
+    setModal('cardpayment')
+  }
+
+  const submitCardPayment = async (e) => {
+    e.preventDefault()
+    const amount = parseFloat(cardPaymentForm.amount)
+    if (!amount || amount <= 0) return
+    setSaving(true)
+    try {
+      await PaymentMethodsApi.updatePayment(cardPaymentForm.cardId, editingCardPaymentId, {
+        amount,
+        date: cardPaymentForm.date ? new Date(cardPaymentForm.date).toISOString() : undefined,
+        note: cardPaymentForm.note.trim() || undefined,
+        sourcePaymentMethodId: cardPaymentForm.sourcePaymentMethodId ? Number(cardPaymentForm.sourcePaymentMethodId) : undefined,
+      })
+      setModal(null)
+      await load()
+      toast.success(t.common.savedOk)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t.expenses.saveError)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -670,6 +728,12 @@ export default function Dashboard() {
                     </span>
                     <div className="list-item-actions">
                       <button
+                        className="btn secondary"
+                        onClick={() => { const x = exchanges.find((ex) => ex.id === m.id); if (x) openEditExchange(x) }}
+                      >
+                        {t.common.edit}
+                      </button>
+                      <button
                         className="btn danger"
                         onClick={() => setConfirm({ message: t.common.confirmDelete, run: () => deleteExchange(m.id) })}
                       >
@@ -697,6 +761,12 @@ export default function Dashboard() {
                       {m.external ? '' : '−'}{formatMoney(m.amount, m.currency)}
                     </span>
                     <div className="list-item-actions">
+                      <button
+                        className="btn secondary"
+                        onClick={() => { const p = cardPayments.find((cp) => cp.id === m.id); if (p) openEditCardPayment(p) }}
+                      >
+                        {t.common.edit}
+                      </button>
                       <button
                         className="btn danger"
                         onClick={() => setConfirm({
@@ -992,7 +1062,7 @@ export default function Dashboard() {
       )}
 
       {modal === 'exchange' && (
-        <Modal title={t.dashboard.exchangeModalTitle} onClose={() => setModal(null)}>
+        <Modal title={editingExchangeId ? t.dashboard.editExchangeTitle : t.dashboard.exchangeModalTitle} onClose={() => setModal(null)}>
           <form onSubmit={addExchange}>
             <div className="insight" style={{ marginBottom: 12, fontSize: 13 }}>
               {t.dashboard.exchangeHint}
@@ -1125,6 +1195,71 @@ export default function Dashboard() {
           </form>
         </Modal>
       )}
+
+      {modal === 'cardpayment' && (() => {
+        const card = paymentMethods.find((p) => String(p.id) === String(cardPaymentForm.cardId))
+        const cardCurrency = card?.currency || baseCurrency
+        return (
+          <Modal title={t.cards.editPaymentTitle} onClose={() => setModal(null)}>
+            <form onSubmit={submitCardPayment}>
+              <div className="field-row">
+                <div className="field" style={{ flex: 1 }}>
+                  <label>{t.common.amount}</label>
+                  <input
+                    type="number" step="0.01" min="0" required autoFocus
+                    value={cardPaymentForm.amount}
+                    onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, amount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <label>{t.common.currency}</label>
+                  <div className="static-field">{cardCurrency}</div>
+                </div>
+              </div>
+              <div className="field">
+                <label>{t.cards.toCard}</label>
+                <div className="static-field">{accountLabel(card?.name || '')}</div>
+              </div>
+              <div className="field">
+                <label>{t.common.paymentMethod}</label>
+                <select
+                  value={cardPaymentForm.sourcePaymentMethodId}
+                  onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, sourcePaymentMethodId: e.target.value })}
+                >
+                  <option value="">{t.cards.externalPayment}</option>
+                  {paymentMethods
+                    .filter((p) => !p.archived && p.type !== 'CreditCard' && (p.currency || baseCurrency) === cardCurrency)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>{accountLabel(p.name)}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>{t.common.date}</label>
+                <input
+                  type="date"
+                  value={cardPaymentForm.date}
+                  onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, date: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>{t.common.description}</label>
+                <input
+                  type="text"
+                  value={cardPaymentForm.note}
+                  onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, note: e.target.value })}
+                  placeholder={t.dashboard.incomePlaceholder}
+                />
+              </div>
+              <div className="row">
+                <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
+                <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              </div>
+            </form>
+          </Modal>
+        )
+      })()}
 
       {showPay && (
         <PayCardModal

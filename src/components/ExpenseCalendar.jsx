@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, ArrowLeftRight } from 'lucide-react'
 import Modal from './Modal'
 import { formatMoney } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { tintVars } from '../utils/color'
 
+const GOLD = '#b8943e'
+
 // Monthly calendar that plots the user's incomes (green) and expenses (red) on each day.
+// Currency exchanges (transfers) are also shown (gold) so the user can see when a movement
+// happened; they are not spending/income, so they never count toward the day's totals.
 // Clicking any day opens its transactions so they can be edited, and lets you add new ones.
 export default function ExpenseCalendar({
-  year, month, expenses, incomes = [], currency, t, categoryLabel, accountLabel,
+  year, month, expenses, incomes = [], exchanges = [], currency, t, categoryLabel, accountLabel,
   onEditExpense, onAddExpense, onEditIncome, onAddIncome,
 }) {
   const [selectedDay, setSelectedDay] = useState(null)
@@ -39,6 +43,16 @@ export default function ExpenseCalendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomes, year, month])
 
+  const exByDay = useMemo(() => {
+    const map = {}
+    for (const x of exchanges) {
+      const d = new Date(x.date)
+      if (inThisMonth(d)) (map[d.getDate()] ||= []).push(x)
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exchanges, year, month])
+
   const firstDow = new Date(year, month - 1, 1).getDay() // 0 = Sunday
   const daysInMonth = new Date(year, month, 0).getDate()
   const today = new Date()
@@ -52,6 +66,7 @@ export default function ExpenseCalendar({
 
   const expItems = selectedDay ? (expByDay[selectedDay] || []) : []
   const incItems = selectedDay ? (incByDay[selectedDay] || []) : []
+  const exItems = selectedDay ? (exByDay[selectedDay] || []) : []
 
   return (
     <div className="exp-calendar">
@@ -63,7 +78,8 @@ export default function ExpenseCalendar({
           if (d === null) return <div key={`e${idx}`} className="cal-cell empty" />
           const exps = expByDay[d] || []
           const incs = incByDay[d] || []
-          const has = exps.length > 0 || incs.length > 0
+          const exs = exByDay[d] || []
+          const has = exps.length > 0 || incs.length > 0 || exs.length > 0
           const isToday = isCurrentMonth && today.getDate() === d
           return (
             <button
@@ -75,6 +91,15 @@ export default function ExpenseCalendar({
               <div className="cal-daynum"><span>{d}</span></div>
               {incs.length > 0 && <div className="cal-amt inc">+{formatMoney(sumOf(incs), currency)}</div>}
               {exps.length > 0 && <div className="cal-amt exp">−{formatMoney(sumOf(exps), currency)}</div>}
+              {exs.length > 0 && (() => {
+                // Net transferred that day in the active currency (out subtracts, in adds).
+                const net = exs.reduce((s, x) => s + (x.fromCurrency === currency ? -x.fromAmount : x.toAmount), 0)
+                return (
+                  <div className="cal-amt" style={{ color: GOLD }}>
+                    {net < 0 ? '−' : '+'}{formatMoney(Math.abs(net), currency)}
+                  </div>
+                )
+              })()}
               <div className="cal-items">
                 {exps.slice(0, 2).map((e) => (
                   <span
@@ -87,6 +112,11 @@ export default function ExpenseCalendar({
                   </span>
                 ))}
                 {exps.length > 2 && <span className="cal-more">+{exps.length - 2}</span>}
+                {exs.slice(0, 1).map((x) => (
+                  <span className="cal-chip" key={`x${x.id}`} style={tintVars(GOLD)} title={t.dashboard.exchange}>
+                    <ArrowLeftRight size={11} /> {t.dashboard.exchange}
+                  </span>
+                ))}
               </div>
             </button>
           )
@@ -121,7 +151,7 @@ export default function ExpenseCalendar({
             </div>
           </div>
 
-          {incItems.length === 0 && expItems.length === 0 && (
+          {incItems.length === 0 && expItems.length === 0 && exItems.length === 0 && (
             <div className="empty">{t.calendar.noneDay}</div>
           )}
 
@@ -176,6 +206,43 @@ export default function ExpenseCalendar({
                       </div>
                     </div>
                   ))}
+              </div>
+            </>
+          )}
+
+          {exItems.length > 0 && (
+            <>
+              <h4 className="cal-sec">{t.expenses.transfersThisMonth}</h4>
+              <div className="list">
+                {exItems
+                  .slice()
+                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                  .map((x) => {
+                    const out = x.fromCurrency === currency
+                    const amount = out ? x.fromAmount : x.toAmount
+                    const otherAmount = out ? x.toAmount : x.fromAmount
+                    const otherCurrency = out ? x.toCurrency : x.fromCurrency
+                    const accountName = out ? x.fromPaymentMethodName : x.toPaymentMethodName
+                    return (
+                      <div className="list-item tinted" key={`ex-${x.id}`} style={tintVars(GOLD)}>
+                        <span className="badge-icon"><ArrowLeftRight size={16} /></span>
+                        <div className="meta">
+                          <div className="title">{t.dashboard.exchange}</div>
+                          <div className="sub">
+                            {out
+                              ? `${t.dashboard.toLabel} ${formatMoney(otherAmount, otherCurrency)}`
+                              : `${t.dashboard.fromLabel} ${formatMoney(otherAmount, otherCurrency)}`}
+                            {accountName ? ` · ${accountLabel(accountName)}` : ''}
+                          </div>
+                        </div>
+                        <div className="list-item-end">
+                          <span className={`amount ${out ? 'neg' : 'pos'}`}>
+                            {out ? '−' : '+'}{formatMoney(amount, currency)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
               </div>
             </>
           )}

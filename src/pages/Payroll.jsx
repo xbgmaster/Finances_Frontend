@@ -214,18 +214,20 @@ export default function Payroll() {
 
   const openAddPayment = (day, preselectJobId) => {
     if (activeJobs.length === 0) { toast.error(t.payroll.noJobsYet); return }
-    const job = (preselectJobId && activeJobs.find((j) => String(j.id) === String(preselectJobId))) || activeJobs[0]
+    // Only prefill when a specific job is targeted (per-job button or "Record / adjust"); the
+    // global and per-day "Add payment" open on "Select a job" so nothing is assumed.
+    const job = preselectJobId ? activeJobs.find((j) => String(j.id) === String(preselectJobId)) : null
     const d = day || now.getDate()
     setEditingShiftId(null)
     setShiftError('')
     setShiftForm({
-      incomeScheduleId: String(job.id),
+      incomeScheduleId: job ? String(job.id) : '',
       date: `${year}-${pad(month)}-${pad(d)}`,
       hours: '',
-      hourlyRate: String(job.hourlyRate ?? ''),
+      hourlyRate: job ? String(job.hourlyRate ?? '') : '',
       // Prefill fixed jobs with their scheduled amount so the user can adjust a specific pay
       // (e.g. a raise or a lower month) before recording it.
-      amount: job.payType !== 'Hourly' ? String(job.amount ?? '') : '',
+      amount: job && job.payType !== 'Hourly' ? String(job.amount ?? '') : '',
     })
     setShowShift(true)
   }
@@ -257,7 +259,8 @@ export default function Payroll() {
 
   const submitShift = async (e) => {
     e.preventDefault()
-    if (!selectedShiftJob || !shiftForm.date) return
+    if (!selectedShiftJob) { setShiftError(t.payroll.pickJobPlaceholder); return }
+    if (!shiftForm.date) return
     setSavingShift(true)
     setShiftError('')
     try {
