@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CreditCard, TrendingDown, Landmark, CalendarDays,
   Sparkles, ShieldCheck, Tag, Settings, LogOut, Briefcase, Users, SlidersHorizontal, ChevronDown,
+  HelpCircle,
 } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
@@ -13,6 +14,7 @@ import CurrencySwitcher from './CurrencySwitcher'
 import ThemeSwitcher from './ThemeSwitcher'
 import BrandLogo from './BrandLogo'
 import { useTheme } from '../theme/ThemeContext'
+import { startTour, isTourPending, markTourPending as _mark } from '../tour/useTour'
 
 // Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
 const MoltenMetal = lazy(() => import('./MoltenMetal'))
@@ -50,6 +52,16 @@ export default function Layout() {
     return () => clearInterval(id)
   }, [])
 
+  // Auto-start the tour when the user first arrives after onboarding.
+  useEffect(() => {
+    if (isTourPending()) {
+      // Small delay so nav elements are painted before driver.js measures them.
+      const tid = setTimeout(() => startTour(t), 600)
+      return () => clearTimeout(tid)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Close the dropdown when clicking outside it.
   useEffect(() => {
     if (!bellOpen) return
@@ -82,12 +94,12 @@ export default function Layout() {
   }, [menuOpen])
 
   const links = [
-    { to: '/', label: t.nav.summary, icon: <LayoutDashboard size={18} />, end: true },
-    { to: '/cards', label: t.nav.cards, icon: <CreditCard size={18} />, feature: 'cards' },
-    { to: '/expenses', label: t.nav.expenses, icon: <TrendingDown size={18} />, feature: 'expenses' },
-    { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} />, feature: 'credits' },
-    { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} />, feature: 'budget' },
-    { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} />, feature: 'projections' },
+    { to: '/', label: t.nav.summary, icon: <LayoutDashboard size={18} />, end: true, tour: 'nav-summary' },
+    { to: '/cards', label: t.nav.cards, icon: <CreditCard size={18} />, feature: 'cards', tour: 'nav-cards' },
+    { to: '/expenses', label: t.nav.expenses, icon: <TrendingDown size={18} />, feature: 'expenses', tour: 'nav-expenses' },
+    { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} />, feature: 'credits', tour: 'nav-credits' },
+    { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} />, feature: 'budget', tour: 'nav-budget' },
+    { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} />, feature: 'projections', tour: 'nav-projections' },
     // Jobs & pay is opt-in: shown here only to non-admins who were granted access
     // (admins always have it, listed inside the Administration submenu instead).
     { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} />, feature: 'payroll', adminHidden: true },
@@ -186,6 +198,7 @@ export default function Layout() {
               end={l.end}
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              data-tour={l.tour}
             >
               <span className="ic">{l.icon}</span>
               {l.label}
@@ -224,6 +237,14 @@ export default function Layout() {
           )}
         </nav>
         <div className="sidebar-footer">
+          <button
+            type="button"
+            className="tour-help-btn"
+            data-tour="help-btn"
+            onClick={() => startTour(t, location.pathname)}
+          >
+            <HelpCircle size={16} /> {t.tour.helpTitle}
+          </button>
           <span className="sidebar-footer-label">{t.common.theme}</span>
           <ThemeSwitcher />
         </div>
@@ -258,7 +279,9 @@ export default function Layout() {
         <div className="topbar">
           <div className="topbar-left">
             <LanguageSwitcher />
-            <CurrencySwitcher />
+            <span data-tour="currency-lens">
+              <CurrencySwitcher />
+            </span>
           </div>
           <div className="topbar-right">
             <div className="bell-wrap" ref={bellRef}>

@@ -584,7 +584,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-3">
+      <div className="grid grid-3" data-tour="summary-kpis">
         <StatCard
           label={`${t.dashboard.availableBalance} (${selCur})`}
           value={selEntry.balance}
@@ -627,7 +627,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="section-title">
+      <h2 className="section-title" data-tour="summary-budgets">
         {t.dashboard.monthlyBudgets}
         <span className="info-hint">
           <span className="dot" tabIndex={0}>i</span>
@@ -670,7 +670,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="section-title">{t.dashboard.recentActivity}</h2>
+      <h2 className="section-title" data-tour="summary-activity">{t.dashboard.recentActivity}</h2>
 
       {movements.length > 0 && (
         <div className="activity-toolbar">

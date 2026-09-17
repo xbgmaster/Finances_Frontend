@@ -50,7 +50,7 @@ export default function Projections() {
   return (
     <div>
       <div className="page-header">
-        <h1>{t.projections.title} 🤖</h1>
+        <h1 data-tour="projections-section">{t.projections.title} 🤖</h1>
         <p>{t.projections.subtitle}</p>
       </div>
 

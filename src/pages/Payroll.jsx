@@ -391,7 +391,7 @@ export default function Payroll() {
           {activeJobs.length > 0 && (
             <button className="btn secondary" onClick={() => openAddPayment()}>{t.payroll.addPayment}</button>
           )}
-          <button className="btn" onClick={openCreate}>{t.payroll.addJob}</button>
+          <button className="btn" data-tour="payroll-add" onClick={openCreate}>{t.payroll.addJob}</button>
         </div>
       </div>
 
@@ -407,7 +407,7 @@ export default function Payroll() {
         />
       </div>
 
-      <h2 className="section-title">{t.payroll.jobsTitle}</h2>
+      <h2 className="section-title" data-tour="payroll-jobs">{t.payroll.jobsTitle}</h2>
       {currencySchedules.length === 0 ? (
         <div className="empty">{t.payroll.noJobs}</div>
       ) : (
@@ -493,7 +493,7 @@ export default function Payroll() {
         </div>
       )}
 
-      <h2 className="section-title">{t.payroll.calendarTitle}</h2>
+      <h2 className="section-title" data-tour="payroll-calendar">{t.payroll.calendarTitle}</h2>
       <div className="card">
         <IncomeCalendar
           year={year}

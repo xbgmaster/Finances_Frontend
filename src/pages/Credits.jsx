@@ -186,12 +186,12 @@ export default function Credits() {
 
   return (
     <div>
-      <div className="page-header row">
+      <div className="page-header row" data-tour="credits-list">
         <div>
           <h1>{t.credits.title}</h1>
           <p>{t.credits.subtitle}</p>
         </div>
-        <button className="btn" onClick={openCreate}>{t.credits.newCredit}</button>
+        <button className="btn" data-tour="credits-add" onClick={openCreate}>{t.credits.newCredit}</button>
       </div>
 
       {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 16 }}>{error}</div>}

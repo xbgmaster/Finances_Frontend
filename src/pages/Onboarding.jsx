@@ -55,6 +55,8 @@ export default function Onboarding() {
         monthlyIncomeTarget: form.monthlyIncomeTarget === '' ? null : parseFloat(form.monthlyIncomeTarget),
       })
       updateUser({ fullName: profile.fullName, onboardingCompleted: true, currency: profile.currency })
+      // Queue the tour so it starts when the user first sees the main app.
+      localStorage.setItem('tishe.tourPending', '1')
       // Open the app already looking through the currency the user just chose.
       if (profile.currency) setCurrency(profile.currency)
       navigate('/', { replace: true })

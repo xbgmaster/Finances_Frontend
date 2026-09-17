@@ -465,7 +465,7 @@ export default function Expenses() {
           <select value={year} onChange={(e) => { setYear(Number(e.target.value)); setPage(1) }}>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-          <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount}>
+          <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount} data-tour="expenses-filter">
             <option value="">{t.expenses.allAccounts}</option>
             {paymentMethods
               .filter((p) => !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
@@ -502,7 +502,7 @@ export default function Expenses() {
         </div>
       )}
 
-      <h2 className="section-title">{t.expenses.calendarTitle}</h2>
+      <h2 className="section-title" data-tour="expenses-calendar">{t.expenses.calendarTitle}</h2>
       <div className="card">
         <ExpenseCalendar
           year={year}
@@ -521,7 +521,7 @@ export default function Expenses() {
         />
       </div>
 
-      <h2 className="section-title">{t.expenses.spendingByCategory}</h2>
+      <h2 className="section-title" data-tour="expenses-categories">{t.expenses.spendingByCategory}</h2>
       {displayByCategory.length === 0 && !hasExchangeCard ? (
         <div className="empty">{t.expenses.noExpensesMonth} {t.months[month - 1]} {year}.</div>
       ) : (
@@ -593,7 +593,7 @@ export default function Expenses() {
         </div>
       )}
 
-      <h2 className="section-title">{t.expenses.expenseDetails}</h2>
+      <h2 className="section-title" data-tour="expenses-details">{t.expenses.expenseDetails}</h2>
       {!listExpanded ? (
         <div className="empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span>{t.expenses.listCollapsedHint}</span>

@@ -2062,3 +2062,123 @@ html[data-theme="dark"] .auth-page--laser .auth-card {
 @media (max-width: 640px) {
   .toast-stack { left: 16px; right: 16px; bottom: 16px; max-width: none; }
 }
+
+/* ─── App Tour (driver.js overrides — Tishe dark/gold theme) ─────────────── */
+
+/* Stage highlight: bright up the spotlit area + gold glow ring */
+#driver-highlighted-element-stage {
+  outline: 2px solid #d4a840 !important;
+  box-shadow:
+    0 0 0 4px rgba(212, 168, 64, 0.35),   /* gold halo */
+    0 0 32px rgba(212, 168, 64, 0.4),      /* gold glow */
+    0 0 0 9999px rgba(0, 0, 0, 0.48),      /* overlay (overrides driver default) */
+    inset 0 0 0 9999px rgba(255,255,255,0.07) /* very subtle white lift inside */ !important;
+  filter: brightness(1.12) contrast(1.04) !important;
+}
+
+/* Overlay */
+.driver-overlay { background: rgba(0,0,0,0.48) !important; }
+
+/* Popover container */
+.tishe-popover.driver-popover {
+  background: var(--card, #171f1b) !important;
+  border: 1px solid #b8943e55 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px #b8943e22 !important;
+  padding: 20px 22px 16px !important;
+  max-width: 320px !important;
+  color: var(--text, #e8efe9) !important;
+}
+
+/* Arrow */
+.tishe-popover.driver-popover .driver-popover-arrow-side-left  { border-right-color:  #b8943e55 !important; }
+.tishe-popover.driver-popover .driver-popover-arrow-side-right { border-left-color:   #b8943e55 !important; }
+.tishe-popover.driver-popover .driver-popover-arrow-side-top   { border-bottom-color: #b8943e55 !important; }
+.tishe-popover.driver-popover .driver-popover-arrow-side-bottom{ border-top-color:    #b8943e55 !important; }
+
+/* Title */
+.tishe-popover .driver-popover-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #d4a840 !important;
+  margin-bottom: 8px !important;
+}
+
+/* Body */
+.tishe-popover .driver-popover-description {
+  font-size: 14px !important;
+  color: var(--text-muted, #96a69d) !important;
+  line-height: 1.55 !important;
+}
+
+/* Footer row */
+.tishe-popover .driver-popover-footer {
+  margin-top: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Progress text */
+.tishe-popover .driver-popover-progress-text {
+  font-size: 12px !important;
+  color: var(--text-muted, #96a69d) !important;
+  flex: 1 !important;
+}
+
+/* Buttons base */
+.tishe-popover .driver-popover-next-btn,
+.tishe-popover .driver-popover-prev-btn,
+.tishe-popover .driver-popover-close-btn {
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 7px 14px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s !important;
+}
+
+/* Next / Done button — gold */
+.tishe-popover .driver-popover-next-btn {
+  background: #b8943e !important;
+  color: #0f1512 !important;
+}
+.tishe-popover .driver-popover-next-btn:hover { opacity: 0.88 !important; }
+
+/* Prev button — subtle */
+.tishe-popover .driver-popover-prev-btn {
+  background: var(--surface-2, #1b241f) !important;
+  color: var(--text, #e8efe9) !important;
+}
+.tishe-popover .driver-popover-prev-btn:hover { opacity: 0.8 !important; }
+
+/* Close (skip) — text only */
+.tishe-popover .driver-popover-close-btn {
+  background: transparent !important;
+  color: var(--text-muted, #96a69d) !important;
+  font-size: 18px !important;
+  padding: 4px !important;
+  position: absolute !important;
+  top: 12px !important;
+  right: 14px !important;
+}
+
+/* Help / Tour button in sidebar */
+.tour-help-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: 1px solid #b8943e55;
+  border-radius: 10px;
+  color: #b8943e;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.2s;
+  margin-bottom: 8px;
+}
+.tour-help-btn:hover { background: #b8943e14; border-color: #b8943e; }

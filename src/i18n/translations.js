@@ -1,6 +1,45 @@
 export const translations = {
   en: {
     appName: 'Tishe',
+    tour: {
+      // Nav orientation (shown on Summary page first-time)
+      summaryTitle: '📊 Summary', summaryNavBody: 'Your home base — see your overall balance, spending vs income, budget tracking and recent activity here.',
+      cardsTitle: '💳 Cards & Accounts', cardsNavBody: 'Manage all your accounts: debit, cash, and credit cards with full movement history.',
+      expensesTitle: '📅 Expenses', expensesNavBody: 'Record and browse your spending with an interactive calendar, account filter, and category breakdown.',
+      creditsTitle: '🏦 Credits', creditsNavBody: 'Track loans and lines of credit — amortization schedules, payments and due-date alerts.',
+      budgetTitle: '📆 Budget History', budgetBody: 'Review income and spending month by month and spot financial trends.',
+      projectionsTitle: '✨ AI Projections', projectionsBody: 'AI projects your financial future based on your history. Great for planning goals.',
+      // Summary page content
+      summaryKpisTitle: '📈 Your balances', summaryKpisBody: 'Real-time totals: net balance by currency, total income, and total spending — always up to date.',
+      summaryBudgetsTitle: '🎯 Category budgets', summaryBudgetsBody: 'Set monthly limits per category and see how close you are at a glance with progress bars.',
+      summaryActivityTitle: '🕐 Recent activity', summaryActivityBody: 'A live feed of every movement — income, expenses, exchanges, card payments. Search, filter by date and page through history.',
+      // Cards page
+      cardsPageBody: 'Your accounts are grouped by type. Each card shows the balance, spending this month and received. Tap "Details" for the full movement list.',
+      cardsAddTitle: '➕ New account', cardsAddBody: 'Add a debit, cash or credit card here. Set a credit limit and statement dates for automatic alerts.',
+      cardsFavTitle: '⭐ Set as favourite', cardsFavBody: 'Star an account to make it the default for new expenses and incomes in that currency. Each currency can have its own favourite.',
+      // Expenses page
+      expensesFilterTitle: '🔍 Filter by account', expensesFilterBody: 'Select an account to scope the entire page — calendar, spending breakdown and detail list — to that account only.',
+      expensesCalendarTitle: '📅 Expense calendar', expensesCalendarBody: 'Click any day to see all transactions for that date or add a new expense. The calendar updates instantly as you filter.',
+      expensesCategoriesTitle: '🏷️ Spending by category', expensesCategoriesBody: 'Tap a category card to drill into its expenses. The detail list filters instantly — no page reload.',
+      expensesDetailsTitle: '📋 Expense details', expensesDetailsBody: 'The full list of expenses this month. Search by description or amount, paginate, and tap Edit to make corrections.',
+      // Credits
+      creditsPageBody: 'Each credit card shows its remaining balance, interest rate and next payment. Tap to see the full amortization schedule.',
+      creditsAddTitle: '➕ New credit', creditsAddBody: 'Register a loan or line of credit with its rate, term and first payment date. The app calculates the schedule automatically.',
+      // Budget
+      budgetPageBody: 'Compare income and spending month by month. Each bar shows the balance for that month — green when positive, red when you overspent.',
+      // Projections
+      projectionsPageBody: 'Based on your spending patterns, the AI forecasts your balance for the coming months. Adjust the horizon with the controls above.',
+      // Payroll
+      payrollJobsTitle: '💼 My jobs', payrollJobsBody: 'Create a job with its pay frequency (monthly, biweekly…) and type (fixed salary or hourly). Pay days are tracked automatically.',
+      payrollCalendarTitle: '📅 Income calendar', payrollCalendarBody: 'See when each pay arrives. For hourly jobs, log shifts here — on pay-cut day all shifts are totalled into a single income.',
+      payrollAddTitle: '➕ Add payment', payrollAddBody: 'Manually record a payment for any job. For salaried jobs you can adjust the amount — great when your pay varies month to month.',
+      // Shared
+      currencyTitle: '🌐 Currency lens', currencyBody: 'Switch currency to see your finances in CAD, COP, USD… Each lens shows only that currency\'s data — no mixing.',
+      helpTitle: '❓ Help & Tour', helpBody: 'Click here any time to replay the walkthrough for the page you\'re on. New steps appear as you explore each section.',
+      next: 'Next →',
+      prev: '← Back',
+      done: '🎉 Got it!',
+    },
     nav: {
       summary: 'Summary',
       categories: 'Categories',
@@ -670,6 +709,36 @@ export const translations = {
   },
   es: {
     appName: 'Tishe',
+    tour: {
+      summaryTitle: '📊 Resumen', summaryNavBody: 'Tu base de operaciones — balance general, gastos vs ingresos, presupuestos por categoría y actividad reciente.',
+      cardsTitle: '💳 Tarjetas y Cuentas', cardsNavBody: 'Gestiona todas tus cuentas: débito, efectivo y tarjetas de crédito con historial completo de movimientos.',
+      expensesTitle: '📅 Gastos', expensesNavBody: 'Registra y consulta tus gastos con un calendario interactivo, filtro por cuenta y desglose por categoría.',
+      creditsTitle: '🏦 Créditos', creditsNavBody: 'Controla préstamos y créditos — tablas de amortización, pagos y alertas de vencimiento.',
+      budgetTitle: '📆 Historial de presupuesto', budgetBody: 'Revisa ingresos y gastos mes a mes e identifica tendencias financieras.',
+      projectionsTitle: '✨ Proyecciones IA', projectionsBody: 'La IA proyecta tu futuro financiero con base en tu historial. Ideal para planear metas.',
+      summaryKpisTitle: '📈 Tus balances', summaryKpisBody: 'Totales en tiempo real: balance neto por moneda, ingresos totales y gastos totales — siempre actualizados.',
+      summaryBudgetsTitle: '🎯 Presupuestos por categoría', summaryBudgetsBody: 'Define límites mensuales por categoría y mira de un vistazo cuánto has usado con barras de progreso.',
+      summaryActivityTitle: '🕐 Actividad reciente', summaryActivityBody: 'Un registro en vivo de cada movimiento — ingresos, gastos, cambios de divisa, pagos de tarjeta. Busca, filtra por fecha y navega la historia.',
+      cardsPageBody: 'Tus cuentas están agrupadas por tipo. Cada tarjeta muestra el balance, gastos del mes e ingresos. Toca "Details" para ver todos los movimientos.',
+      cardsAddTitle: '➕ Nueva cuenta', cardsAddBody: 'Agrega una cuenta de débito, efectivo o tarjeta de crédito. Define límite de crédito y fechas de corte para alertas automáticas.',
+      cardsFavTitle: '⭐ Marcar como favorita', cardsFavBody: 'Marca una cuenta como favorita para que sea el predeterminado al registrar gastos e ingresos en esa moneda. Cada moneda tiene su propia favorita.',
+      expensesFilterTitle: '🔍 Filtrar por cuenta', expensesFilterBody: 'Selecciona una cuenta para enfocar toda la página — calendario, desglose de gastos y lista de detalle — en esa cuenta.',
+      expensesCalendarTitle: '📅 Calendario de gastos', expensesCalendarBody: 'Toca cualquier día para ver las transacciones de esa fecha o añadir un nuevo gasto. El calendario se actualiza al instante al filtrar.',
+      expensesCategoriesTitle: '🏷️ Gastos por categoría', expensesCategoriesBody: 'Toca una tarjeta de categoría para ver sus gastos. La lista de detalle se filtra al instante, sin recargar la página.',
+      expensesDetailsTitle: '📋 Detalle de gastos', expensesDetailsBody: 'Lista completa de gastos del mes. Busca por descripción o monto, pagina y toca Editar para corregir cualquier registro.',
+      creditsPageBody: 'Cada crédito muestra el saldo pendiente, tasa de interés y próximo pago. Toca para ver la tabla de amortización completa.',
+      creditsAddTitle: '➕ Nuevo crédito', creditsAddBody: 'Registra un préstamo o línea de crédito con su tasa, plazo y fecha de primer pago. La app calcula el calendario automáticamente.',
+      budgetPageBody: 'Compara ingresos y gastos mes a mes. Cada barra muestra el balance de ese mes — verde cuando es positivo, rojo cuando gastaste de más.',
+      projectionsPageBody: 'Con base en tus patrones de gasto, la IA proyecta tu balance en los próximos meses. Ajusta el horizonte con los controles de arriba.',
+      payrollJobsTitle: '💼 Mis trabajos', payrollJobsBody: 'Crea un trabajo con su frecuencia de pago (mensual, quincenal…) y tipo (salario fijo o por horas). Los días de pago se rastrean automáticamente.',
+      payrollCalendarTitle: '📅 Calendario de ingresos', payrollCalendarBody: 'Ve cuándo llega cada pago. Para trabajos por horas, registra turnos aquí — en el día de corte se totalizan en un solo ingreso.',
+      payrollAddTitle: '➕ Añadir pago', payrollAddBody: 'Registra manualmente un pago para cualquier trabajo. En salarios fijos puedes ajustar el monto — ideal cuando tu pago varía mes a mes.',
+      currencyTitle: '🌐 Lente de moneda', currencyBody: 'Cambia la moneda para ver tus finanzas en CAD, COP, USD… Cada lente muestra solo los datos de esa moneda, sin mezclar.',
+      helpTitle: '❓ Ayuda y Tour', helpBody: 'Toca aquí en cualquier momento para repetir el recorrido de la página en la que estás. Aparecen pasos nuevos a medida que exploras cada sección.',
+      next: 'Siguiente →',
+      prev: '← Atrás',
+      done: '🎉 ¡Entendido!',
+    },
     nav: {
       summary: 'Resumen',
       categories: 'Categorías',

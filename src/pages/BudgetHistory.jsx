@@ -49,7 +49,7 @@ export default function BudgetHistory() {
     return (
       <div>
         <div className="page-header">
-          <h1>{t.budgetHistory.title}</h1>
+          <h1 data-tour="budget-section">{t.budgetHistory.title}</h1>
           <p>{t.budgetHistory.subtitle}</p>
         </div>
         <div className="empty">
@@ -68,7 +68,7 @@ export default function BudgetHistory() {
     <div>
       <div className="page-header row">
         <div>
-          <h1>{t.budgetHistory.title}</h1>
+          <h1 data-tour="budget-section">{t.budgetHistory.title}</h1>
           <p>{t.budgetHistory.subtitle}</p>
         </div>
         <div className="toolbar">

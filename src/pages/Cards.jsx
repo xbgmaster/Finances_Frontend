@@ -56,6 +56,7 @@ function MethodCard({
         className={`fav-star ${m.isFavorite ? 'on' : ''}`}
         title={m.isFavorite ? t.cards.favorite : t.cards.makeFavorite}
         aria-pressed={m.isFavorite}
+        data-tour="cards-favorite"
         onClick={() => onFavorite(m)}
       >
         {m.isFavorite ? '⭐' : '☆'}
@@ -268,7 +269,7 @@ export default function Cards() {
           <h1>{t.cards.title}</h1>
           <p>{t.cards.subtitle}</p>
         </div>
-        <button className="btn" onClick={openCreate}>{t.cards.newMethod}</button>
+        <button className="btn" data-tour="cards-add" onClick={openCreate}>{t.cards.newMethod}</button>
       </div>
 
       {listError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 16 }}>{listError}</div>}
@@ -278,8 +279,8 @@ export default function Cards() {
       ) : visibleMethods.length === 0 ? (
         <div className="empty">{t.cards.emptyCurrency.replace('{cur}', activeCurrency)}</div>
       ) : (
-        sections.map((section) => (
-          <section className="method-section" key={section.type}>
+        sections.map((section, idx) => (
+          <section className="method-section" key={section.type} {...(idx === 0 ? { 'data-tour': 'cards-section' } : {})}>
             <h2 className="section-title">
               <span aria-hidden="true" className="section-icon">{pmTypeIcon(section.type, { size: 18 })}</span>
               {t.cards[section.titleKey]}
