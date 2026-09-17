@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ExpensesApi, IncomesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
@@ -21,9 +21,11 @@ const EXCHANGE_CAT = '__exchange__'
 
 export default function Expenses() {
   const { t, categoryLabel, accountLabel } = useI18n()
-  const { currency: activeCurrency, baseCurrency } = useCurrency()
+  const { currency: activeCurrency, baseCurrency, setCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [pendingEdit, setPendingEdit] = useState(null)
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [pmFilter, setPmFilter] = useState('') // '' = all accounts
@@ -93,6 +95,35 @@ export default function Expenses() {
   useEffect(() => {
     setPage(1)
   }, [pmFilter, catFilter, searchInput, activeCurrency, year, month, pageSize])
+
+  // Arriving from another page (e.g. Card details "Edit") with an item to edit: switch to its
+  // currency/month and remember which item to open once its data has loaded.
+  useEffect(() => {
+    const edit = location.state?.edit
+    if (!edit) return
+    if (edit.currency && edit.currency !== activeCurrency) setCurrency(edit.currency)
+    if (edit.date) {
+      const d = new Date(edit.date)
+      setYear(d.getFullYear())
+      setMonth(d.getMonth() + 1)
+    }
+    setPendingEdit({ kind: edit.kind, id: edit.id })
+    navigate(location.pathname, { replace: true, state: null }) // don't re-trigger on back/refresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Once the target month/currency data is loaded, open the right editor.
+  useEffect(() => {
+    if (!pendingEdit || loading) return
+    if (pendingEdit.kind === 'income') {
+      const i = allIncomes.find((x) => String(x.id) === String(pendingEdit.id))
+      if (i) { openEditIncome(i); setPendingEdit(null) }
+    } else {
+      const e = monthExpenses.find((x) => String(x.id) === String(pendingEdit.id))
+      if (e) { openEdit(e); setPendingEdit(null) }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEdit, loading, monthExpenses, allIncomes])
 
   const openCreate = async () => {
     setEditingId(null)

@@ -849,6 +849,21 @@ export default function Payroll() {
                 onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
               />
             </div>
+            <div className="field">
+              <label>{t.common.paymentMethod}</label>
+              <select
+                value={incomeForm.paymentMethodId}
+                onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
+              >
+                <option value="">{t.common.none}</option>
+                {paymentMethods
+                  .filter((p) => !p.archived && p.type !== 'CreditCard'
+                    && (p.currency === (incomeForm.currency || activeCurrency) || String(p.id) === String(incomeForm.paymentMethodId)))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
+                  ))}
+              </select>
+            </div>
             {incomeError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{incomeError}</div>}
             <div className="row">
               <button

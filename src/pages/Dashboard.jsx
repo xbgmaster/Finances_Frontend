@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
@@ -24,6 +24,8 @@ export default function Dashboard() {
   const { currency: activeCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [pendingEdit, setPendingEdit] = useState(null)
   const [balance, setBalance] = useState(null)
   const [incomes, setIncomes] = useState([])
   const [expenses, setExpenses] = useState([])
@@ -92,6 +94,24 @@ export default function Dashboard() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCurrency])
+
+  // Arriving from another page (e.g. Card details "Edit") with an item to edit here.
+  useEffect(() => {
+    const edit = location.state?.edit
+    if (!edit) return
+    setPendingEdit(edit)
+    navigate(location.pathname, { replace: true, state: null }) // don't re-trigger on back/refresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!pendingEdit || loading) return
+    if (pendingEdit.kind === 'cardpayment') {
+      const p = cardPayments.find((x) => String(x.id) === String(pendingEdit.id))
+      if (p) { openEditCardPayment(p); setPendingEdit(null) }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEdit, loading, cardPayments])
 
   // Reset to the first page whenever the search/filters change.
   useEffect(() => {

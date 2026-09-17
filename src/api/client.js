@@ -175,6 +175,8 @@ export const PaymentMethodsApi = {
   remove: (id) => api.delete(`/paymentmethods/${id}`),
   // Credit card payments (reduce debt / free cupo).
   payments: (id) => api.get(`/paymentmethods/${id}/payments`).then((r) => r.data),
+  // Card payments funded FROM this account (money that left it to pay a credit card).
+  fundedPayments: (id) => api.get(`/paymentmethods/${id}/funded-payments`).then((r) => r.data),
   payCard: (id, data) => api.post(`/paymentmethods/${id}/payments`, data).then((r) => r.data),
   updatePayment: (id, paymentId, data) => api.put(`/paymentmethods/${id}/payments/${paymentId}`, data).then((r) => r.data),
   removePayment: (id, paymentId) => api.delete(`/paymentmethods/${id}/payments/${paymentId}`),
