@@ -109,8 +109,15 @@ function getSteps(t, route = '/') {
     if (route.startsWith('/payroll'))          return payrollSteps(t)
     return navFallbackSteps(t)
   })()
-  // Drop steps whose target isn't in the DOM (e.g. hidden by feature gate).
-  return raw.filter((s) => !s.element || document.querySelector(s.element))
+  // Drop steps whose target is missing OR not visible (e.g. sidebar links
+  // on mobile when the drawer is closed, or feature-gated nav items).
+  return raw.filter((s) => {
+    if (!s.element) return true
+    const el = document.querySelector(s.element)
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  })
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────

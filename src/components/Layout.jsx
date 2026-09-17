@@ -241,7 +241,7 @@ export default function Layout() {
             type="button"
             className="tour-help-btn"
             data-tour="help-btn"
-            onClick={() => startTour(t, location.pathname)}
+            onClick={() => { setMenuOpen(false); setTimeout(() => startTour(t, location.pathname), 50) }}
           >
             <HelpCircle size={16} /> {t.tour.helpTitle}
           </button>
