@@ -23,6 +23,18 @@ export const formatMoney = (value, currency) =>
     minimumFractionDigits: 2,
   }).format(Number(value || 0))
 
+/**
+ * Returns today's date as "YYYY-MM-DD" in the device's LOCAL timezone.
+ * `new Date().toISOString()` uses UTC, which shows tomorrow after ~5 pm
+ * in UTC-7 (PT) — this is the correct alternative.
+ */
+export const localDate = () => {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
 export const formatDate = (iso) =>
   new Date(iso).toLocaleDateString(currentLocale, {
     day: '2-digit',

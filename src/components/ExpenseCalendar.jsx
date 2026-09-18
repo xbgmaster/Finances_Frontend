@@ -89,35 +89,14 @@ export default function ExpenseCalendar({
               onClick={() => setSelectedDay(d)}
             >
               <div className="cal-daynum"><span>{d}</span></div>
-              {incs.length > 0 && <div className="cal-amt inc">+{formatMoney(sumOf(incs), currency)}</div>}
-              {exps.length > 0 && <div className="cal-amt exp">−{formatMoney(sumOf(exps), currency)}</div>}
-              {exs.length > 0 && (() => {
-                // Net transferred that day in the active currency (out subtracts, in adds).
-                const net = exs.reduce((s, x) => s + (x.fromCurrency === currency ? -x.fromAmount : x.toAmount), 0)
-                return (
-                  <div className="cal-amt" style={{ color: GOLD }}>
-                    {net < 0 ? '−' : '+'}{formatMoney(Math.abs(net), currency)}
-                  </div>
-                )
-              })()}
-              <div className="cal-items">
-                {exps.slice(0, 2).map((e) => (
-                  <span
-                    className="cal-chip"
-                    key={e.id}
-                    style={tintVars(e.categoryColor || '#ef4444')}
-                    title={`${e.description || categoryLabel(e.categoryName)} · ${formatMoney(e.amount, e.currency || currency)}`}
-                  >
-                    {e.description || categoryLabel(e.categoryName)}
-                  </span>
-                ))}
-                {exps.length > 2 && <span className="cal-more">+{exps.length - 2}</span>}
-                {exs.slice(0, 1).map((x) => (
-                  <span className="cal-chip" key={`x${x.id}`} style={tintVars(GOLD)} title={t.dashboard.exchange}>
-                    <ArrowLeftRight size={11} /> {t.dashboard.exchange}
-                  </span>
-                ))}
-              </div>
+              {/* Simple colored dots so cells stay readable even on small screens */}
+              {has && (
+                <div className="cal-dots">
+                  {exps.length > 0 && <span className="cal-dot exp" />}
+                  {incs.length > 0 && <span className="cal-dot inc" />}
+                  {exs.length  > 0 && <span className="cal-dot xfr" />}
+                </div>
+              )}
             </button>
           )
         })}
@@ -128,11 +107,31 @@ export default function ExpenseCalendar({
           title={`${t.calendar.weekdaysLong[new Date(year, month - 1, selectedDay).getDay()]}, ${selectedDay} ${t.months[month - 1]} ${year}`}
           onClose={() => setSelectedDay(null)}
         >
-          <div className="cal-day-actions">
-            <div className="cal-day-totals">
-              {incItems.length > 0 && <strong className="pos">+{formatMoney(sumOf(incItems), currency)}</strong>}
-              {expItems.length > 0 && <strong className="neg">−{formatMoney(sumOf(expItems), currency)}</strong>}
+          {/* Day totals bar — shown only when there is at least one movement */}
+          {(incItems.length > 0 || expItems.length > 0 || exItems.length > 0) && (
+            <div className="cal-day-summary">
+              {expItems.length > 0 && (
+                <span className="neg">
+                  {t.calendar.expensesTitle}: <strong>−{formatMoney(sumOf(expItems), currency)}</strong>
+                </span>
+              )}
+              {incItems.length > 0 && (
+                <span className="pos">
+                  {t.calendar.incomesTitle}: <strong>+{formatMoney(sumOf(incItems), currency)}</strong>
+                </span>
+              )}
+              {exItems.length > 0 && (() => {
+                const net = exItems.reduce((s, x) => s + (x.fromCurrency === currency ? -x.fromAmount : x.toAmount), 0)
+                return (
+                  <span style={{ color: GOLD }}>
+                    {t.dashboard.exchange}: <strong>{net < 0 ? '−' : '+'}{formatMoney(Math.abs(net), currency)}</strong>
+                  </span>
+                )
+              })()}
             </div>
+          )}
+          <div className="cal-day-actions">
+            <div className="cal-day-totals" />
             <div className="cal-day-add">
               <button
                 type="button"

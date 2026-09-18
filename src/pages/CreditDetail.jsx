@@ -9,10 +9,9 @@ import {
   CheckCircle2, Target, PiggyBank, Hourglass, CalendarDays, Receipt,
   TrendingUp, Landmark, Zap, Banknote, AlertTriangle, Clock,
 } from 'lucide-react'
-import { formatMoney, formatDate } from '../utils/format'
+import { formatMoney, formatDate, localDate as today } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
-const today = () => new Date().toISOString().slice(0, 10)
 const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' }
 
 export default function CreditDetail() {

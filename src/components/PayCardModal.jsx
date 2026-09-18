@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import { PaymentMethodsApi } from '../api/client'
-import { formatMoney } from '../utils/format'
+import { formatMoney, localDate as todayIso } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
 
 // Modal to pay down a credit card. Money can come from a cash/debit account (reduces its
 // balance) or be cash/money outside saved accounts (only reduces the card debt). Both free up cupo.

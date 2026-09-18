@@ -22,7 +22,9 @@ export default function Login() {
     setLoading(true)
     try {
       const user = await login(form.email, form.password)
-      const dest = !user.onboardingCompleted ? '/onboarding' : location.state?.from?.pathname || '/'
+      // Always land on Summary after login; never restore the previous route
+      // (preserving the last hash causes the wrong page on APK cold-start).
+      const dest = !user.onboardingCompleted ? '/onboarding' : '/'
       navigate(dest, { replace: true })
     } catch (err) {
       if (!err?.response) setError(t.auth.networkError)

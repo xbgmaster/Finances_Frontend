@@ -120,8 +120,9 @@ export default function Layout() {
   const displayName = user?.fullName || user?.email || ''
   const initial = (displayName || '?').charAt(0).toUpperCase()
 
-  const count = (alerts?.overdueCount ?? 0) + (alerts?.dueSoonCount ?? 0)
-  const hasOverdue = (alerts?.overdueCount ?? 0) > 0
+  const cardAlertCount = alerts?.cardAlertCount ?? 0
+  const count = (alerts?.overdueCount ?? 0) + (alerts?.dueSoonCount ?? 0) + cardAlertCount
+  const hasOverdue = (alerts?.overdueCount ?? 0) > 0 || (alerts?.cardAlerts ?? []).some((a) => a.alertType === 'OverLimit')
 
   const openCredit = (id) => {
     setBellOpen(false)
@@ -309,6 +310,21 @@ export default function Layout() {
                             <span className="bell-item-body">
                               <span className="bell-item-title">{a.name}</span>
                               <span className="bell-item-sub">{itemSub(a)}</span>
+                            </span>
+                          </button>
+                        ))}
+                        {(alerts.cardAlerts ?? []).map((c, i) => (
+                          <button key={`ca-${i}`} className="bell-item" onClick={() => { setBellOpen(false); navigate('/cards') }}>
+                            <span className={`bell-dot ${c.alertType === 'OverLimit' ? 'over' : 'soon'}`} />
+                            <span className="bell-item-body">
+                              <span className="bell-item-title">{c.name}</span>
+                              <span className="bell-item-sub">
+                                {c.alertType === 'OverLimit'
+                                  ? `${t.notifications.overLimit} ${c.overByAmount} ${c.currency}`
+                                  : c.alertType === 'StatementSoon'
+                                    ? `${t.notifications.statementIn} ${c.daysUntilDate}d`
+                                    : `${t.notifications.paymentDueIn} ${c.daysUntilDate}d`}
+                              </span>
                             </span>
                           </button>
                         ))}

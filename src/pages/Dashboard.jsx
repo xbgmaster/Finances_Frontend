@@ -8,14 +8,13 @@ import ReceiptInput from '../components/ReceiptInput'
 import PayCardModal from '../components/PayCardModal'
 import { useToast } from '../components/Toast'
 import { Wallet, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowLeftRight, AlertTriangle, Clock } from 'lucide-react'
-import { formatMoney, formatDate } from '../utils/format'
+import { formatMoney, formatDate, localDate } from '../utils/format'
 import { iconFor, pmTypeIcon } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
 const pad = (n) => String(n).padStart(2, '0')
 const now = new Date()
 
@@ -122,7 +121,7 @@ export default function Dashboard() {
     setEditingIncomeId(null)
     const pms = await ensureCashAccount(activeCurrency)
     setIncomeForm({
-      amount: '', description: '', date: todayIso(), currency: activeCurrency,
+      amount: '', description: '', date: localDate(), currency: activeCurrency,
       paymentMethodId: bestPm(pms, activeCurrency),
     })
     setModal('income')
@@ -145,7 +144,7 @@ export default function Dashboard() {
     setExpenseError('')
     const pms = await ensureCashAccount(activeCurrency)
     setExpenseForm({
-      amount: '', description: '', categoryId: categories.find((c) => !c.isSystem)?.id ?? '', date: todayIso(),
+      amount: '', description: '', categoryId: categories.find((c) => !c.isSystem)?.id ?? '', date: localDate(),
       currency: activeCurrency, paymentMethodId: bestPm(pms, activeCurrency), receipt: null, existingReceiptUrl: null, removeReceipt: false,
     })
     setModal('expense')
@@ -213,7 +212,7 @@ export default function Dashboard() {
     const from = activeCurrency
     const to = CURRENCIES.find((c) => c !== from) || from
     setExchangeForm({
-      fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: todayIso(), note: '',
+      fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: localDate(), note: '',
       fromPaymentMethodId: bestPm(paymentMethods, from, { excludeCredit: true }),
       toPaymentMethodId: bestPm(paymentMethods, to, { excludeCredit: true }),
     })

@@ -8,7 +8,7 @@ import ReceiptInput from '../components/ReceiptInput'
 import ExpenseCalendar from '../components/ExpenseCalendar'
 import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight } from 'lucide-react'
-import { formatMoney, formatDate } from '../utils/format'
+import { formatMoney, formatDate, localDate } from '../utils/format'
 import { iconFor, pmTypeIcon } from '../utils/icons'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
@@ -137,7 +137,7 @@ export default function Expenses() {
       amount: '',
       description: '',
       categoryId: categories.find((c) => !c.isSystem)?.id ?? '',
-      date: new Date().toISOString().slice(0, 10),
+      date: localDate(),
       currency: activeCurrency,
       paymentMethodId: preferredPm,
       receipt: null,
@@ -184,7 +184,7 @@ export default function Expenses() {
     setIncomeForm({
       amount: '',
       description: '',
-      date: dateStr || new Date().toISOString().slice(0, 10),
+      date: dateStr || localDate(),
       currency: activeCurrency,
       paymentMethodId: bestNonCreditPm(pms, activeCurrency),
     })

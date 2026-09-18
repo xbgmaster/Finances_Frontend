@@ -123,6 +123,11 @@ function MethodCard({
                     {formatMoney(m.availableCredit, m.currency)}
                   </strong>
                 </div>
+                {m.availableCredit < 0 && (
+                  <div className="insight" style={{ borderColor: 'var(--danger)', marginTop: 8, fontSize: 13 }}>
+                    ⚠️ {t.notifications.overLimitWarning}
+                  </div>
+                )}
               </>
             )}
           </>
@@ -366,27 +371,30 @@ export default function Cards() {
                     type="number" step="0.01" min="0"
                     value={form.creditLimit}
                     onChange={(e) => setForm({ ...form, creditLimit: e.target.value })}
+                    onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
                     placeholder="0.00"
                   />
                 </div>
                 <div className="row" style={{ gap: 12 }}>
                   <div className="field" style={{ flex: 1 }}>
                     <label>{t.cards.statementDay}</label>
-                    <input
-                      type="number" min="1" max="31"
-                      value={form.statementDay}
-                      onChange={(e) => setForm({ ...form, statementDay: e.target.value })}
-                      placeholder="1-31"
-                    />
-                  </div>
-                  <div className="field" style={{ flex: 1 }}>
-                    <label>{t.cards.paymentDueDay}</label>
-                    <input
-                      type="number" min="1" max="31"
-                      value={form.paymentDueDay}
-                      onChange={(e) => setForm({ ...form, paymentDueDay: e.target.value })}
-                      placeholder="1-31"
-                    />
+                  <input
+                    type="number" min="1" max="31" step="1"
+                    value={form.statementDay}
+                    onChange={(e) => setForm({ ...form, statementDay: e.target.value })}
+                    onKeyDown={(e) => { if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
+                    placeholder="1-31"
+                  />
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <label>{t.cards.paymentDueDay}</label>
+                  <input
+                    type="number" min="1" max="31" step="1"
+                    value={form.paymentDueDay}
+                    onChange={(e) => setForm({ ...form, paymentDueDay: e.target.value })}
+                    onKeyDown={(e) => { if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
+                    placeholder="1-31"
+                  />
                   </div>
                 </div>
                 <div className="hint" style={{ marginTop: -4, marginBottom: 8 }}>{t.cards.dayHint}</div>

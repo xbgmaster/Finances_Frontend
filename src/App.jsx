@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import LoadingBar from './components/LoadingBar'
 import { ProtectedRoute, AdminRoute, FeatureRoute } from './auth/guards'
 
 // Route-level code splitting: each page ships in its own chunk so the initial
@@ -26,7 +27,9 @@ const Payroll = lazy(() => import('./pages/Payroll'))
 
 export default function App() {
   return (
-    <Suspense fallback={<div className="loading">…</div>}>
+    <>
+      <LoadingBar />
+      <Suspense fallback={<div className="loading">…</div>}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -67,6 +70,7 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
-    </Suspense>
+      </Suspense>
+    </>
   )
 }

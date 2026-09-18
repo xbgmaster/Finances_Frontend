@@ -2066,6 +2066,76 @@ html[data-theme="dark"] .auth-page--laser .auth-card {
   .toast-stack { left: 16px; right: 16px; bottom: 16px; max-width: none; }
 }
 
+/* ─── Loading bar ─────────────────────────────────────────────────────────── */
+.loading-bar-track {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 9999;
+  background: transparent;
+  pointer-events: none;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b8943e, #d4a840, #f0c060);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px #b8943e99;
+  will-change: width;
+}
+
+/* ─── Admin stats: 2-col on mobile ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .stat-card { padding: 12px 14px !important; }
+  .stat-card .label { font-size: 11px !important; }
+  .stat-card .value { font-size: 22px !important; }
+}
+
+/* ─── Budget History: narrow Category column ─────────────────────────────── */
+.bh-table th:first-child, .bh-table td:first-child { min-width: 110px; max-width: 130px; }
+
+/* ─── Feature access: user combo fills width ─────────────────────────────── */
+.feat-user-combo { position: relative; width: 100%; }
+.feat-user-combo input { width: 100%; }
+.feat-user-list {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; max-height: 200px; overflow-y: auto;
+  box-shadow: var(--shadow); margin-top: 4px;
+}
+.feat-user-list button {
+  display: block; width: 100%; text-align: left;
+  padding: 9px 14px; background: none; border: none;
+  color: var(--text); font-size: 14px; cursor: pointer;
+}
+.feat-user-list button:hover, .feat-user-list button.active { background: var(--primary-soft); }
+
+/* ─── Credits card actions: wraps cleanly on mobile ─────────────────────── */
+.credit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.credit-actions-delete { width: 100%; display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+
+/* ─── Expense calendar: dot indicators ───────────────────────────────────── */
+.cal-day-summary {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  padding: 10px 14px; margin: -26px -26px 14px;
+  background: var(--surface-2, rgba(120,120,120,0.08));
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.cal-day-summary strong { font-size: 14px; }
+.cal-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; padding: 2px 0; }
+.cal-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cal-dot.exp { background: var(--danger); }
+.cal-dot.inc { background: #10b981; }
+.cal-dot.xfr { background: #b8943e; }
+
+/* ─── Income calendar: larger cells on mobile ────────────────────────────── */
+@media (max-width: 640px) {
+  .exp-calendar .cal-cell { min-height: 52px; padding: 3px; font-size: 10px; }
+  .exp-calendar .cal-daynum { font-size: 10px; }
+  .exp-calendar .cal-amt { font-size: 9px; }
+  .exp-calendar .cal-chip { font-size: 9px; padding: 1px 4px; }
+}
+
 /* ─── App Tour (driver.js overrides — Tishe dark/gold theme) ─────────────── */
 
 /* Stage highlight: bright up the spotlit area + gold glow ring */

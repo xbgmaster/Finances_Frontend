@@ -11,7 +11,7 @@ export default function BudgetHistory() {
   const { t, categoryLabel } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const navigate = useNavigate()
-  const [months, setMonths] = useState(6)
+  const [months, setMonths] = useState(3)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)

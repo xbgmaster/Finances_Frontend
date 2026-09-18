@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { incRequests, decRequests } from '../components/LoadingBar'
 
 // En dev usa el proxy de Vite (/api). En produccion (Render) usa VITE_API_URL
 // (p.ej. https://finances-backend-7njx.onrender.com/api) definido en .env.production.
@@ -77,13 +78,14 @@ export const refreshAccessToken = () => {
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)
   if (token) config.headers.Authorization = `Bearer ${token}`
+  incRequests()
   return config
-})
+}, (error) => { decRequests(); return Promise.reject(error) })
 
 // On 401 for a protected call, try ONE silent refresh + retry. If that fails
 // (or there is no refresh token), sign out and go to the login page.
 api.interceptors.response.use(
-  (r) => r,
+  (r) => { decRequests(); return r },
   async (error) => {
     const original = error?.config || {}
     const status = error?.response?.status
@@ -105,6 +107,7 @@ api.interceptors.response.use(
       emitLogout()
       redirectToLogin()
     }
+    decRequests()
     return Promise.reject(error)
   },
 )

@@ -5,12 +5,11 @@ import { CreditsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
-import { formatMoney, formatDate, getBaseCurrency } from '../utils/format'
+import { formatMoney, formatDate, getBaseCurrency, localDate as today } from '../utils/format'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 
-const today = () => new Date().toISOString().slice(0, 10)
 const currentDay = () => String(new Date().getDate())
 
 const LOAN_TYPES = ['InterestLoan', 'LibreInversion']
@@ -277,12 +276,14 @@ export default function Credits() {
                   </div>
                 )}
 
-                <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+                <div className="credit-actions">
                   <Link className="btn secondary" to={`/credits/${c.id}`}>{t.credits.details}</Link>
                   <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
                   {!paidOff && (
                     <button className="btn" onClick={() => openPayment(c)}>{t.credits.addPayment}</button>
                   )}
+                </div>
+                <div className="credit-actions-delete">
                   <button
                     className="btn danger"
                     onClick={() => setConfirm({ message: t.credits.deleteConfirm, run: () => remove(c) })}

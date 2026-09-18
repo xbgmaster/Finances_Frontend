@@ -82,31 +82,32 @@ export default function AdminFeatures() {
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="field-row">
-          <div className="field" style={{ flex: 1 }}>
-            <label>{t.features.searchUser}</label>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t.features.searchUser}
-            />
-          </div>
-          <div className="field" style={{ flex: 1 }}>
-            <label>{t.features.pickUser}</label>
-            <select value={selectedId} onChange={(e) => selectUser(e.target.value)}>
-              <option value="">{t.common.select}</option>
-              {filtered.length === 0 ? (
-                <option value="" disabled>{t.features.noUsers}</option>
-              ) : (
-                filtered.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {(u.fullName || u.email)}{u.fullName ? ` · ${u.email}` : ''}{u.role === 'Admin' ? ' · Admin' : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+        {/* Combo: typing filters the list; clicking a result selects the user */}
+        <div className="field feat-user-combo">
+          <label>{t.features.searchUser}</label>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); if (!e.target.value) selectUser('') }}
+            placeholder={t.features.searchUser}
+            autoComplete="off"
+          />
+          {search && filtered.length > 0 && (
+            <div className="feat-user-list">
+              {filtered.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  className={u.id === selectedId ? 'active' : ''}
+                  onClick={() => { selectUser(u.id); setSearch(u.fullName || u.email) }}
+                >
+                  {u.fullName || u.email}
+                  {u.fullName && <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 12 }}>{u.email}</span>}
+                  {u.role === 'Admin' && <span className="pill pill-auto" style={{ marginLeft: 6 }}>Admin</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
