@@ -43,10 +43,20 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
   const sourceTypeLabel = (type) =>
     type === 'Cash' ? t.cards.typeCash : type === 'Debit' ? t.cards.typeDebit : type
 
+  // Show the selected wallet's available balance for client-side feedback.
+  const selectedSource = sources.find((s) => String(s.id) === String(form.sourceId))
+  const sourceBalance = selectedSource?.balance ?? null
+  const amountNum = parseFloat(form.amount) || 0
+  const insufficientFunds = selectedSource != null && amountNum > sourceBalance
+
   const submit = async (e) => {
     e.preventDefault()
     const amount = parseFloat(form.amount)
     if (!card || !amount || amount <= 0) return
+    if (insufficientFunds) {
+      setError(`${t.notifications.insufficientFunds} ${t.cards.available.toLowerCase()}: ${formatMoney(sourceBalance, cardCurrency)}`)
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -116,6 +126,12 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
           <div className="hint" style={{ marginTop: 4 }}>
             {form.sourceId ? t.cards.payFromHint : t.cards.payExternalHint}
           </div>
+          {selectedSource && (
+            <div className="hint" style={{ marginTop: 4, color: insufficientFunds ? 'var(--danger)' : 'var(--text-muted)' }}>
+              {t.cards.walletBalance}: <strong>{formatMoney(sourceBalance, cardCurrency)}</strong>
+              {insufficientFunds && ` — ${t.notifications.insufficientFunds}`}
+            </div>
+          )}
         </div>
 
         <div className="field">
@@ -139,7 +155,7 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
 
         <div className="row">
           <button type="button" className="btn secondary" onClick={onClose}>{t.common.cancel}</button>
-          <button type="submit" className="btn" disabled={saving || !card}>
+          <button type="submit" className="btn" disabled={saving || !card || insufficientFunds}>
             {saving ? t.common.saving : t.cards.payAction}
           </button>
         </div>

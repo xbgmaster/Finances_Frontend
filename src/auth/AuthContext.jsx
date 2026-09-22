@@ -121,9 +121,10 @@ export function AuthProvider({ children }) {
 
   const isAdmin = user?.role === 'Admin'
   // The stored set holds hidden opt-out modules and granted opt-in modules (see registry).
+  const userRole = user?.role || 'User'   // 'Admin' | 'Premium' | 'User'
   const featureOverrides = user?.disabledFeatures || []
-  // Admins are never gated (so they can't lock themselves out of a module they manage).
-  const canAccess = (key) => !key || isAdmin || isFeatureVisible(key, featureOverrides)
+  // Admins bypass all feature gates; other roles use the role-aware visibility function.
+  const canAccess = (key) => !key || isAdmin || isFeatureVisible(key, featureOverrides, userRole)
 
   const value = useMemo(
     () => ({
@@ -131,6 +132,7 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: !!token,
       isAdmin,
+      userRole,
       featureOverrides,
       canAccess,
       login,

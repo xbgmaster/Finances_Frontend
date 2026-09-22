@@ -134,6 +134,7 @@ export const AdminApi = {
   // Set the modules a user is NOT allowed to see (feature blocklist).
   setUserFeatures: (id, disabledFeatures) =>
     api.put(`/admin/users/${id}/features`, { disabledFeatures }).then((r) => r.data),
+  setUserRole: (id, role) => api.put(`/admin/users/${id}/role`, { role }).then((r) => r.data),
   exportCsv: (params) => api.get('/admin/reports/export', { params, responseType: 'blob' }).then((r) => r.data),
 }
 
@@ -164,8 +165,12 @@ export const IncomeSchedulesApi = {
   createShift: (data) => api.post('/income-schedules/shifts', data).then((r) => r.data),
   updateShift: (id, data) => api.put(`/income-schedules/shifts/${id}`, data).then((r) => r.data),
   removeShift: (id) => api.delete(`/income-schedules/shifts/${id}`),
-  // Direct one-off payment attributed to a job (posted as income that day).
+  // For fixed jobs: store a pay-occurrence override (stays SCHEDULED, auto-posted later).
+  // For hourly jobs: create income immediately.
   createPayment: (jobId, data) => api.post(`/income-schedules/${jobId}/payments`, data).then((r) => r.data),
+  // Occurrence overrides for a month (amount adjustments for specific scheduled pay days).
+  occurrenceOverrides: (year, month) =>
+    api.get('/income-schedules/occurrence-overrides', { params: { year, month } }).then((r) => r.data),
 }
 
 export const PaymentMethodsApi = {

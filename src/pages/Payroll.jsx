@@ -25,6 +25,7 @@ export default function Payroll() {
   const [allIncomes, setAllIncomes] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
   const [shifts, setShifts] = useState([])
+  const [occOverrides, setOccOverrides] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState(null)
 
@@ -67,8 +68,12 @@ export default function Payroll() {
   }
 
   const loadShifts = async (y, m) => {
-    const s = await IncomeSchedulesApi.shifts(y, m).catch(() => [])
+    const [s, ov] = await Promise.all([
+      IncomeSchedulesApi.shifts(y, m).catch(() => []),
+      IncomeSchedulesApi.occurrenceOverrides(y, m).catch(() => []),
+    ])
     setShifts(s)
+    setOccOverrides(ov)
   }
 
   const refresh = async () => { await loadCore(); await loadShifts(year, month) }
@@ -494,6 +499,18 @@ export default function Payroll() {
       )}
 
       <h2 className="section-title" data-tour="payroll-calendar">{t.payroll.calendarTitle}</h2>
+      {/* Dot legend */}
+      <div className="cal-legend">
+        <span className="cal-legend-item">
+          <span className="cal-dot" style={{ background: '#10b981' }} /> {t.payroll.legendIncome}
+        </span>
+        <span className="cal-legend-item">
+          <span className="cal-dot" style={{ background: '#0f5c4d' }} /> {t.payroll.legendShift}
+        </span>
+        <span className="cal-legend-item">
+          <span className="cal-dot" style={{ background: '#b8943e' }} /> {t.payroll.legendScheduled}
+        </span>
+      </div>
       <div className="card">
         <IncomeCalendar
           year={year}
@@ -504,6 +521,7 @@ export default function Payroll() {
           currency={activeCurrency}
           t={t}
           accountLabel={accountLabel}
+          occurrenceOverrides={occOverrides}
           onAddPayment={openAddPayment}
           onEditShift={openEditShift}
           onDeleteShift={removeShift}

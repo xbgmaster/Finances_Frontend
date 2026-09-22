@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, CreditCard, TrendingDown, Landmark, CalendarDays,
@@ -30,6 +30,7 @@ export default function Layout() {
 
   const [alerts, setAlerts] = useState(null)
   const [bellOpen, setBellOpen] = useState(false)
+  const [bellSeen, setBellSeen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(
     () => location.pathname.startsWith('/admin') || location.pathname === '/payroll',
@@ -123,6 +124,9 @@ export default function Layout() {
   const cardAlertCount = alerts?.cardAlertCount ?? 0
   const count = (alerts?.overdueCount ?? 0) + (alerts?.dueSoonCount ?? 0) + cardAlertCount
   const hasOverdue = (alerts?.overdueCount ?? 0) > 0 || (alerts?.cardAlerts ?? []).some((a) => a.alertType === 'OverLimit')
+  // Reset "seen" whenever the alert count changes so new alerts pulse again.
+  const prevCount = React.useRef(count)
+  if (prevCount.current !== count) { prevCount.current = count; setBellSeen(false) }
 
   const openCredit = (id) => {
     setBellOpen(false)
@@ -288,12 +292,12 @@ export default function Layout() {
             <div className="bell-wrap" ref={bellRef}>
               <button
                 className="bell-btn"
-                onClick={() => setBellOpen((o) => !o)}
+                onClick={() => { setBellOpen((o) => !o); setBellSeen(true) }}
                 aria-label={t.notifications.title}
               >
                 🔔
                 {count > 0 && (
-                  <span className={`bell-badge ${hasOverdue ? 'over' : 'soon'}`}>{count}</span>
+                  <span className={`bell-badge ${hasOverdue ? 'over' : 'soon'} ${bellSeen ? 'seen' : ''}`}>{count}</span>
                 )}
               </button>
               {bellOpen && (

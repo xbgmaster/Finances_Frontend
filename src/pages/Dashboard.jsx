@@ -945,16 +945,12 @@ export default function Dashboard() {
                 <option value="">{t.common.none}</option>
                 {paymentMethods
                   .filter((p) => !p.archived
-                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId))
-                    && (!editingIncomeId || p.type !== 'CreditCard'))
+                    && p.type !== 'CreditCard'
+                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))
                   .map((p) => (
                     <option key={p.id} value={p.id}>{pmLabel(p)}</option>
                   ))}
               </select>
-              {!editingIncomeId
-                && paymentMethods.find((p) => String(p.id) === String(incomeForm.paymentMethodId))?.type === 'CreditCard' && (
-                <div className="hint" style={{ marginTop: 4 }}>{t.cards.incomeToCardHint}</div>
-              )}
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>

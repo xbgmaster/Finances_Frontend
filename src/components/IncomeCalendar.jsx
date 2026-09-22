@@ -14,6 +14,7 @@ const TEAL = '#0f5c4d'
 export default function IncomeCalendar({
   year, month, incomes = [], schedules = [], shifts = [], currency, t, accountLabel,
   onEditIncome, onAddPayment, onEditShift, onDeleteShift, onDeleteIncome,
+  occurrenceOverrides = [],
 }) {
   const [selectedDay, setSelectedDay] = useState(null)
 
@@ -49,6 +50,14 @@ export default function IncomeCalendar({
     [schedules],
   )
   const hasActiveJob = schedules.some((s) => s.active)
+
+  // Build a lookup: scheduleId+dateStr → override amount (user-adjusted amount for that occurrence).
+  const overrideMap = {}
+  for (const o of occurrenceOverrides) {
+    const d = new Date(o.payDate)
+    if (inThisMonth(d)) overrideMap[`${o.incomeScheduleId}-${d.getDate()}`] = o.amount
+  }
+  const overrideFor = (scheduleId, day) => overrideMap[`${scheduleId}-${day}`] ?? null
 
   // Each job carries its own color; shifts are painted with it (like categories in Summary).
   const colorOf = (jobId) => schedules.find((s) => s.id === jobId)?.color || TEAL
@@ -158,17 +167,27 @@ export default function IncomeCalendar({
               onClick={() => setSelectedDay(d)}
             >
               <div className="cal-daynum"><span>{d}</span></div>
-              {incs.length > 0 && (
-                <div className="cal-amt inc" style={incByDay[d] && incomeDisplay(incs[0]).job ? { color: incomeDisplay(incs[0]).color } : undefined}>
-                  +{formatMoney(sumOf(incs), currency)}
-                </div>
-              )}
-              {incs.length === 0 && shs.length > 0 && (
-                <div className="cal-amt shift" style={{ color: colorOf(shs[0].incomeScheduleId) }}>
-                  {sumHours(shs)}{t.payroll.hoursShort} · {formatMoney(sumOf(shs), currency)}
-                </div>
-              )}
-              <div className="cal-items">
+              {/* Compact dot indicators — same style as expense calendar */}
+              {has && (() => {
+                // Hide the scheduled/pending dot when a real income already covers that job on this day.
+                const unpostedFixed = fixed.filter((s) => !incs.some((i) => i.incomeScheduleId === s.id))
+                const showGold = cuts.length > 0 || unpostedFixed.length > 0
+                return (
+                  <div className="cal-dots">
+                    {incs.length > 0 && (
+                      <span className="cal-dot" style={{ background: incomeDisplay(incs[0]).color || GREEN }} />
+                    )}
+                    {shs.length > 0 && (
+                      <span className="cal-dot" style={{ background: colorOf(shs[0].incomeScheduleId) }} />
+                    )}
+                    {showGold && (
+                      <span className="cal-dot" style={{ background: GOLD }} />
+                    )}
+                  </div>
+                )
+              })()}
+              <div className="cal-items" style={{ display: 'none' }}>
+                {/* chips hidden; detail visible in day modal only */}
                 {incs.slice(0, 1).map((i) => {
                   const disp = incomeDisplay(i)
                   return (
@@ -333,29 +352,36 @@ export default function IncomeCalendar({
             <>
               <h4 className="cal-sec">{t.payroll.scheduledTitle}</h4>
               <div className="list">
-                {fixedItems.map((s) => (
-                  <div className="list-item tinted" key={`sch-${s.id}`} style={tintVars(GOLD)}>
-                    <span className="badge-icon"><CalendarClock size={16} /></span>
-                    <div className="meta">
-                      <div className="title">{s.name} · {t.payroll.payday}</div>
-                      <div className="sub">
-                        {s.autoPost ? t.payroll.autoBadge : t.payroll.manualBadge}
-                        {s.paymentMethodName ? ` · ${accountLabel(s.paymentMethodName)}` : ''}
+                {fixedItems.map((s) => {
+                  const overrideAmt = overrideFor(s.id, selectedDay)
+                  const displayAmt = overrideAmt ?? s.amount
+                  return (
+                    <div className="list-item tinted" key={`sch-${s.id}`} style={tintVars(GOLD)}>
+                      <span className="badge-icon"><CalendarClock size={16} /></span>
+                      <div className="meta">
+                        <div className="title">{s.name} · {t.payroll.payday}</div>
+                        <div className="sub">
+                          {s.autoPost ? t.payroll.autoBadge : t.payroll.manualBadge}
+                          {s.paymentMethodName ? ` · ${accountLabel(s.paymentMethodName)}` : ''}
+                          {overrideAmt !== null && (
+                            <span style={{ color: GOLD, marginLeft: 6 }}>✎ {t.payroll.adjusted}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="list-item-end">
+                        <span className="amount pos">+{formatMoney(displayAmt, s.currency || currency)}</span>
+                        {onAddPayment && s.active && (
+                          <button
+                            className="btn secondary"
+                            onClick={() => { const day = selectedDay; setSelectedDay(null); onAddPayment(day, s.id) }}
+                          >
+                            {t.payroll.recordPay}
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="list-item-end">
-                      <span className="amount pos">+{formatMoney(s.amount, s.currency || currency)}</span>
-                      {onAddPayment && s.active && (
-                        <button
-                          className="btn secondary"
-                          onClick={() => { const day = selectedDay; setSelectedDay(null); onAddPayment(day, s.id) }}
-                        >
-                          {t.payroll.recordPay}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </>
           )}
