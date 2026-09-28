@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SlidersHorizontal, ShieldCheck, Star, User } from 'lucide-react'
 import { AdminApi } from '../api/client'
 import { useToast } from '../components/Toast'

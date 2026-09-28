@@ -32,7 +32,10 @@ export default function IncomeCalendar({
       const out = []
       for (let d = 1; d <= daysInMonth; d++) {
         const diff = Math.round((new Date(year, month - 1, d) - anchor) / 86400000)
-        if (diff >= 0 && diff % step === 0) out.push(d)
+        // Include dates before the anchor that still fall on the same N-day cycle
+        // (JS % keeps the dividend sign, so normalize before comparing to 0).
+        const mod = ((diff % step) + step) % step
+        if (mod === 0) out.push(d)
       }
       return out
     }
@@ -103,7 +106,7 @@ export default function IncomeCalendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixedJobs, daysInMonth, year, month])
 
-  // Unpaid shifts of a job whose day falls in the window (start exclusive, end inclusive).
+  // Unpaid shifts of a job in (startExclusive, endInclusive] by calendar day-of-month (same month only).
   const pendingForWindow = (job, startExclusive, endInclusive) => shifts
     .filter((s) => {
       const d = new Date(s.date)
@@ -112,13 +115,41 @@ export default function IncomeCalendar({
     })
     .reduce((sum, s) => sum + s.amount, 0)
 
+  // Same window for weekly/biweekly, but with real Date bounds so the first cut of the month
+  // still picks up unposted shifts from the previous period (e.g. Aug 28–Sep 10).
+  const pendingForDateWindow = (job, startExclusive, endInclusive) => {
+    const start = startExclusive.getTime()
+    const end = endInclusive.getTime()
+    return shifts
+      .filter((s) => {
+        if (s.incomeScheduleId !== job.id || s.posted) return false
+        const t = new Date(s.date)
+        t.setHours(0, 0, 0, 0)
+        const ms = t.getTime()
+        return ms > start && ms <= end
+      })
+      .reduce((sum, s) => sum + s.amount, 0)
+  }
+
   const cutByDay = useMemo(() => {
     const map = {}
     for (const job of hourlyJobs) {
-      let prev = 0
-      for (const day of payDaysFor(job)) {
-        ;(map[day] ||= []).push({ job, pending: pendingForWindow(job, prev, day) })
-        prev = day
+      const days = payDaysFor(job)
+      if (job.payFrequency === 'Weekly' || job.payFrequency === 'Biweekly') {
+        const step = job.payFrequency === 'Weekly' ? 7 : 14
+        for (const day of days) {
+          const cut = new Date(year, month - 1, day)
+          cut.setHours(0, 0, 0, 0)
+          const prev = new Date(cut)
+          prev.setDate(prev.getDate() - step)
+          ;(map[day] ||= []).push({ job, pending: pendingForDateWindow(job, prev, cut) })
+        }
+      } else {
+        let prev = 0
+        for (const day of days) {
+          ;(map[day] ||= []).push({ job, pending: pendingForWindow(job, prev, day) })
+          prev = day
+        }
       }
     }
     return map

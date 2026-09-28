@@ -71,8 +71,9 @@ export default function Expenses() {
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
       // Whole month of expenses (drives both the calendar and the detail list).
-      ExpensesApi.listPaged({ year, month, currency: activeCurrency, page: 1, pageSize: 1000 })
-        .then((r) => r.items).catch(() => []),
+      // Use /expenses (unpaged) — /expenses/paged caps pageSize at 200 and silently
+      // falls back to 25 when given a larger value, which truncated early-month rows.
+      ExpensesApi.list({ year, month, currency: activeCurrency }).catch(() => []),
       IncomesApi.list().catch(() => []),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
