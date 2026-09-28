@@ -362,6 +362,39 @@ button {
   margin-top: 4px;
 }
 
+.subtabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.subtab:hover { color: var(--text); background: var(--card-hover); }
+.subtab.active {
+  color: var(--text);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
 /* ===== Cards ===== */
 .grid {
   display: grid;
@@ -599,8 +632,17 @@ button {
 
 .btn:hover { filter: brightness(1.06); }
 .btn.secondary { background: var(--card-hover); color: var(--text); border: 1px solid var(--border); }
-.btn.danger { background: transparent; color: var(--danger); border: 1px solid transparent; padding: 6px 10px; }
-.btn.danger:hover { background: rgba(239, 68, 68, 0.12); }
+.btn.danger {
+  background: rgba(239, 68, 68, 0.14);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  padding: 6px 12px;
+}
+.btn.danger:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.7);
+  filter: none;
+}
 .btn.block { width: 100%; }
 
 .field {

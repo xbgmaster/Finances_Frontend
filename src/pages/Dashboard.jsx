@@ -122,7 +122,9 @@ export default function Dashboard() {
     const pms = await ensureCashAccount(activeCurrency)
     setIncomeForm({
       amount: '', description: '', date: localDate(), currency: activeCurrency,
-      paymentMethodId: bestPm(pms, activeCurrency),
+      // Income must land in debit/cash — never preselect a credit card (that used to
+      // look like "None" in the dropdown while still posting a Card payment).
+      paymentMethodId: bestPm(pms, activeCurrency, { excludeCredit: true }),
     })
     setModal('income')
   }
@@ -134,7 +136,9 @@ export default function Dashboard() {
       description: m.description || '',
       date: m.date ? new Date(m.date).toISOString().slice(0, 10) : '',
       currency: m.currency || activeCurrency,
-      paymentMethodId: m.paymentMethodId != null ? String(m.paymentMethodId) : '',
+      paymentMethodId: m.paymentMethodId != null
+        ? String(m.paymentMethodId)
+        : bestPm(paymentMethods, m.currency || activeCurrency, { excludeCredit: true }),
     })
     setModal('income')
   }
@@ -286,30 +290,20 @@ export default function Dashboard() {
   const addIncome = async (e) => {
     e.preventDefault()
     const amount = parseFloat(incomeForm.amount)
-    if (!amount || amount <= 0) return
+    if (!amount || amount <= 0 || !incomeForm.paymentMethodId) return
+    const selectedMethod = paymentMethods.find(
+      (p) => String(p.id) === String(incomeForm.paymentMethodId),
+    )
+    // Income always goes to debit/cash. Card payments use the dedicated "Pay card" flow.
+    if (!selectedMethod || selectedMethod.type === 'CreditCard') return
     setSaving(true)
     try {
-      const selectedMethod = paymentMethods.find(
-        (p) => String(p.id) === String(incomeForm.paymentMethodId),
-      )
-      // Choosing a credit card as the "destination" means paying that card (external).
-      if (!editingIncomeId && selectedMethod?.type === 'CreditCard') {
-        await PaymentMethodsApi.payCard(selectedMethod.id, {
-          amount,
-          date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
-          note: incomeForm.description.trim() || undefined,
-        })
-        setModal(null)
-        await load()
-        toast.success(t.common.savedOk)
-        return
-      }
       const payload = {
         amount,
         description: incomeForm.description,
         date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
         currency: incomeForm.currency || undefined,
-        paymentMethodId: incomeForm.paymentMethodId ? Number(incomeForm.paymentMethodId) : undefined,
+        paymentMethodId: Number(incomeForm.paymentMethodId),
       }
       if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
       else await IncomesApi.create(payload)
@@ -937,12 +931,13 @@ export default function Dashboard() {
               />
             </div>
             <div className="field">
-              <label>{t.common.paymentMethod} ({t.common.optional})</label>
+              <label>{t.common.paymentMethod}</label>
               <select
+                required
                 value={incomeForm.paymentMethodId}
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
-                <option value="">{t.common.none}</option>
+                <option value="" disabled>{t.common.select}</option>
                 {paymentMethods
                   .filter((p) => !p.archived
                     && p.type !== 'CreditCard'
@@ -954,7 +949,9 @@ export default function Dashboard() {
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn" disabled={saving || !incomeForm.paymentMethodId}>
+                {saving ? t.common.saving : t.common.save}
+              </button>
             </div>
           </form>
         </Modal>

@@ -222,6 +222,14 @@ export const ExpensesApi = {
   remove: (id) => api.delete(`/expenses/${id}`),
 }
 
+export const ExpenseSchedulesApi = {
+  list: () => api.get('/expense-schedules').then((r) => r.data),
+  create: (data) => api.post('/expense-schedules', data).then((r) => r.data),
+  update: (id, data) => api.put(`/expense-schedules/${id}`, data).then((r) => r.data),
+  remove: (id) => api.delete(`/expense-schedules/${id}`),
+  postDue: () => api.post('/expense-schedules/post-due').then((r) => r.data),
+}
+
 export const BalanceApi = {
   get: () => api.get('/balance').then((r) => r.data),
   monthly: (params) => api.get('/balance/monthly', { params }).then((r) => r.data),

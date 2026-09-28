@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ExpensesApi, IncomesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
+import { ExpensesApi, IncomesApi, CategoriesApi, BalanceApi, ExchangesApi, PaymentMethodsApi, ExpenseSchedulesApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import ExpenseCalendar from '../components/ExpenseCalendar'
+import SubscriptionsPanel from '../components/SubscriptionsPanel'
 import { useToast } from '../components/Toast'
-import { TrendingUp, TrendingDown, Scale, ArrowLeftRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, Scale, ArrowLeftRight, CalendarDays, Repeat } from 'lucide-react'
 import { formatMoney, formatDate, localDate } from '../utils/format'
 import { iconFor, pmTypeIcon } from '../utils/icons'
 import { tintVars } from '../utils/color'
@@ -26,6 +27,7 @@ export default function Expenses() {
   const navigate = useNavigate()
   const location = useLocation()
   const [pendingEdit, setPendingEdit] = useState(null)
+  const [tab, setTab] = useState('activity') // 'activity' | 'subscriptions'
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [pmFilter, setPmFilter] = useState('') // '' = all accounts
@@ -67,6 +69,7 @@ export default function Expenses() {
   // and paging are all derived from these results in the browser (no request, no spinner).
   const load = async () => {
     setLoading(true)
+    try { await ExpenseSchedulesApi.postDue() } catch { /* non-critical */ }
     const [cats, sum, monthAll, monthInc, exch, pms] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
@@ -208,7 +211,7 @@ export default function Expenses() {
   const submitIncome = async (e) => {
     e.preventDefault()
     const amount = parseFloat(incomeForm.amount)
-    if (!amount || amount <= 0) return
+    if (!amount || amount <= 0 || !incomeForm.paymentMethodId) return
     setSavingIncome(true)
     setIncomeError('')
     try {
@@ -217,7 +220,7 @@ export default function Expenses() {
         description: incomeForm.description,
         date: incomeForm.date ? new Date(incomeForm.date).toISOString() : undefined,
         currency: incomeForm.currency || activeCurrency,
-        paymentMethodId: incomeForm.paymentMethodId ? Number(incomeForm.paymentMethodId) : undefined,
+        paymentMethodId: Number(incomeForm.paymentMethodId),
       }
       if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
       else await IncomesApi.create(payload)
@@ -459,24 +462,52 @@ export default function Expenses() {
           <h1>{t.expenses.title}</h1>
           <p>{t.expenses.subtitle}</p>
         </div>
-        <div className="toolbar">
-          <select value={month} onChange={(e) => { setMonth(Number(e.target.value)); setPage(1) }}>
-            {t.months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-          <select value={year} onChange={(e) => { setYear(Number(e.target.value)); setPage(1) }}>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount} data-tour="expenses-filter">
-            <option value="">{t.expenses.allAccounts}</option>
-            {paymentMethods
-              .filter((p) => !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
-              .map((p) => (
-                <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
-              ))}
-          </select>
-          <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
-        </div>
+        {tab === 'activity' && (
+          <div className="toolbar">
+            <select value={month} onChange={(e) => { setMonth(Number(e.target.value)); setPage(1) }}>
+              {t.months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+            <select value={year} onChange={(e) => { setYear(Number(e.target.value)); setPage(1) }}>
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount} data-tour="expenses-filter">
+              <option value="">{t.expenses.allAccounts}</option>
+              {paymentMethods
+                .filter((p) => !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
+                ))}
+            </select>
+            <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
+          </div>
+        )}
       </div>
+
+      <div className="subtabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'activity'}
+          className={`subtab ${tab === 'activity' ? 'active' : ''}`}
+          onClick={() => setTab('activity')}
+        >
+          <CalendarDays size={16} /> {t.expenses.tabActivity}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'subscriptions'}
+          className={`subtab ${tab === 'subscriptions' ? 'active' : ''}`}
+          onClick={() => setTab('subscriptions')}
+        >
+          <Repeat size={16} /> {t.expenses.tabSubscriptions}
+        </button>
+      </div>
+
+      {tab === 'subscriptions' ? (
+        <SubscriptionsPanel />
+      ) : (
+      <>
 
       <div className="grid grid-3">
         <StatCard label={t.expenses.incomeThisMonth} value={summary.income} currency={activeCurrency} icon={<TrendingUp size={20} />} color="#10b981" />
@@ -854,6 +885,9 @@ export default function Expenses() {
         </>
       )}
 
+      </>
+      )}
+
       {showModal && (
         <Modal
           title={editingId ? t.dashboard.editExpenseTitle : t.dashboard.expenseModalTitle}
@@ -1011,10 +1045,11 @@ export default function Expenses() {
             <div className="field">
               <label>{t.common.paymentMethod}</label>
               <select
+                required
                 value={incomeForm.paymentMethodId}
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
-                <option value="">{t.common.select}</option>
+                <option value="" disabled>{t.common.select}</option>
                 {paymentMethods
                   .filter((p) => !p.archived && p.type !== 'CreditCard'
                     && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))

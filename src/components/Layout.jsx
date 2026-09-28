@@ -124,9 +124,14 @@ export default function Layout() {
   const cardAlertCount = alerts?.cardAlertCount ?? 0
   const count = (alerts?.overdueCount ?? 0) + (alerts?.dueSoonCount ?? 0) + cardAlertCount
   const hasOverdue = (alerts?.overdueCount ?? 0) > 0 || (alerts?.cardAlerts ?? []).some((a) => a.alertType === 'OverLimit')
-  // Reset "seen" whenever the alert count changes so new alerts pulse again.
-  const prevCount = React.useRef(count)
-  if (prevCount.current !== count) { prevCount.current = count; setBellSeen(false) }
+  // Reset "seen" whenever the alert count changes so new alerts show again.
+  const prevCount = useRef(count)
+  useEffect(() => {
+    if (prevCount.current !== count) {
+      prevCount.current = count
+      setBellSeen(false)
+    }
+  }, [count])
 
   const openCredit = (id) => {
     setBellOpen(false)
@@ -292,12 +297,12 @@ export default function Layout() {
             <div className="bell-wrap" ref={bellRef}>
               <button
                 className="bell-btn"
-                onClick={() => { setBellOpen((o) => !o); setBellSeen(true) }}
+                onClick={() => { setBellOpen((o) => !o); if (count > 0) setBellSeen(true) }}
                 aria-label={t.notifications.title}
               >
                 🔔
-                {count > 0 && (
-                  <span className={`bell-badge ${hasOverdue ? 'over' : 'soon'} ${bellSeen ? 'seen' : ''}`}>{count}</span>
+                {count > 0 && !bellSeen && (
+                  <span className={`bell-badge ${hasOverdue ? 'over' : 'soon'}`}>{count}</span>
                 )}
               </button>
               {bellOpen && (
