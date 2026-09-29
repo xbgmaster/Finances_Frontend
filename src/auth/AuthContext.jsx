@@ -58,6 +58,12 @@ export function AuthProvider({ children }) {
     return result.user
   }
 
+  const loginWithGoogle = async (idToken) => {
+    const result = await AuthApi.google(idToken)
+    persist(result)
+    return result.user
+  }
+
   const logout = () => {
     // Best-effort server-side revoke so a leaked refresh token can't be reused.
     const rt = getStoredRefreshToken()
@@ -137,6 +143,7 @@ export function AuthProvider({ children }) {
       canAccess,
       login,
       register,
+      loginWithGoogle,
       logout,
       updateUser,
     }),

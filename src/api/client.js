@@ -119,6 +119,8 @@ export const AuthApi = {
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }).then((r) => r.data),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }).then((r) => r.data),
   resetPassword: (data) => api.post('/auth/reset-password', data).then((r) => r.data),
+  google: (idToken) => api.post('/auth/google', { idToken }).then((r) => r.data),
+  googleClient: () => api.get('/auth/google-client').then((r) => r.data),
 }
 
 export const ProfileApi = {

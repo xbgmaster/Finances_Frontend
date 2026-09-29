@@ -6,10 +6,11 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import ThemeSwitcher from '../components/ThemeSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 export default function Login() {
   const { t } = useI18n()
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ email: '', password: '' })
@@ -30,6 +31,21 @@ export default function Login() {
       if (!err?.response) setError(t.auth.networkError)
       else if (err.response.status === 400) setError(t.auth.invalidCredentials)
       else setError(t.auth.genericError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithGoogle = async (idToken) => {
+    setError('')
+    setLoading(true)
+    try {
+      const user = await loginWithGoogle(idToken)
+      const dest = !user.onboardingCompleted ? '/onboarding' : '/'
+      navigate(dest, { replace: true })
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      setError(detail || t.auth.googleFailed)
     } finally {
       setLoading(false)
     }
@@ -59,6 +75,7 @@ export default function Login() {
             {loading ? t.auth.signingIn : t.auth.signIn}
           </button>
         </form>
+        <GoogleSignInButton onCredential={signInWithGoogle} disabled={loading} />
         <p className="auth-switch">{t.auth.noAccount} <Link to="/register">{t.auth.signUp}</Link></p>
         <p className="auth-switch"><Link to="/password">{t.auth.changePassword}</Link></p>
       </div>

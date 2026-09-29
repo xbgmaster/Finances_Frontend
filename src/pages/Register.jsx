@@ -7,10 +7,11 @@ import ThemeSwitcher from '../components/ThemeSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 import CountrySelect from '../components/CountrySelect'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 export default function Register() {
   const { t } = useI18n()
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '', fullName: '', country: '', currency: 'CAD' })
   const [error, setError] = useState('')
@@ -31,6 +32,19 @@ export default function Register() {
       navigate('/onboarding', { replace: true, state: { country: form.country, currency: form.currency } })
     } catch (err) {
       setError(err?.response?.data?.detail || err?.response?.data?.title || t.auth.genericError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithGoogle = async (idToken) => {
+    setError('')
+    setLoading(true)
+    try {
+      const user = await loginWithGoogle(idToken)
+      navigate(user.onboardingCompleted ? '/' : '/onboarding', { replace: true })
+    } catch (err) {
+      setError(err?.response?.data?.detail || t.auth.googleFailed)
     } finally {
       setLoading(false)
     }
@@ -77,6 +91,7 @@ export default function Register() {
             {loading ? t.auth.signingIn : t.auth.signUp}
           </button>
         </form>
+        <GoogleSignInButton onCredential={signInWithGoogle} disabled={loading} />
         <p className="auth-switch">{t.auth.haveAccount} <Link to="/login">{t.auth.signIn}</Link></p>
       </div>
     </div>
