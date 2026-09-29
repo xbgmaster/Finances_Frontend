@@ -6,6 +6,7 @@ import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import ExpenseCalendar from '../components/ExpenseCalendar'
+import PageSpinner from '../components/PageSpinner'
 import SubscriptionsPanel from '../components/SubscriptionsPanel'
 import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight, CalendarDays, Repeat } from 'lucide-react'
@@ -46,6 +47,7 @@ export default function Expenses() {
   const [allIncomes, setAllIncomes] = useState([])
   const [exchanges, setExchanges] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
+  const [schedules, setSchedules] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -70,7 +72,7 @@ export default function Expenses() {
   const load = async () => {
     setLoading(true)
     try { await ExpenseSchedulesApi.postDue() } catch { /* non-critical */ }
-    const [cats, sum, monthAll, monthInc, exch, pms] = await Promise.all([
+    const [cats, sum, monthAll, monthInc, exch, pms, sch] = await Promise.all([
       CategoriesApi.list(),
       BalanceApi.monthly({ year, month, currency: activeCurrency }),
       // Whole month of expenses (drives both the calendar and the detail list).
@@ -80,6 +82,7 @@ export default function Expenses() {
       IncomesApi.list().catch(() => []),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
+      ExpenseSchedulesApi.list().catch(() => []),
     ])
     setCategories(cats)
     setSummary(sum)
@@ -87,6 +90,7 @@ export default function Expenses() {
     setAllIncomes(monthInc)
     setExchanges(exch)
     setPaymentMethods(pms)
+    setSchedules(sch)
     setLoading(false)
   }
 
@@ -356,7 +360,7 @@ export default function Expenses() {
     return [y - 2, y - 1, y, y + 1]
   }, [])
 
-  if (loading || !summary) return <div className="loading">{t.common.loading}</div>
+  if (loading || !summary) return <PageSpinner />
 
   // Exchanges touching the active currency this month. They are transfers (not expenses), so they
   // are shown in the activity list but never counted as spending or income.
@@ -472,11 +476,27 @@ export default function Expenses() {
             </select>
             <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount} data-tour="expenses-filter">
               <option value="">{t.expenses.allAccounts}</option>
-              {paymentMethods
-                .filter((p) => !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
-                ))}
+              {['Debit', 'CreditCard', 'Cash'].map((type) => {
+                const group = paymentMethods.filter((p) =>
+                  !p.archived
+                  && p.type === type
+                  && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
+                if (group.length === 0) return null
+                const label = type === 'CreditCard'
+                  ? t.cards.sectionCreditCard
+                  : type === 'Cash'
+                    ? t.cards.sectionCash
+                    : t.cards.sectionDebit
+                return (
+                  <optgroup key={type} label={label}>
+                    {group.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {accountLabel(p.name)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              })}
             </select>
             <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
           </div>
@@ -534,7 +554,12 @@ export default function Expenses() {
         </div>
       )}
 
-      <h2 className="section-title" data-tour="expenses-calendar">{t.expenses.calendarTitle}</h2>
+      <h2 className="section-title" data-tour="expenses-calendar">
+        {t.expenses.calendarTitle}
+        <span className="hint" style={{ fontWeight: 500, marginLeft: 8 }}>
+          · {t.months[month - 1]} {year}
+        </span>
+      </h2>
       <div className="card">
         <ExpenseCalendar
           year={year}
@@ -542,6 +567,7 @@ export default function Expenses() {
           expenses={calendarExpenses}
           incomes={calendarIncomes}
           exchanges={visibleExchanges}
+          schedules={schedules}
           currency={activeCurrency}
           t={t}
           categoryLabel={categoryLabel}

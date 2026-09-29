@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Briefcase, CalendarClock, TrendingUp, Wallet } from 'lucide-react'
+import { Briefcase, CalendarClock, Repeat, TrendingUp, Wallet } from 'lucide-react'
 import {
-  BalanceApi, CreditsApi, IncomeSchedulesApi, IncomesApi, PaymentMethodsApi,
+  BalanceApi, CreditsApi, ExpenseSchedulesApi, ExpensesApi,
+  IncomeSchedulesApi, IncomesApi, PaymentMethodsApi,
 } from '../api/client'
 import StatCard from './StatCard'
+import PageSpinner from './PageSpinner'
 import { formatMoney, formatDate } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -11,13 +13,15 @@ import { useCurrency } from '../currency/CurrencyContext'
 const now = new Date()
 const pad = (n) => String(n).padStart(2, '0')
 
-/** Deterministic cash forecast: available + expected paydays − today's debts. */
+/** Deterministic cash forecast: available + expected paydays − subscriptions − today's debts. */
 export default function PaydayOutlook() {
   const { t } = useI18n()
   const { currency: activeCurrency } = useCurrency()
   const [loading, setLoading] = useState(true)
   const [schedules, setSchedules] = useState([])
+  const [expenseSchedules, setExpenseSchedules] = useState([])
   const [allIncomes, setAllIncomes] = useState([])
+  const [allExpenses, setAllExpenses] = useState([])
   const [shifts, setShifts] = useState([])
   const [nextMonthShifts, setNextMonthShifts] = useState([])
   const [occOverrides, setOccOverrides] = useState([])
@@ -32,9 +36,11 @@ export default function PaydayOutlook() {
     ;(async () => {
       setLoading(true)
       const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
-      const [sch, inc, pms, bal, credits, s, ov, sNext] = await Promise.all([
+      const [sch, expSch, inc, exp, pms, bal, credits, s, ov, sNext] = await Promise.all([
         IncomeSchedulesApi.list().catch(() => []),
+        ExpenseSchedulesApi.list().catch(() => []),
         IncomesApi.list().catch(() => []),
+        ExpensesApi.list().catch(() => []),
         PaymentMethodsApi.list().catch(() => []),
         BalanceApi.get().catch(() => null),
         CreditsApi.list({ currency: activeCurrency }).catch(() => []),
@@ -44,7 +50,9 @@ export default function PaydayOutlook() {
       ])
       if (cancelled) return
       setSchedules(sch)
+      setExpenseSchedules(expSch)
       setAllIncomes(inc)
+      setAllExpenses(exp)
       setShifts(s)
       setOccOverrides(ov)
       setNextMonthShifts(sNext)
@@ -65,12 +73,17 @@ export default function PaydayOutlook() {
     [schedules, activeCurrency],
   )
 
+  const activeSubs = useMemo(
+    () => expenseSchedules.filter((s) => s.active && (s.currency || activeCurrency) === activeCurrency),
+    [expenseSchedules, activeCurrency],
+  )
+
   const monthShifts = useMemo(
     () => shifts.filter((s) => (s.currency || activeCurrency) === activeCurrency),
     [shifts, activeCurrency],
   )
 
-  const payDayProjections = useMemo(() => {
+  const dayEvents = useMemo(() => {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const horizon = new Date(year, month - 1 + 2, 0)
     const allShifts = [
@@ -99,9 +112,26 @@ export default function PaydayOutlook() {
       return [...new Set(days)].sort((a, b) => a - b).map((d) => new Date(y, m - 1, d))
     }
 
+    const chargeDaysFor = (sub, y, m) => {
+      const dim = new Date(y, m, 0).getDate()
+      const days = [Math.min(Math.max(1, sub.dayOfMonth || 1), dim)]
+      if (sub.payFrequency === 'SemiMonthly') {
+        days.push(Math.min(Math.max(1, sub.secondDayOfMonth || dim), dim))
+      }
+      return [...new Set(days)].map((d) => new Date(y, m - 1, d))
+    }
+
     const incomeAlreadyOn = (jobId, date) => allIncomes.some((i) => {
       if (i.incomeScheduleId !== jobId) return false
       const d = new Date(i.date)
+      return d.getFullYear() === date.getFullYear()
+        && d.getMonth() === date.getMonth()
+        && d.getDate() === date.getDate()
+    })
+
+    const expenseAlreadyOn = (scheduleId, date) => allExpenses.some((e) => {
+      if (e.expenseScheduleId !== scheduleId) return false
+      const d = new Date(e.date)
       return d.getFullYear() === date.getFullYear()
         && d.getMonth() === date.getMonth()
         && d.getDate() === date.getDate()
@@ -118,11 +148,22 @@ export default function PaydayOutlook() {
       return o?.amount
     }
 
-    const events = []
+    const byDay = new Map()
+    const ensure = (date) => {
+      const key = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+      if (!byDay.has(key)) {
+        byDay.set(key, {
+          date, expectedIncome: 0, expectedExpense: 0, incomeParts: [], expenseParts: [],
+        })
+      }
+      return byDay.get(key)
+    }
+
     const monthsToScan = [
       { y: year, m: month },
       month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 },
     ]
+
     for (const job of activeJobs) {
       for (const { y, m } of monthsToScan) {
         for (const date of payDaysForJob(job, y, m)) {
@@ -157,37 +198,50 @@ export default function PaydayOutlook() {
             if (amt > 0) parts.push({ name: job.name, amount: amt, kind: 'fixed' })
           }
           if (amount > 0 || parts.length > 0) {
-            events.push({ date, amount, parts })
+            const day = ensure(date)
+            day.expectedIncome += amount
+            day.incomeParts.push(...parts)
           }
         }
       }
     }
 
-    const byDay = new Map()
-    for (const ev of events) {
-      const key = `${ev.date.getFullYear()}-${pad(ev.date.getMonth() + 1)}-${pad(ev.date.getDate())}`
-      const cur = byDay.get(key) || { date: ev.date, expectedIncome: 0, parts: [] }
-      cur.expectedIncome += ev.amount
-      cur.parts.push(...ev.parts)
-      byDay.set(key, cur)
+    for (const sub of activeSubs) {
+      for (const { y, m } of monthsToScan) {
+        for (const date of chargeDaysFor(sub, y, m)) {
+          if (date < startOfToday || date > horizon) continue
+          if (expenseAlreadyOn(sub.id, date)) continue
+          const amt = sub.amount || 0
+          if (amt <= 0) continue
+          const day = ensure(date)
+          day.expectedExpense += amt
+          day.expenseParts.push({ name: sub.name, amount: amt, kind: 'subscription' })
+        }
+      }
     }
 
-    const ordered = [...byDay.values()].sort((a, b) => a.date - b.date)
-    let cumulative = 0
+    const ordered = [...byDay.values()]
+      .filter((d) => d.expectedIncome > 0 || d.expectedExpense > 0)
+      .sort((a, b) => a.date - b.date)
+
+    let cumIncome = 0
+    let cumExpense = 0
     return ordered.map((day) => {
-      cumulative += day.expectedIncome
+      cumIncome += day.expectedIncome
+      cumExpense += day.expectedExpense
       return {
         ...day,
-        cumulativeIncome: cumulative,
-        projected: availableBalance + cumulative - outstandingDebts,
+        cumulativeIncome: cumIncome,
+        cumulativeExpense: cumExpense,
+        projected: availableBalance + cumIncome - cumExpense - outstandingDebts,
       }
     })
   }, [
-    activeJobs, allIncomes, monthShifts, nextMonthShifts, occOverrides,
+    activeJobs, activeSubs, allIncomes, allExpenses, monthShifts, nextMonthShifts, occOverrides,
     year, month, activeCurrency, availableBalance, outstandingDebts,
   ])
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   return (
     <div>
@@ -219,36 +273,56 @@ export default function PaydayOutlook() {
         />
       </div>
 
-      {activeJobs.length === 0 ? (
+      {activeJobs.length === 0 && activeSubs.length === 0 ? (
         <div className="empty">{t.projections.noJobsForPayday}</div>
-      ) : payDayProjections.length === 0 ? (
+      ) : dayEvents.length === 0 ? (
         <div className="empty">{t.projections.noUpcomingPays}</div>
       ) : (
         <div className="list">
-          {payDayProjections.map((p) => (
-            <div className="list-item" key={p.date.toISOString()}>
-              <span className="badge-icon" style={{ background: '#b8943e22', color: '#b8943e' }}>
-                <CalendarClock size={20} />
-              </span>
-              <div className="meta">
-                <div className="title">
-                  {t.projections.paymentDay} · {formatDate(p.date)}
-                </div>
-                <div className="sub">
-                  {p.parts.map((part) => `${part.name} +${formatMoney(part.amount, activeCurrency)}`).join(' · ')}
-                  {p.parts.length === 0 && t.projections.projectionNoIncome}
-                </div>
-              </div>
-              <div className="list-item-end" style={{ textAlign: 'right' }}>
-                <div className="hint">{t.projections.expectedIncome}</div>
-                <span className="amount pos">+{formatMoney(p.expectedIncome, activeCurrency)}</span>
-                <div className="hint" style={{ marginTop: 4 }}>{t.projections.projectedAfter}</div>
-                <span className={`amount ${p.projected < 0 ? 'neg' : 'pos'}`}>
-                  {formatMoney(p.projected, activeCurrency)}
+          {dayEvents.map((p) => {
+            const isSubOnly = p.expectedIncome <= 0 && p.expectedExpense > 0
+            const net = p.expectedIncome - p.expectedExpense
+            return (
+              <div className="list-item outlook-item" key={p.date.toISOString()}>
+                <span
+                  className="badge-icon"
+                  style={{
+                    background: isSubOnly ? '#0f5c4d22' : '#b8943e22',
+                    color: isSubOnly ? '#0f5c4d' : '#b8943e',
+                  }}
+                >
+                  {isSubOnly ? <Repeat size={20} /> : <CalendarClock size={20} />}
                 </span>
+                <div className="meta">
+                  <div className="title">
+                    {isSubOnly
+                      ? `${t.projections.subscriptionDay} · ${formatDate(p.date)}`
+                      : `${t.projections.paymentDay} · ${formatDate(p.date)}`}
+                  </div>
+                  <div className="sub">
+                    {[
+                      ...p.incomeParts.map((part) => `${part.name} +${formatMoney(part.amount, activeCurrency)}`),
+                      ...p.expenseParts.map((part) => `${part.name} −${formatMoney(part.amount, activeCurrency)}`),
+                    ].join(' · ') || t.projections.projectionNoIncome}
+                  </div>
+                </div>
+                <div className="outlook-figures">
+                  <div className="outlook-fig">
+                    <div className="hint">{t.projections.expectedIncome}</div>
+                    <span className={`amount ${net < 0 ? 'neg' : 'pos'}`}>
+                      {net < 0 ? '−' : '+'}{formatMoney(Math.abs(net), activeCurrency)}
+                    </span>
+                  </div>
+                  <div className="outlook-fig">
+                    <div className="hint">{t.projections.projectedAfter}</div>
+                    <span className={`amount ${p.projected < 0 ? 'neg' : 'pos'}`}>
+                      {formatMoney(p.projected, activeCurrency)}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import PageSpinner from '../components/PageSpinner'
 import {
   CheckCircle2, Target, PiggyBank, Hourglass, CalendarDays, Receipt,
   TrendingUp, Landmark, Zap, Banknote, AlertTriangle, Clock,
@@ -103,7 +104,7 @@ export default function CreditDetail() {
     }
   }
 
-  if (loading || !summary) return <div className="loading">{t.common.loading}</div>
+  if (loading || !summary) return <PageSpinner />
 
   const paidOff = summary.status === 'PaidOff'
   const cur = summary.currency

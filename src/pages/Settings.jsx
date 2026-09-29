@@ -6,6 +6,7 @@ import { useCurrency } from '../currency/CurrencyContext'
 import { CURRENCIES } from '../utils/currencies'
 import { findCountry } from '../utils/countries'
 import CountrySelect from '../components/CountrySelect'
+import PageSpinner from '../components/PageSpinner'
 
 export default function Settings() {
   const { t } = useI18n()
@@ -69,7 +70,7 @@ export default function Settings() {
     }
   }
 
-  if (loading || !form) return <div className="loading">{t.common.loading}</div>
+  if (loading || !form) return <PageSpinner />
 
   return (
     <div className="settings-page">

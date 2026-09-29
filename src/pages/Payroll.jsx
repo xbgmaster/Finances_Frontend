@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import IncomeCalendar from '../components/IncomeCalendar'
+import PageSpinner from '../components/PageSpinner'
 import { useToast } from '../components/Toast'
 import { formatMoney, formatDate } from '../utils/format'
 import { COLOR_PALETTE } from '../utils/icons'
@@ -377,7 +378,7 @@ export default function Payroll() {
     })
   }
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   return (
     <div>

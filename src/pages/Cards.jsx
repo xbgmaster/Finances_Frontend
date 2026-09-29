@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PaymentMethodsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
-import PayCardModal from '../components/PayCardModal'
+import PageSpinner from '../components/PageSpinner'
 import { useToast } from '../components/Toast'
 import { tintVars, normalizeHex, sameColor, CARD_BANK_COLORS } from '../utils/color'
-import { formatMoney } from '../utils/format'
+import { formatMoney, formatDate } from '../utils/format'
 import { pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -39,8 +39,66 @@ function sortMethods(list) {
   })
 }
 
+/** Current payment-due window for a credit card + whether a payment landed in it.
+ *  Late payments still clear the past due (then the next cycle shows unpaid until another payment). */
+function cardDueStatus(card, payments, today = new Date()) {
+  const dueDay = card.paymentDueDay
+  if (!dueDay) return null
+
+  const startOfDay = (value) => {
+    const d = value instanceof Date ? new Date(value) : new Date(value)
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+  const clamp = (y, m, day) => {
+    const dim = new Date(y, m + 1, 0).getDate()
+    return startOfDay(new Date(y, m, Math.min(Math.max(1, day), dim)))
+  }
+
+  const today0 = startOfDay(today)
+  let due = clamp(today0.getFullYear(), today0.getMonth(), dueDay)
+  let prev = clamp(due.getFullYear(), due.getMonth() - 1, dueDay)
+  let next = clamp(due.getFullYear(), due.getMonth() + 1, dueDay)
+
+  // Chronological pool so each payment can only satisfy one cycle.
+  const pool = (payments || [])
+    .map((p) => startOfDay(p.date))
+    .filter((d) => !Number.isNaN(d.getTime()))
+    .sort((a, b) => a - b)
+  let payIdx = 0
+
+  const consume = (allowLate) => {
+    while (payIdx < pool.length) {
+      const d = pool[payIdx]
+      if (d <= prev) {
+        payIdx += 1
+        continue
+      }
+      // On-time / early for this due, or late but before the next due date.
+      if (d <= due || (allowLate && d <= next)) {
+        payIdx += 1
+        return true
+      }
+      return false
+    }
+    return false
+  }
+
+  // Close past dues with on-time or late payments, advancing one cycle at a time.
+  while (today0 > due) {
+    if (!consume(true)) break
+    prev = due
+    due = next
+    next = clamp(due.getFullYear(), due.getMonth() + 1, dueDay)
+  }
+
+  const paid = consume(today0 > due)
+  const daysUntil = Math.round((due - today0) / 86400000)
+  return { dueDate: due, paid, daysUntil, overdue: !paid && daysUntil < 0 }
+}
+
 function MethodCard({
-  m, t, typeLabel, accountLabel, onFavorite, onPay, onDetails, onEdit, onDelete,
+  m, t, typeLabel, accountLabel, dueStatus, onFavorite, onPay, onDetails, onEdit, onDelete,
 }) {
   const isCard = m.type === 'CreditCard'
   const limit = m.creditLimit ?? 0
@@ -85,6 +143,37 @@ function MethodCard({
           </div>
         </div>
       </div>
+
+      {isCard && dueStatus && !m.archived && (
+        <div
+          className={`card-due-banner ${dueStatus.paid ? 'paid' : dueStatus.overdue ? 'overdue' : 'pending'}`}
+          role="status"
+        >
+          <span className="card-due-emoji" aria-hidden="true">{dueStatus.paid ? '🎉' : '⚠️'}</span>
+          <div className="card-due-text">
+            {dueStatus.paid ? (
+              <>
+                <strong>{t.cards.duePaidTitle}</strong>
+                <span>{t.cards.duePaidBody.replace('{date}', formatDate(dueStatus.dueDate))}</span>
+              </>
+            ) : dueStatus.overdue ? (
+              <>
+                <strong>{t.cards.dueOverdueTitle}</strong>
+                <span>{t.cards.dueOverdueBody.replace('{date}', formatDate(dueStatus.dueDate))}</span>
+              </>
+            ) : (
+              <>
+                <strong>{t.cards.duePendingTitle}</strong>
+                <span>
+                  {t.cards.duePendingBody
+                    .replace('{date}', formatDate(dueStatus.dueDate))
+                    .replace('{days}', String(Math.max(0, dueStatus.daysUntil)))}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {!isCard && (
@@ -155,6 +244,7 @@ export default function Cards() {
   const { currency: activeCurrency } = useCurrency()
   const toast = useToast()
   const [methods, setMethods] = useState([])
+  const [cardPaymentsById, setCardPaymentsById] = useState({})
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -167,7 +257,13 @@ export default function Cards() {
   const load = async () => {
     setLoading(true)
     try {
-      setMethods(await PaymentMethodsApi.list({ includeArchived: true }))
+      const list = await PaymentMethodsApi.list({ includeArchived: true })
+      setMethods(list)
+      const cards = list.filter((m) => m.type === 'CreditCard')
+      const pairs = await Promise.all(
+        cards.map(async (c) => [c.id, await PaymentMethodsApi.payments(c.id).catch(() => [])]),
+      )
+      setCardPaymentsById(Object.fromEntries(pairs))
       setListError('')
     } catch {
       setListError(t.cards.deleteError)
@@ -254,7 +350,16 @@ export default function Cards() {
     }
   }
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  const dueByCard = useMemo(() => {
+    const map = {}
+    for (const m of methods) {
+      if (m.type !== 'CreditCard') continue
+      map[m.id] = cardDueStatus(m, cardPaymentsById[m.id] || [])
+    }
+    return map
+  }, [methods, cardPaymentsById])
+
+  if (loading) return <PageSpinner />
 
   // Only show methods in the active currency lens: paying/adding in another currency is
   // confusing and error-prone. Switch the currency at the top to see the others.
@@ -299,6 +404,7 @@ export default function Cards() {
                   t={t}
                   typeLabel={typeLabel}
                   accountLabel={accountLabel}
+                  dueStatus={dueByCard[m.id]}
                   onFavorite={toggleFavorite}
                   onPay={setPayCardId}
                   onDetails={(id) => navigate(`/cards/${id}`)}

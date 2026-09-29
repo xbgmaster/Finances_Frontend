@@ -9,6 +9,7 @@ import { formatMoney, formatDate, getBaseCurrency, localDate as today } from '..
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import PageSpinner from '../components/PageSpinner'
 
 const currentDay = () => String(new Date().getDate())
 
@@ -181,7 +182,7 @@ export default function Credits() {
     }, {})
   const debtEntries = Object.entries(debtByCurrency).filter(([, v]) => v > 0)
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   return (
     <div>

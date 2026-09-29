@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { BalanceApi, IncomesApi, ExpensesApi, CategoriesApi, CreditsApi, ExchangesApi, PaymentMethodsApi, assetUrl } from '../api/client'
 import StatCard from '../components/StatCard'
@@ -7,8 +7,10 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import PayCardModal from '../components/PayCardModal'
 import { useToast } from '../components/Toast'
+import PageSpinner from '../components/PageSpinner'
 import { Wallet, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowLeftRight, AlertTriangle, Clock } from 'lucide-react'
 import { formatMoney, formatDate, localDate } from '../utils/format'
+import { cashBalanceAsOf, endOfMonth, endOfPreviousMonth } from '../utils/cashBalance'
 import { iconFor, pmTypeIcon } from '../utils/icons'
 import { CURRENCIES } from '../utils/currencies'
 import { tintVars } from '../utils/color'
@@ -34,6 +36,8 @@ export default function Dashboard() {
   const [exchanges, setExchanges] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
   const [cardPayments, setCardPayments] = useState([])
+  const [viewYear, setViewYear] = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
   const [showPay, setShowPay] = useState(false)
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // 'income' | 'expense' | 'exchange' | null
@@ -58,6 +62,13 @@ export default function Dashboard() {
   })
   const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '', fromPaymentMethodId: '', toPaymentMethodId: '' })
 
+  const years = useMemo(() => {
+    const y = now.getFullYear()
+    return [y - 2, y - 1, y, y + 1]
+  }, [])
+
+  const isViewingCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth() + 1
+
   const load = async () => {
     setLoading(true)
     const [b, inc, exp, cats, mon, alerts, exch, pms] = await Promise.all([
@@ -65,7 +76,7 @@ export default function Dashboard() {
       IncomesApi.list(),
       ExpensesApi.list(),
       CategoriesApi.list(),
-      BalanceApi.monthly({ year: now.getFullYear(), month: now.getMonth() + 1, currency: activeCurrency }),
+      BalanceApi.monthly({ year: viewYear, month: viewMonth, currency: activeCurrency }),
       CreditsApi.alerts().catch(() => null),
       ExchangesApi.list().catch(() => []),
       PaymentMethodsApi.list().catch(() => []),
@@ -88,11 +99,24 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  // Reload the currency-scoped monthly summary whenever the lens changes.
+  // Full reload when currency changes (activity + live balance).
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCurrency])
+
+  // Month lens only refreshes the monthly summary (budgets / income / expenses KPIs).
+  // Recent activity stays on the full unfiltered history from `load`.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const mon = await BalanceApi.monthly({ year: viewYear, month: viewMonth, currency: activeCurrency })
+        if (!cancelled) setMonthly(mon)
+      } catch { /* keep previous */ }
+    })()
+    return () => { cancelled = true }
+  }, [viewYear, viewMonth, activeCurrency])
 
   // Arriving from another page (e.g. Card details "Edit") with an item to edit here.
   useEffect(() => {
@@ -416,14 +440,48 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   const baseCurrency = balance.baseCurrency
   const selCur = activeCurrency
-  const isBase = selCur === baseCurrency
 
   const selEntry = (balance.byCurrency ?? []).find((c) => c.currency === selCur)
     ?? { balance: 0, totalIncome: 0, totalExpense: 0 }
+
+  const balanceInputs = {
+    currency: selCur,
+    baseCurrency,
+    incomes,
+    expenses,
+    exchanges,
+    cardPayments,
+    paymentMethods,
+  }
+  const closingThisMonth = cashBalanceAsOf({
+    ...balanceInputs,
+    asOfEnd: endOfMonth(viewYear, viewMonth),
+  })
+  const closingPrevMonth = cashBalanceAsOf({
+    ...balanceInputs,
+    asOfEnd: endOfPreviousMonth(viewYear, viewMonth),
+  })
+  const prevMonthLabel = (() => {
+    const d = endOfPreviousMonth(viewYear, viewMonth)
+    return `${t.months[d.getMonth()]} ${d.getFullYear()}`
+  })()
+  const availableDisplay = isViewingCurrentMonth
+    ? {
+        value: selEntry.balance,
+        hint: t.dashboard.balanceStartedMonth
+          .replace('{amount}', formatMoney(closingPrevMonth, selCur))
+          .replace('{month}', prevMonthLabel),
+      }
+    : {
+        value: closingThisMonth,
+        hint: t.dashboard.balanceAtEndOfMonth
+          .replace('{month}', `${t.months[viewMonth - 1]} ${viewYear}`)
+          .replace('{started}', formatMoney(closingPrevMonth, selCur)),
+      }
 
   // Movements are strictly per-currency (no conversion). Exchanges show the leg that affects
   // the selected currency: money leaving it (out) or arriving into it (in).
@@ -548,13 +606,13 @@ export default function Dashboard() {
           <h1>{t.dashboard.title}</h1>
           <p>{t.dashboard.subtitle}</p>
         </div>
-        <div className="toolbar action-bar">
-          {paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived) && (
-            <button className="btn secondary" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>
-          )}
-          <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
-          <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
-          <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
+        <div className="toolbar">
+          <select value={viewMonth} onChange={(e) => setViewMonth(Number(e.target.value))} aria-label={t.dashboard.viewMonth}>
+            {t.months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
+          <select value={viewYear} onChange={(e) => setViewYear(Number(e.target.value))} aria-label={t.dashboard.viewYear}>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
       </div>
 
@@ -577,18 +635,41 @@ export default function Dashboard() {
         </div>
       )}
 
+      <div className="toolbar action-bar summary-actions" style={{ margin: '14px 0 16px', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
+        {paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived) && (
+          <button className="btn secondary" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>
+        )}
+        <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
+        <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
+        <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
+      </div>
+
       <div className="grid grid-3" data-tour="summary-kpis">
         <StatCard
           label={`${t.dashboard.availableBalance} (${selCur})`}
-          value={selEntry.balance}
+          value={availableDisplay.value}
           currency={selCur}
           icon={<Wallet size={20} />}
           color="#0f5c4d"
-          tone={selEntry.balance >= 0 ? 'pos' : 'neg'}
-          hint={isBase ? t.dashboard.balanceHint : t.dashboard.balanceHintCurrency.replace('{cur}', selCur)}
+          tone={availableDisplay.value >= 0 ? 'pos' : 'neg'}
+          hint={availableDisplay.hint}
         />
-        <StatCard label={t.dashboard.totalIncome} value={selEntry.totalIncome} currency={selCur} icon={<TrendingUp size={20} />} color="#10b981" />
-        <StatCard label={t.dashboard.totalExpenses} value={selEntry.totalExpense} currency={selCur} icon={<TrendingDown size={20} />} color="#ef4444" />
+        <StatCard
+          label={t.dashboard.totalIncome}
+          value={monthly?.income ?? 0}
+          currency={selCur}
+          icon={<TrendingUp size={20} />}
+          color="#10b981"
+          hint={t.dashboard.monthLensHint.replace('{month}', t.months[viewMonth - 1]).replace('{year}', String(viewYear))}
+        />
+        <StatCard
+          label={t.dashboard.totalExpenses}
+          value={monthly?.expense ?? 0}
+          currency={selCur}
+          icon={<TrendingDown size={20} />}
+          color="#ef4444"
+          hint={t.dashboard.totalExpensesHint}
+        />
       </div>
 
       {creditCardsCur.length > 0 && (

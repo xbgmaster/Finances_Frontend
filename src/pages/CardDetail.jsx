@@ -4,6 +4,7 @@ import { PaymentMethodsApi, ExpensesApi, IncomesApi, ExchangesApi } from '../api
 import StatCard from '../components/StatCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PayCardModal from '../components/PayCardModal'
+import PageSpinner from '../components/PageSpinner'
 import { CreditCard, Wallet, TrendingDown, ArrowUpRight, Receipt, CheckCircle2, Banknote, TrendingUp, ArrowLeftRight } from 'lucide-react'
 import { formatMoney, formatDate } from '../utils/format'
 import { iconFor, pmTypeIcon } from '../utils/icons'
@@ -73,7 +74,7 @@ export default function CardDetail() {
   const typeLabel = (type) =>
     type === 'CreditCard' ? t.cards.typeCreditCard : type === 'Cash' ? t.cards.typeCash : t.cards.typeDebit
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
   if (error || !method) {
     return (
       <div>

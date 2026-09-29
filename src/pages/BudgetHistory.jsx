@@ -6,6 +6,7 @@ import { formatMoney } from '../utils/format'
 import { iconFor } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import PageSpinner from '../components/PageSpinner'
 
 export default function BudgetHistory() {
   const { t, categoryLabel } = useI18n()
@@ -43,7 +44,37 @@ export default function BudgetHistory() {
 
   const monthLabel = (m) => `${t.months[m.month - 1].slice(0, 3)} ${String(m.year).slice(2)}`
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  const cellTitle = (c, cell) => {
+    const spent = formatMoney(cell.spent, activeCurrency)
+    if (c.monthlyBudget <= 0) {
+      return t.budgetHistory.tipNoBudget.replace('{spent}', spent)
+    }
+    const budget = formatMoney(c.monthlyBudget, activeCurrency)
+    if (cell.spent === 0) {
+      return t.budgetHistory.tipEmpty.replace('{budget}', budget)
+    }
+    if (cell.over) {
+      const overBy = formatMoney(cell.spent - c.monthlyBudget, activeCurrency)
+      return t.budgetHistory.tipOver
+        .replace('{spent}', spent)
+        .replace('{budget}', budget)
+        .replace('{over}', overBy)
+        .replace('{pct}', String(Math.round(cell.percent)))
+    }
+    return t.budgetHistory.tipUnder
+      .replace('{spent}', spent)
+      .replace('{budget}', budget)
+      .replace('{pct}', String(Math.round(cell.percent)))
+  }
+
+  const cellClass = (c, cell) => {
+    if (cell.spent === 0) return 'bh-zero'
+    if (c.monthlyBudget <= 0) return 'bh-nobudget'
+    if (cell.over) return 'bh-over'
+    return 'bh-under'
+  }
+
+  if (loading) return <PageSpinner />
 
   if (error || !data) {
     return (
@@ -63,6 +94,7 @@ export default function BudgetHistory() {
   }
 
   const hasBudgets = data.categories.length > 0
+  const monthCount = Math.max(1, data.months.length)
 
   return (
     <div>
@@ -94,7 +126,7 @@ export default function BudgetHistory() {
         <>
           <div
             className="insight"
-            style={{ marginBottom: 20, borderColor: data.totalOverCount > 0 ? 'var(--danger)' : 'var(--success)' }}
+            style={{ marginBottom: 20, borderColor: data.totalOverCount > 0 ? '#b45309' : '#1d4ed8' }}
           >
             <span>{data.totalOverCount > 0 ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}</span>
             <span>
@@ -102,6 +134,12 @@ export default function BudgetHistory() {
                 ? t.budgetHistory.totalOver.replace('{count}', data.totalOverCount)
                 : t.budgetHistory.noOverruns}
             </span>
+          </div>
+
+          <div className="bh-legend" style={{ marginBottom: 12 }}>
+            <span><i className="bh-swatch bh-under" /> {t.budgetHistory.legendUnder}</span>
+            <span><i className="bh-swatch bh-over" /> {t.budgetHistory.legendOver}</span>
+            <span><i className="bh-swatch bh-nobudget" /> {t.budgetHistory.legendNoBudget}</span>
           </div>
 
           <div className="card table-card">
@@ -113,11 +151,13 @@ export default function BudgetHistory() {
                   {data.months.map((m) => (
                     <th key={`${m.year}-${m.month}`} className="num">{monthLabel(m)}</th>
                   ))}
-                  <th className="num">{t.budgetHistory.overruns}</th>
+                  <th className="num">{t.budgetHistory.avgSpend}</th>
                 </tr>
               </thead>
               <tbody>
-                {data.categories.map((c) => (
+                {data.categories.map((c) => {
+                  const avg = c.totalSpent / monthCount
+                  return (
                   <tr key={c.categoryId}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -137,19 +177,18 @@ export default function BudgetHistory() {
                     {c.cells.map((cell) => (
                       <td
                         key={`${cell.year}-${cell.month}`}
-                        className={`num bh-cell ${cell.spent === 0 ? 'bh-zero' : cell.over ? 'bh-over' : c.monthlyBudget > 0 ? 'bh-under' : ''}`}
-                        title={`${cell.percent}%`}
+                        className={`num bh-cell ${cellClass(c, cell)}`}
+                        title={cellTitle(c, cell)}
                       >
                         {cell.spent === 0 ? '—' : formatMoney(cell.spent, activeCurrency)}
                       </td>
                     ))}
-                    <td className="num">
-                      {c.overCount > 0
-                        ? <span className="pill pill-over">{c.overCount}</span>
-                        : <span style={{ color: 'var(--text-muted)' }}>0</span>}
+                    <td className="num" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {formatMoney(avg, activeCurrency)}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
             </div>

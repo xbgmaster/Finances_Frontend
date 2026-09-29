@@ -7,6 +7,7 @@ import { Sparkles, PiggyBank, CheckCircle2, Wallet, BarChart3, CalendarClock } f
 import { ProjectionApi } from '../api/client'
 import StatCard from '../components/StatCard'
 import PaydayOutlook from '../components/PaydayOutlook'
+import PageSpinner from '../components/PageSpinner'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
@@ -79,7 +80,7 @@ export default function Projections() {
 
       {tab === 'ai' && (
         loading && !data ? (
-          <div className="loading">{t.projections.analyzing}</div>
+          <PageSpinner />
         ) : data ? (
           <>
             <div className="card savings-card">

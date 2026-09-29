@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SlidersHorizontal, ShieldCheck, Star, User } from 'lucide-react'
 import { AdminApi } from '../api/client'
 import { useToast } from '../components/Toast'
+import PageSpinner from '../components/PageSpinner'
 import { useI18n } from '../i18n/I18nContext'
 import { GATEABLE_FEATURES, getRoleDefault, isFeatureVisible, ROLES } from '../features/registry'
 
@@ -103,7 +104,7 @@ export default function AdminFeatures() {
     } finally { setChangingRole(false) }
   }
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   // â”€â”€â”€ Role picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!selectedRole) {

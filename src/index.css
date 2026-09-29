@@ -557,6 +557,43 @@ button {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 28%, transparent);
 }
 
+.card-due-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.card-due-banner .card-due-emoji { font-size: 18px; line-height: 1.2; }
+.card-due-banner .card-due-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.card-due-banner .card-due-text strong { font-weight: 650; }
+.card-due-banner .card-due-text span { color: var(--text-muted); }
+.card-due-banner.pending {
+  background: rgba(180, 83, 9, 0.10);
+  border-color: rgba(180, 83, 9, 0.28);
+}
+.card-due-banner.pending strong { color: #9a3412; }
+.card-due-banner.overdue {
+  background: rgba(185, 28, 28, 0.10);
+  border-color: rgba(185, 28, 28, 0.30);
+}
+.card-due-banner.overdue strong { color: #991b1b; }
+.card-due-banner.paid {
+  background: rgba(15, 92, 77, 0.10);
+  border-color: rgba(15, 92, 77, 0.28);
+}
+.card-due-banner.paid strong { color: #0f5c4d; }
+.card-due-banner.paid .card-due-text span { color: color-mix(in srgb, #0f5c4d 70%, var(--text-muted)); }
+
 .credit-capacity {
   margin-top: 28px;
 }
@@ -836,6 +873,7 @@ input:focus, select:focus {
 .cal-cell.today { box-shadow: inset 0 0 0 2px var(--primary); }
 .cal-cell:disabled { cursor: default; }
 .cal-daynum {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1013,6 +1051,31 @@ input:focus, select:focus {
   flex-shrink: 0;
 }
 
+.outlook-item { align-items: stretch; }
+.outlook-item .meta { flex: 1 1 160px; min-width: 0; }
+.outlook-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-left: auto;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.outlook-fig { min-width: 0; }
+.outlook-fig .hint {
+  white-space: normal;
+  line-height: 1.25;
+}
+.outlook-fig .amount {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+@media (max-width: 640px) {
+  .outlook-figures { flex-basis: 100%; margin-left: 0; }
+}
+
 .list-item-actions {
   display: flex;
   align-items: center;
@@ -1090,16 +1153,47 @@ input:focus, select:focus {
   overscroll-behavior: contain;
 }
 
-.modal h3 {
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   margin: -26px -26px 18px;
-  padding: 26px 26px 14px;
-  font-size: 20px;
+  padding: 18px 16px 14px 26px;
   position: sticky;
   top: -26px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
   border-radius: var(--radius) var(--radius) 0 0;
-  z-index: 1;
+  z-index: 2;
+}
+.modal-head h3 {
+  margin: 0;
+  padding: 4px 0 0;
+  font-size: 20px;
+  flex: 1;
+  min-width: 0;
+}
+.modal-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2, transparent);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.modal-close:hover { border-color: var(--primary); color: var(--primary); }
+.page-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: calc(100dvh - 140px);
+  padding: 0;
 }
 
 @media (max-width: 640px) {
@@ -1112,9 +1206,9 @@ input:focus, select:focus {
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
   }
-  .modal h3 {
+  .modal-head {
     margin: -20px -20px 16px;
-    padding: 20px 20px 12px;
+    padding: 14px 12px 12px 20px;
     top: -20px;
   }
 }
@@ -1399,8 +1493,15 @@ input:focus, select:focus {
 .bh-table thead th:first-child { background: var(--bg-elevated); }
 
 .bh-cell { font-weight: 600; }
-.bh-cell.bh-over { color: #9f1d18; background: rgba(180, 35, 24, 0.10); }
-.bh-cell.bh-under { color: #14634c; background: rgba(27, 122, 92, 0.10); }
+.bh-cell.bh-over { color: #9a3412; background: rgba(180, 83, 9, 0.12); }
+.bh-cell.bh-under { color: #1e40af; background: rgba(37, 99, 235, 0.10); }
+.bh-cell.bh-nobudget { color: #334155; background: rgba(100, 116, 139, 0.12); }
+.bh-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-muted); }
+.bh-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bh-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.bh-swatch.bh-under { background: rgba(37, 99, 235, 0.35); }
+.bh-swatch.bh-over { background: rgba(180, 83, 9, 0.45); }
+.bh-swatch.bh-nobudget { background: rgba(100, 116, 139, 0.4); }
 .bh-cell.bh-zero { color: var(--text-muted); }
 
 .pill-over { background: rgba(180, 35, 24, 0.12); color: #9f1d18; }
@@ -1693,11 +1794,20 @@ input:focus, select:focus {
 
 .auth-topbar {
   position: absolute;
-  top: 20px;
+  top: calc(20px + env(safe-area-inset-top, 0px));
   right: 24px;
   display: flex;
   gap: 12px;
   align-items: center;
+  z-index: 3;
+}
+
+@media (max-width: 720px) {
+  .auth-topbar {
+    /* Clear the status bar and punch-hole camera when the WebView reports no safe-area. */
+    top: max(64px, calc(16px + env(safe-area-inset-top, 0px)));
+    right: 16px;
+  }
 }
 
 /* Laser background variant (used on the login page) */
@@ -2182,6 +2292,11 @@ html[data-theme="dark"] .auth-page--laser .auth-card {
 .cal-dot.exp { background: var(--danger); }
 .cal-dot.inc { background: #10b981; }
 .cal-dot.xfr { background: #b8943e; }
+.cal-dot.pending { background: #b8943e; box-shadow: 0 0 0 1px rgba(184, 148, 62, 0.35); }
+.cal-pending {
+  position: absolute; right: -2px; top: -2px;
+  font-size: 9px; line-height: 1;
+}
 
 /* ─── Income calendar: larger cells on mobile ────────────────────────────── */
 @media (max-width: 640px) {

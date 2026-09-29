@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import LoadingBar from './components/LoadingBar'
+import PageSpinner from './components/PageSpinner'
 import { ProtectedRoute, AdminRoute, FeatureRoute } from './auth/guards'
 
 // Route-level code splitting: each page ships in its own chunk so the initial
@@ -29,7 +30,7 @@ export default function App() {
   return (
     <>
       <LoadingBar />
-      <Suspense fallback={<div className="loading">…</div>}>
+      <Suspense fallback={<PageSpinner />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

@@ -9,6 +9,7 @@ import { iconFor, pmTypeIcon } from '../utils/icons'
 import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import PageSpinner from './PageSpinner'
 
 const emptyForm = {
   name: '', amount: '', categoryId: '', paymentMethodId: '',
@@ -142,7 +143,7 @@ export default function SubscriptionsPanel() {
   const freqLabel = (f) =>
     f === 'SemiMonthly' ? t.subscriptions.freqSemiMonthly : t.subscriptions.freqMonthly
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   return (
     <div>

@@ -197,12 +197,26 @@ export default function IncomeCalendar({
               className={`cal-cell ${has ? 'has' : ''} ${isToday ? 'today' : ''}`}
               onClick={() => setSelectedDay(d)}
             >
-              <div className="cal-daynum"><span>{d}</span></div>
+              <div className="cal-daynum">
+                <span>{d}</span>
+                {(() => {
+                  // Hourglass only for a pay/cut that is still unpaid — including past dates
+                  // that were never posted. A posted income for that job clears it.
+                  const unpaidFixed = fixed.filter((s) => !incs.some((i) => i.incomeScheduleId === s.id))
+                  const unpaidCuts = cuts.filter((c) =>
+                    !incs.some((i) => i.incomeScheduleId === c.job.id) && (c.pending || 0) > 0)
+                  return (unpaidFixed.length > 0 || unpaidCuts.length > 0)
+                    ? <span className="cal-pending" title={t.payroll.legendScheduled}>⏳</span>
+                    : null
+                })()}
+              </div>
               {/* Compact dot indicators — same style as expense calendar */}
               {has && (() => {
                 // Hide the scheduled/pending dot when a real income already covers that job on this day.
                 const unpostedFixed = fixed.filter((s) => !incs.some((i) => i.incomeScheduleId === s.id))
-                const showGold = cuts.length > 0 || unpostedFixed.length > 0
+                const unpaidCuts = cuts.filter((c) =>
+                  !incs.some((i) => i.incomeScheduleId === c.job.id) && (c.pending || 0) > 0)
+                const showGold = unpaidCuts.length > 0 || unpostedFixed.length > 0
                 return (
                   <div className="cal-dots">
                     {incs.length > 0 && (
@@ -211,8 +225,8 @@ export default function IncomeCalendar({
                     {shs.length > 0 && (
                       <span className="cal-dot" style={{ background: colorOf(shs[0].incomeScheduleId) }} />
                     )}
-                    {showGold && (
-                      <span className="cal-dot" style={{ background: GOLD }} />
+                    {showGold && incs.length === 0 && (
+                      <span className="cal-dot pending" title={t.payroll.legendScheduled} />
                     )}
                   </div>
                 )

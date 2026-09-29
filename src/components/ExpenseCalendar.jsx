@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { TrendingUp, ArrowLeftRight } from 'lucide-react'
+import { TrendingUp, ArrowLeftRight, Repeat } from 'lucide-react'
 import Modal from './Modal'
 import { formatMoney } from '../utils/format'
 import { iconFor } from '../utils/icons'
@@ -7,12 +7,11 @@ import { tintVars } from '../utils/color'
 
 const GOLD = '#b8943e'
 
-// Monthly calendar that plots the user's incomes (green) and expenses (red) on each day.
-// Currency exchanges (transfers) are also shown (gold) so the user can see when a movement
-// happened; they are not spending/income, so they never count toward the day's totals.
-// Clicking any day opens its transactions so they can be edited, and lets you add new ones.
+// Monthly calendar: expenses (red), incomes (green), exchanges (gold), and pending
+// subscriptions (⏳) until the charge posts as a real expense.
 export default function ExpenseCalendar({
-  year, month, expenses, incomes = [], exchanges = [], currency, t, categoryLabel, accountLabel,
+  year, month, expenses, incomes = [], exchanges = [], schedules = [], currency, t,
+  categoryLabel, accountLabel,
   onEditExpense, onAddExpense, onEditIncome, onAddIncome,
 }) {
   const [selectedDay, setSelectedDay] = useState(null)
@@ -21,6 +20,14 @@ export default function ExpenseCalendar({
   const dateStrFor = (day) => `${year}-${pad(month)}-${pad(day)}`
 
   const inThisMonth = (d) => d.getFullYear() === year && d.getMonth() + 1 === month
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const clampDay = (day) => Math.min(Math.max(1, day), daysInMonth)
+
+  const chargeDaysFor = (s) => {
+    const days = [clampDay(s.dayOfMonth || 1)]
+    if (s.payFrequency === 'SemiMonthly') days.push(clampDay(s.secondDayOfMonth || daysInMonth))
+    return [...new Set(days)].sort((a, b) => a - b)
+  }
 
   // Group the month's expenses / incomes by day-of-month.
   const expByDay = useMemo(() => {
@@ -53,8 +60,21 @@ export default function ExpenseCalendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exchanges, year, month])
 
+  // Pending subscription charges for this month (hidden once a matching expense is posted).
+  const pendingByDay = useMemo(() => {
+    const map = {}
+    const active = (schedules || []).filter((s) => s.active && (s.currency || currency) === currency)
+    for (const s of active) {
+      for (const day of chargeDaysFor(s)) {
+        const posted = (expByDay[day] || []).some((e) => e.expenseScheduleId === s.id)
+        if (!posted) (map[day] ||= []).push(s)
+      }
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedules, expByDay, year, month, currency, daysInMonth])
+
   const firstDow = new Date(year, month - 1, 1).getDay() // 0 = Sunday
-  const daysInMonth = new Date(year, month, 0).getDate()
   const today = new Date()
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
 
@@ -67,6 +87,7 @@ export default function ExpenseCalendar({
   const expItems = selectedDay ? (expByDay[selectedDay] || []) : []
   const incItems = selectedDay ? (incByDay[selectedDay] || []) : []
   const exItems = selectedDay ? (exByDay[selectedDay] || []) : []
+  const pendingItems = selectedDay ? (pendingByDay[selectedDay] || []) : []
 
   return (
     <div className="exp-calendar">
@@ -79,7 +100,8 @@ export default function ExpenseCalendar({
           const exps = expByDay[d] || []
           const incs = incByDay[d] || []
           const exs = exByDay[d] || []
-          const has = exps.length > 0 || incs.length > 0 || exs.length > 0
+          const pending = pendingByDay[d] || []
+          const has = exps.length > 0 || incs.length > 0 || exs.length > 0 || pending.length > 0
           const isToday = isCurrentMonth && today.getDate() === d
           return (
             <button
@@ -88,13 +110,18 @@ export default function ExpenseCalendar({
               className={`cal-cell ${has ? 'has' : ''} ${isToday ? 'today' : ''}`}
               onClick={() => setSelectedDay(d)}
             >
-              <div className="cal-daynum"><span>{d}</span></div>
-              {/* Simple colored dots so cells stay readable even on small screens */}
+              <div className="cal-daynum">
+                <span>{d}</span>
+                {pending.length > 0 && <span className="cal-pending" title={t.calendar.pendingCharge}>⏳</span>}
+              </div>
               {has && (
                 <div className="cal-dots">
                   {exps.length > 0 && <span className="cal-dot exp" />}
                   {incs.length > 0 && <span className="cal-dot inc" />}
-                  {exs.length  > 0 && <span className="cal-dot xfr" />}
+                  {exs.length > 0 && <span className="cal-dot xfr" />}
+                  {pending.length > 0 && exps.length === 0 && (
+                    <span className="cal-dot pending" title={t.calendar.pendingCharge} />
+                  )}
                 </div>
               )}
             </button>
@@ -107,12 +134,16 @@ export default function ExpenseCalendar({
           title={`${t.calendar.weekdaysLong[new Date(year, month - 1, selectedDay).getDay()]}, ${selectedDay} ${t.months[month - 1]} ${year}`}
           onClose={() => setSelectedDay(null)}
         >
-          {/* Day totals bar — shown only when there is at least one movement */}
-          {(incItems.length > 0 || expItems.length > 0 || exItems.length > 0) && (
+          {(incItems.length > 0 || expItems.length > 0 || exItems.length > 0 || pendingItems.length > 0) && (
             <div className="cal-day-summary">
               {expItems.length > 0 && (
                 <span className="neg">
                   {t.calendar.expensesTitle}: <strong>−{formatMoney(sumOf(expItems), currency)}</strong>
+                </span>
+              )}
+              {pendingItems.length > 0 && (
+                <span style={{ color: GOLD }}>
+                  {t.calendar.pendingTitle}: <strong>−{formatMoney(sumOf(pendingItems), currency)}</strong>
                 </span>
               )}
               {incItems.length > 0 && (
@@ -150,8 +181,32 @@ export default function ExpenseCalendar({
             </div>
           </div>
 
-          {incItems.length === 0 && expItems.length === 0 && exItems.length === 0 && (
+          {incItems.length === 0 && expItems.length === 0 && exItems.length === 0 && pendingItems.length === 0 && (
             <div className="empty">{t.calendar.noneDay}</div>
+          )}
+
+          {pendingItems.length > 0 && (
+            <>
+              <h4 className="cal-sec">⏳ {t.calendar.pendingTitle}</h4>
+              <div className="list">
+                {pendingItems.map((s) => (
+                  <div className="list-item tinted" key={`pend-${s.id}`} style={tintVars(s.categoryColor || GOLD)}>
+                    <span className="badge-icon"><Repeat size={16} /></span>
+                    <div className="meta">
+                      <div className="title">{s.name}</div>
+                      <div className="sub">
+                        {categoryLabel(s.categoryName)}
+                        {s.paymentMethodName ? ` · ${accountLabel(s.paymentMethodName)}` : ''}
+                        {' · '}{t.calendar.pendingCharge}
+                      </div>
+                    </div>
+                    <div className="list-item-end">
+                      <span className="amount" style={{ color: GOLD }}>−{formatMoney(s.amount, s.currency || currency)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {incItems.length > 0 && (

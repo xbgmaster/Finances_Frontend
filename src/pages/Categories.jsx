@@ -8,6 +8,7 @@ import { ICON_KEYS, iconFor, COLOR_PALETTE } from '../utils/icons'
 import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import PageSpinner from '../components/PageSpinner'
 
 const emptyForm = { name: '', icon: 'tag', color: '#0f5c4d', monthlyBudget: '' }
 
@@ -90,7 +91,7 @@ export default function Categories() {
     }
   }
 
-  if (loading) return <div className="loading">{t.common.loading}</div>
+  if (loading) return <PageSpinner />
 
   return (
     <div>
