@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { AuthApi } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -39,6 +40,7 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
   const callback = useRef(onCredential)
   callback.current = onCredential
   const [ready, setReady] = useState(false)
+  const [nativeError, setNativeError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -74,7 +76,27 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
     return () => { cancelled = true }
   }, [])
 
-  const open = () => {
+  const open = async () => {
+    setNativeError('')
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { GoogleAuth } = await import('@southdevs/capacitor-google-auth')
+        await GoogleAuth.initialize({
+          clientId: '487523170626-r9hgc3ocogoiuthbv9tbdinnhln7n23p.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: false,
+        })
+        const user = await GoogleAuth.signIn()
+        const idToken = user?.authentication?.idToken
+        if (idToken) callback.current(idToken)
+        else setNativeError(t.auth.googleFailed)
+      } catch (err) {
+        const message = String(err?.message || err || '')
+        if (/cancel/i.test(message)) return
+        setNativeError(t.auth.googleFailed)
+      }
+      return
+    }
     const target = host.current?.querySelector('[role="button"]')
     if (target) target.click()
   }
@@ -93,6 +115,7 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
             <GoogleMark />
             <span>{t.auth.continueGoogle}</span>
           </button>
+          {nativeError && <div className="auth-error">{nativeError}</div>}
         </>
       )}
       <div ref={host} className="google-btn-host" aria-hidden="true" />
