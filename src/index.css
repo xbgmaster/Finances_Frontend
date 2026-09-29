@@ -1996,7 +1996,30 @@ html[data-theme="dark"] .auth-page--laser .auth-card {
   height: 1px;
   background: var(--border, rgba(0, 0, 0, 0.12));
 }
-.google-btn-host { display: flex; justify-content: center; min-height: 40px; }
+.google-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.google-signin-btn:hover { filter: none; border-color: var(--accent); }
+html[data-theme="dark"] .google-signin-btn {
+  background: var(--accent);
+  color: #1c1608;
+  border-color: transparent;
+}
+html[data-theme="dark"] .google-signin-btn:hover { filter: brightness(1.06); }
+.google-signin-btn:disabled { opacity: 0.6; }
+.google-btn-host {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
 
 /* ===== Data table ===== */
 .data-table {
