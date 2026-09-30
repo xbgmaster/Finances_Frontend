@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { AuthApi } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 
 const GIS = 'https://accounts.google.com/gsi/client'
+const WEB_CLIENT_ID = '487523170626-r9hgc3ocogoiuthbv9tbdinnhln7n23p.apps.googleusercontent.com'
+const isNativeApp = () =>
+  import.meta.env.VITE_NATIVE === 'true' || Capacitor.isNativePlatform()
 
 function loadGis() {
   if (window.google?.accounts?.id) return Promise.resolve()
@@ -43,16 +45,19 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
   const [nativeError, setNativeError] = useState('')
 
   useEffect(() => {
+    if (isNativeApp()) {
+      setReady(true)
+      return undefined
+    }
     let cancelled = false
     ;(async () => {
       try {
-        const config = await AuthApi.googleClient()
-        if (!config?.clientId || cancelled) return
+        if (cancelled) return
         await loadGis()
         if (cancelled || !host.current) return
         const googleId = window.google.accounts.id
         googleId.initialize({
-          client_id: config.clientId,
+          client_id: WEB_CLIENT_ID,
           auto_select: false,
           cancel_on_tap_outside: true,
           callback: (resp) => {
@@ -78,11 +83,11 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
 
   const open = async () => {
     setNativeError('')
-    if (Capacitor.isNativePlatform()) {
+    if (isNativeApp()) {
       try {
         const { GoogleAuth } = await import('@southdevs/capacitor-google-auth')
         await GoogleAuth.initialize({
-          clientId: '487523170626-r9hgc3ocogoiuthbv9tbdinnhln7n23p.apps.googleusercontent.com',
+          clientId: WEB_CLIENT_ID,
           scopes: ['profile', 'email'],
           grantOfflineAccess: false,
         })
