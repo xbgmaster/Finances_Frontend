@@ -41,7 +41,7 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
   const host = useRef(null)
   const callback = useRef(onCredential)
   callback.current = onCredential
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(true)
   const [nativeError, setNativeError] = useState('')
 
   useEffect(() => {
@@ -66,12 +66,13 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
         })
         googleId.cancel()
         host.current.innerHTML = ''
+        const width = Math.max(240, Math.floor(host.current.parentElement?.getBoundingClientRect().width || 320))
         googleId.renderButton(host.current, {
           type: 'standard',
           theme: 'outline',
           size: 'large',
           text: 'continue_with',
-          width: 320,
+          width,
         })
         setReady(true)
       } catch {
@@ -101,10 +102,7 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
         const code = err?.code ? ` (${err.code})` : ''
         setNativeError(`${t.auth.googleFailed}${code}`)
       }
-      return
     }
-    const target = host.current?.querySelector('[role="button"]')
-    if (target) target.click()
   }
 
   return (
@@ -112,19 +110,21 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
       {ready && (
         <>
           <div className="auth-divider"><span>{t.auth.or}</span></div>
-          <button
-            type="button"
-            className="btn block google-signin-btn"
-            onClick={open}
-            disabled={disabled}
-          >
-            <GoogleMark />
-            <span>{t.auth.continueGoogle}</span>
-          </button>
+          <div className="google-signin-wrap">
+            <button
+              type="button"
+              className="btn block google-signin-btn"
+              onClick={open}
+              disabled={disabled}
+            >
+              <GoogleMark />
+              <span>{t.auth.continueGoogle}</span>
+            </button>
+            {!isNativeApp() && <div ref={host} className="google-btn-overlay" aria-hidden="true" />}
+          </div>
           {nativeError && <div className="auth-error">{nativeError}</div>}
         </>
       )}
-      <div ref={host} className="google-btn-host" aria-hidden="true" />
     </div>
   )
 }

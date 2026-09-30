@@ -2013,12 +2013,18 @@ html[data-theme="dark"] .google-signin-btn {
 }
 html[data-theme="dark"] .google-signin-btn:hover { filter: brightness(1.06); }
 .google-signin-btn:disabled { opacity: 0.6; }
-.google-btn-host {
+.google-signin-wrap { position: relative; }
+.google-btn-overlay {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  cursor: pointer;
+}
+.google-btn-overlay iframe {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* ===== Data table ===== */
