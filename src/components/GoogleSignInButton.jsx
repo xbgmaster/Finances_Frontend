@@ -93,7 +93,8 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
       } catch (err) {
         const message = String(err?.message || err || '')
         if (/cancel/i.test(message)) return
-        setNativeError(t.auth.googleFailed)
+        const code = err?.code ? ` (${err.code})` : ''
+        setNativeError(`${t.auth.googleFailed}${code}`)
       }
       return
     }
