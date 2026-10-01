@@ -33,7 +33,7 @@ export default function Layout() {
   const [bellSeen, setBellSeen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(
-    () => location.pathname.startsWith('/admin') || location.pathname === '/payroll',
+    () => location.pathname.startsWith('/admin'),
   )
   const [userOpen, setUserOpen] = useState(false)
   const bellRef = useRef(null)
@@ -101,16 +101,13 @@ export default function Layout() {
     { to: '/credits', label: t.nav.credits, icon: <Landmark size={18} />, feature: 'credits', tour: 'nav-credits' },
     { to: '/budget-history', label: t.nav.budgetHistory, icon: <CalendarDays size={18} />, feature: 'budget', tour: 'nav-budget' },
     { to: '/projections', label: t.nav.projections, icon: <Sparkles size={18} />, feature: 'projections', tour: 'nav-projections' },
-    // Jobs & pay is opt-in: shown here only to non-admins who were granted access
-    // (admins always have it, listed inside the Administration submenu instead).
-    { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} />, feature: 'payroll', adminHidden: true },
-  ].filter((l) => (!l.feature || canAccess(l.feature)) && !(l.adminHidden && isAdmin))
+    { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} />, feature: 'payroll', tour: 'nav-payroll' },
+  ].filter((l) => !l.feature || canAccess(l.feature))
 
   // All admin-only options live together under a collapsible "Administration" group.
   const adminLinks = isAdmin ? [
     { to: '/admin', label: t.nav.users, icon: <Users size={18} />, end: true },
     { to: '/admin/features', label: t.nav.featureAccess, icon: <SlidersHorizontal size={18} /> },
-    { to: '/payroll', label: t.nav.payroll, icon: <Briefcase size={18} /> },
   ] : []
 
   const onLogout = () => {

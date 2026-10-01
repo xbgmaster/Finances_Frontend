@@ -194,7 +194,7 @@ export default function IncomeCalendar({
             <button
               type="button"
               key={d}
-              className={`cal-cell ${has ? 'has' : ''} ${isToday ? 'today' : ''}`}
+              className={`cal-cell ${has ? 'has' : ''} ${isToday ? 'today' : ''} ${(fixed.length > 0 || cuts.length > 0) ? 'payday' : ''}`}
               onClick={() => setSelectedDay(d)}
             >
               <div className="cal-daynum">
@@ -214,18 +214,17 @@ export default function IncomeCalendar({
               {has && (() => {
                 // Hide the scheduled/pending dot when a real income already covers that job on this day.
                 const unpostedFixed = fixed.filter((s) => !incs.some((i) => i.incomeScheduleId === s.id))
-                const unpaidCuts = cuts.filter((c) =>
-                  !incs.some((i) => i.incomeScheduleId === c.job.id) && (c.pending || 0) > 0)
-                const showGold = unpaidCuts.length > 0 || unpostedFixed.length > 0
+                const showScheduled = unpostedFixed.length > 0
+                const isPayment = incs.length > 0 || cuts.length > 0
                 return (
                   <div className="cal-dots">
-                    {incs.length > 0 && (
-                      <span className="cal-dot" style={{ background: incomeDisplay(incs[0]).color || GREEN }} />
+                    {isPayment && (
+                      <span className="cal-pay" title={t.payroll.legendIncome}>💰</span>
                     )}
                     {shs.length > 0 && (
                       <span className="cal-dot" style={{ background: colorOf(shs[0].incomeScheduleId) }} />
                     )}
-                    {showGold && incs.length === 0 && (
+                    {showScheduled && (
                       <span className="cal-dot pending" title={t.payroll.legendScheduled} />
                     )}
                   </div>

@@ -46,7 +46,7 @@ export default function Payroll() {
   const [savingShift, setSavingShift] = useState(false)
   const [editingShiftId, setEditingShiftId] = useState(null)
   const [shiftError, setShiftError] = useState('')
-  const [shiftForm, setShiftForm] = useState({ incomeScheduleId: '', date: '', hours: '', hourlyRate: '', amount: '' })
+  const [shiftForm, setShiftForm] = useState({ incomeScheduleId: '', date: '', hours: '', hourlyRate: '', amount: '', description: '' })
 
   // Income edit modal (fix a payment added by mistake).
   const [showIncome, setShowIncome] = useState(false)
@@ -231,6 +231,7 @@ export default function Payroll() {
       date: `${year}-${pad(month)}-${pad(d)}`,
       hours: '',
       hourlyRate: job ? String(job.hourlyRate ?? '') : '',
+      description: '',
       // Prefill fixed jobs with their scheduled amount so the user can adjust a specific pay
       // (e.g. a raise or a lower month) before recording it.
       amount: job && job.payType !== 'Hourly' ? String(job.amount ?? '') : '',
@@ -248,6 +249,7 @@ export default function Payroll() {
       hours: String(s.hours ?? ''),
       hourlyRate: String(s.hourlyRate ?? ''),
       amount: '',
+      description: s.description || '',
     })
     setShowShift(true)
   }
@@ -286,7 +288,11 @@ export default function Payroll() {
         // Fixed job: a direct payment posted as income that day.
         const amount = parseFloat(shiftForm.amount)
         if (!amount || amount <= 0) { setSavingShift(false); return }
-        await IncomeSchedulesApi.createPayment(Number(shiftForm.incomeScheduleId), { date: shiftForm.date, amount })
+        await IncomeSchedulesApi.createPayment(Number(shiftForm.incomeScheduleId), {
+          date: shiftForm.date,
+          amount,
+          description: shiftForm.description?.trim() || undefined,
+        })
       }
       setShowShift(false)
       await refresh()
@@ -503,13 +509,13 @@ export default function Payroll() {
       {/* Dot legend */}
       <div className="cal-legend">
         <span className="cal-legend-item">
-          <span className="cal-dot" style={{ background: '#10b981' }} /> {t.payroll.legendIncome}
+          <span className="cal-pay" title={t.payroll.legendIncome}>💰</span> {t.payroll.legendIncome}
         </span>
         <span className="cal-legend-item">
           <span className="cal-dot" style={{ background: '#0f5c4d' }} /> {t.payroll.legendShift}
         </span>
         <span className="cal-legend-item">
-          <span className="cal-dot" style={{ background: '#b8943e' }} /> {t.payroll.legendScheduled}
+          <span className="cal-dot pending" /> {t.payroll.legendScheduled}
         </span>
       </div>
       <div className="card">
@@ -774,6 +780,15 @@ export default function Payroll() {
               </div>
             )}
 
+            <div className="field">
+              <label>{t.common.description}</label>
+              <input
+                type="text"
+                value={shiftForm.description || ''}
+                onChange={(e) => setShiftForm({ ...shiftForm, description: e.target.value })}
+                placeholder={t.dashboard.incomePlaceholder}
+              />
+            </div>
             {shiftError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{shiftError}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowShift(false)}>{t.common.cancel}</button>
