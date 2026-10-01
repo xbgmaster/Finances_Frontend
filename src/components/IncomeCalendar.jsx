@@ -71,11 +71,12 @@ export default function IncomeCalendar({
     const job = schedules.find((s) => s.id === i.incomeScheduleId)
     if (!job) return { color: GREEN, label: i.description || t.calendar.incomeLabel, job: null, hours: null }
     const color = job.color || TEAL
+    const custom = i.description && i.description !== job.name ? i.description : null
     if (job.payType === 'Hourly' && job.hourlyRate > 0) {
       const hours = Math.round((i.amount / job.hourlyRate) * 100) / 100
-      return { color, label: `${hours}${t.payroll.hoursShort} ${job.name}`, job, hours }
+      return { color, label: custom || `${hours}${t.payroll.hoursShort} ${job.name}`, job, hours }
     }
-    return { color, label: job.name, job, hours: null }
+    return { color, label: custom || job.name, job, hours: null }
   }
 
   const incByDay = useMemo(() => {
@@ -303,9 +304,10 @@ export default function IncomeCalendar({
                   <div className="list-item tinted" key={`sh-${s.id}`} style={tintVars(colorOf(s.incomeScheduleId))}>
                     <span className="badge-icon"><Clock size={16} /></span>
                     <div className="meta">
-                      <div className="title">{s.jobName}</div>
+                      <div className="title">{s.description || s.jobName}</div>
                       <div className="sub">
                         {s.hours}{t.payroll.hoursShort} × {formatMoney(s.hourlyRate, s.currency || currency)}
+                        {s.description ? ` · ${s.jobName}` : ''}
                         {' · '}
                         <span className={`pill ${s.posted ? 'pill-auto' : 'pill-manual'}`}>
                           {s.posted ? t.payroll.shiftPaid : t.payroll.shiftPending}
@@ -344,7 +346,7 @@ export default function IncomeCalendar({
                     <div className="list-item tinted" key={`inc-${i.id}`} style={tintVars(disp.color)}>
                       <span className="badge-icon">{disp.hours != null ? <Clock size={16} /> : <TrendingUp size={16} />}</span>
                       <div className="meta">
-                        <div className="title">{disp.job ? disp.job.name : (i.description || t.calendar.incomeLabel)}</div>
+                        <div className="title">{disp.label}</div>
                         <div className="sub">
                           {disp.hours != null
                             ? `${disp.hours}${t.payroll.hoursShort} × ${formatMoney(disp.job.hourlyRate, i.currency || currency)}`

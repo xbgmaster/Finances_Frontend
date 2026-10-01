@@ -277,11 +277,15 @@ export default function Payroll() {
         const rate = parseFloat(shiftForm.hourlyRate) || selectedShiftJob?.hourlyRate
         if (!hours || hours <= 0 || !rate || rate <= 0) { setSavingShift(false); return }
         if (editingShiftId) {
-          await IncomeSchedulesApi.updateShift(editingShiftId, { date: shiftForm.date, hours, hourlyRate: rate })
+          await IncomeSchedulesApi.updateShift(editingShiftId, {
+            date: shiftForm.date, hours, hourlyRate: rate,
+            description: shiftForm.description?.trim() || null,
+          })
         } else {
           await IncomeSchedulesApi.createShift({
             incomeScheduleId: Number(shiftForm.incomeScheduleId),
             date: shiftForm.date, hours, hourlyRate: rate,
+            description: shiftForm.description?.trim() || null,
           })
         }
       } else {
