@@ -489,7 +489,7 @@ export default function Payroll() {
                     {accountLabel(s.paymentMethodName)}
                   </div>
                 )}
-                <div className="row" style={{ marginTop: 12, justifyContent: 'flex-end', gap: 8 }}>
+                <div className="row job-actions" style={{ marginTop: 12, justifyContent: 'flex-end', gap: 8 }}>
                   {s.active && (
                     <button className="btn secondary" onClick={() => openAddPayment(null, s.id)}>
                       <Plus size={16} /> {t.payroll.addPayment}

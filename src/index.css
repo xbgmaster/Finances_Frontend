@@ -907,7 +907,7 @@ input:focus, select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 .cal-day-totals { flex: 1 1 100%; display: flex; align-items: center; gap: 12px; font-size: 15px; }
@@ -922,7 +922,7 @@ input:focus, select:focus {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  margin: 18px 0 8px;
+  margin: 28px 0 10px;
   padding: 0;
   background: none;
 }
@@ -1125,9 +1125,9 @@ input:focus, select:focus {
   inset: 0;
   background: rgba(26, 43, 51, 0.38);
   display: flex;
-  align-items: safe center;
+  align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 200;
   padding: 20px;
   /* Backdrop itself must NOT scroll — only the modal inside does.
      On iOS Safari two nested overflow-auto containers compete and the
@@ -1199,7 +1199,8 @@ input:focus, select:focus {
 @media (max-width: 640px) {
   .modal-backdrop {
     padding: 16px 12px;
-    align-items: safe center;
+    align-items: center;
+    justify-content: center;
   }
   .modal {
     padding: 20px;
@@ -2295,7 +2296,21 @@ html[data-theme="dark"] .google-signin-btn:hover { filter: brightness(1.06); }
 }
 
 /* ─── Budget History: narrow Category column ─────────────────────────────── */
-.bh-table th:first-child, .bh-table td:first-child { min-width: 110px; max-width: 130px; }
+.bh-table th:first-child, .bh-table td:first-child { min-width: 92px; max-width: 108px; width: 108px; }
+@media (max-width: 640px) {
+  .bh-table th:first-child, .bh-table td:first-child { min-width: 88px; max-width: 96px; width: 96px; }
+  .bh-table .badge-icon { width: 22px !important; height: 22px !important; font-size: 12px !important; }
+  .bh-table .title { font-size: 12px; line-height: 1.2; }
+  .bh-table th, .bh-table td { padding: 8px 4px; }
+  .job-actions { flex-wrap: wrap; }
+  .job-actions .btn {
+    font-size: 13px;
+    line-height: 1.25;
+    padding: 8px 10px;
+    white-space: normal;
+    overflow: visible;
+  }
+}
 
 /* ─── Feature access: user combo fills width ─────────────────────────────── */
 .feat-user-combo { position: relative; width: 100%; }
