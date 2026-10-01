@@ -69,11 +69,15 @@ export default function Payroll() {
   }
 
   const loadShifts = async (y, m) => {
-    const [s, ov] = await Promise.all([
+    const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+    const [s, prevS, ov] = await Promise.all([
       IncomeSchedulesApi.shifts(y, m).catch(() => []),
+      IncomeSchedulesApi.shifts(prev.y, prev.m).catch(() => []),
       IncomeSchedulesApi.occurrenceOverrides(y, m).catch(() => []),
     ])
-    setShifts(s)
+    const byId = new Map()
+    for (const shift of [...prevS, ...s]) byId.set(shift.id, shift)
+    setShifts([...byId.values()])
     setOccOverrides(ov)
   }
 
@@ -97,7 +101,11 @@ export default function Payroll() {
   // Everything is scoped to the active currency lens (like the rest of the app).
   const currencySchedules = schedules.filter((s) => s.currency === activeCurrency)
   const activeJobs = currencySchedules.filter((s) => s.active)
-  const monthShifts = shifts.filter((s) => (s.currency || activeCurrency) === activeCurrency)
+  const currencyShifts = shifts.filter((s) => (s.currency || activeCurrency) === activeCurrency)
+  const monthShifts = currencyShifts.filter((s) => {
+    const d = new Date(s.date)
+    return d.getFullYear() === year && d.getMonth() + 1 === month
+  })
   const monthIncomes = allIncomes.filter((i) => {
     const d = new Date(i.date)
     const inMonth = d.getFullYear() === year && d.getMonth() + 1 === month
@@ -528,7 +536,7 @@ export default function Payroll() {
           month={month}
           incomes={monthIncomes}
           schedules={currencySchedules}
-          shifts={monthShifts}
+          shifts={currencyShifts}
           currency={activeCurrency}
           t={t}
           accountLabel={accountLabel}

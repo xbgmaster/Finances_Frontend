@@ -24,6 +24,7 @@ export default function PaydayOutlook() {
   const [allExpenses, setAllExpenses] = useState([])
   const [shifts, setShifts] = useState([])
   const [nextMonthShifts, setNextMonthShifts] = useState([])
+  const [prevMonthShifts, setPrevMonthShifts] = useState([])
   const [occOverrides, setOccOverrides] = useState([])
   const [availableBalance, setAvailableBalance] = useState(0)
   const [outstandingDebts, setOutstandingDebts] = useState(0)
@@ -35,8 +36,9 @@ export default function PaydayOutlook() {
     let cancelled = false
     ;(async () => {
       setLoading(true)
+      const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 }
       const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
-      const [sch, expSch, inc, exp, pms, bal, credits, s, ov, sNext] = await Promise.all([
+      const [sch, expSch, inc, exp, pms, bal, credits, s, ov, sNext, sPrev] = await Promise.all([
         IncomeSchedulesApi.list().catch(() => []),
         ExpenseSchedulesApi.list().catch(() => []),
         IncomesApi.list().catch(() => []),
@@ -47,6 +49,7 @@ export default function PaydayOutlook() {
         IncomeSchedulesApi.shifts(year, month).catch(() => []),
         IncomeSchedulesApi.occurrenceOverrides(year, month).catch(() => []),
         IncomeSchedulesApi.shifts(next.y, next.m).catch(() => []),
+        IncomeSchedulesApi.shifts(prev.y, prev.m).catch(() => []),
       ])
       if (cancelled) return
       setSchedules(sch)
@@ -56,6 +59,7 @@ export default function PaydayOutlook() {
       setShifts(s)
       setOccOverrides(ov)
       setNextMonthShifts(sNext)
+      setPrevMonthShifts(sPrev)
       const entry = (bal?.byCurrency ?? []).find((c) => c.currency === activeCurrency)
       setAvailableBalance(entry?.balance ?? 0)
       const cardDebt = pms
@@ -87,6 +91,7 @@ export default function PaydayOutlook() {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const horizon = new Date(year, month - 1 + 2, 0)
     const allShifts = [
+      ...prevMonthShifts.filter((s) => (s.currency || activeCurrency) === activeCurrency),
       ...monthShifts,
       ...nextMonthShifts.filter((s) => (s.currency || activeCurrency) === activeCurrency),
     ]
@@ -237,7 +242,7 @@ export default function PaydayOutlook() {
       }
     })
   }, [
-    activeJobs, activeSubs, allIncomes, allExpenses, monthShifts, nextMonthShifts, occOverrides,
+    activeJobs, activeSubs, allIncomes, allExpenses, monthShifts, nextMonthShifts, prevMonthShifts, occOverrides,
     year, month, activeCurrency, availableBalance, outstandingDebts,
   ])
 
