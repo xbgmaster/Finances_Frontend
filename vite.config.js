@@ -8,13 +8,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        //target: 'http://localhost:5143',
-        target: 'https://finances-backend-7njx.onrender.com',
+        target: 'http://localhost:5143',
+        //target: 'https://finances-backend-7njx.onrender.com',
         changeOrigin: true,
       },
       '/uploads': {
-        //target: 'http://localhost:5143',
-        target: 'https://finances-backend-7njx.onrender.com',
+        target: 'http://localhost:5143',
+        //target: 'https://finances-backend-7njx.onrender.com',
         changeOrigin: true,
       },
     },
