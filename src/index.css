@@ -1121,8 +1121,8 @@ input:focus, select:focus {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.amount.pos { color: var(--success); }
-.amount.neg { color: var(--danger); }
+.amount.pos { color: var(--success); text-align: left;}
+.amount.neg { color: var(--danger); text-align: left;}
 
 /* ===== Modal ===== */
 .modal-backdrop {
