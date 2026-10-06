@@ -8,6 +8,7 @@ import ReceiptInput from '../components/ReceiptInput'
 import ExpenseCalendar from '../components/ExpenseCalendar'
 import PageSpinner from '../components/PageSpinner'
 import SubscriptionsPanel from '../components/SubscriptionsPanel'
+import AccountOptionGroups from '../components/AccountOptionGroups'
 import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight, CalendarDays, Repeat } from 'lucide-react'
 import { formatMoney, formatDate, localDate } from '../utils/format'
@@ -476,34 +477,19 @@ export default function Expenses() {
             </select>
             <select value={pmFilter} onChange={(e) => { setPmFilter(e.target.value); setPage(1) }} title={t.expenses.filterByAccount} data-tour="expenses-filter">
               <option value="">{t.expenses.allAccounts}</option>
-              {['Debit', 'CreditCard', 'Cash'].map((type) => {
-                const group = paymentMethods.filter((p) =>
-                  !p.archived
-                  && p.type === type
-                  && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))
-                if (group.length === 0) return null
-                const label = type === 'CreditCard'
-                  ? t.cards.sectionCreditCard
-                  : type === 'Cash'
-                    ? t.cards.sectionCash
-                    : t.cards.sectionDebit
-                return (
-                  <optgroup key={type} label={label}>
-                    {group.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {accountLabel(p.name)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )
-              })}
+              <AccountOptionGroups
+                methods={paymentMethods.filter((p) =>
+                  !p.archived && (p.currency === activeCurrency || (!p.currency && activeCurrency === baseCurrency)))}
+                accountLabel={accountLabel}
+                labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+              />
             </select>
             <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
           </div>
         )}
       </div>
 
-      <div className="subtabs" role="tablist">
+      <div className="subtabs" role="tablist" data-tour="expenses-tabs">
         <button
           type="button"
           role="tab"
@@ -971,12 +957,13 @@ export default function Expenses() {
                 onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived
-                    && (p.currency === form.currency || String(p.id) === String(form.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === form.currency || String(p.id) === String(form.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="field">
@@ -1076,12 +1063,14 @@ export default function Expenses() {
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived && p.type !== 'CreditCard'
-                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             {incomeError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{incomeError}</div>}

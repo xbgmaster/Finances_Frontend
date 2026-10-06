@@ -6,6 +6,7 @@ import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import PayCardModal from '../components/PayCardModal'
+import AccountOptionGroups from '../components/AccountOptionGroups'
 import { useToast } from '../components/Toast'
 import PageSpinner from '../components/PageSpinner'
 import { Wallet, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowLeftRight, AlertTriangle, Clock } from 'lucide-react'
@@ -635,9 +636,22 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="toolbar action-bar summary-actions" style={{ margin: '14px 0 16px', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
-        {paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived) && (
-          <button className="btn secondary" onClick={() => setShowPay(true)}>{t.cards.payAction}</button>
+      <div className="toolbar action-bar summary-actions" data-tour="summary-actions" style={{ margin: '14px 0 16px', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
+        {(() => {
+          const canPayCard = paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived && p.currency === selCur)
+          return (
+            <button
+              className="btn secondary"
+              disabled={!canPayCard}
+              title={canPayCard ? undefined : t.cards.noCardsToPay}
+              onClick={() => canPayCard && setShowPay(true)}
+            >
+              {t.cards.payAction}
+            </button>
+          )
+        })()}
+        {!paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived && p.currency === selCur) && (
+          <span className="hint" style={{ alignSelf: 'center' }}>{t.cards.noCardsToPay}</span>
         )}
         <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
         <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
@@ -1019,13 +1033,14 @@ export default function Dashboard() {
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived
-                    && p.type !== 'CreditCard'
-                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === incomeForm.currency || String(p.id) === String(incomeForm.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="row">
@@ -1095,12 +1110,13 @@ export default function Dashboard() {
                 onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived
-                    && (p.currency === expenseForm.currency || String(p.id) === String(expenseForm.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === expenseForm.currency || String(p.id) === String(expenseForm.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="field">
@@ -1184,9 +1200,13 @@ export default function Dashboard() {
                 onChange={(e) => setExchangeForm({ ...exchangeForm, fromPaymentMethodId: e.target.value })}
               >
                 <option value="">{t.common.none}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived && p.type !== 'CreditCard' && p.currency === exchangeForm.fromCurrency)
-                  .map((p) => <option key={p.id} value={p.id}>{pmLabel(p)}</option>)}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived && p.currency === exchangeForm.fromCurrency)}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="field">
@@ -1236,9 +1256,13 @@ export default function Dashboard() {
                 onChange={(e) => setExchangeForm({ ...exchangeForm, toPaymentMethodId: e.target.value })}
               >
                 <option value="">{t.dashboard.toAccountAuto}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived && p.type !== 'CreditCard' && p.currency === exchangeForm.toCurrency)
-                  .map((p) => <option key={p.id} value={p.id}>{pmLabel(p)}</option>)}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived && p.currency === exchangeForm.toCurrency)}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
               <div className="hint" style={{ marginTop: 4 }}>{t.dashboard.toAccountHint}</div>
             </div>
@@ -1320,12 +1344,15 @@ export default function Dashboard() {
                   value={cardPaymentForm.sourcePaymentMethodId}
                   onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, sourcePaymentMethodId: e.target.value })}
                 >
-                  <option value="">{t.cards.externalPayment}</option>
-                  {paymentMethods
-                    .filter((p) => !p.archived && p.type !== 'CreditCard' && (p.currency || baseCurrency) === cardCurrency)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>{accountLabel(p.name)}</option>
-                    ))}
+                  {!paymentMethods.some((p) => !p.archived && p.type === 'Cash' && (p.currency || baseCurrency) === cardCurrency) && (
+                    <option value="">{t.cards.externalPayment}</option>
+                  )}
+                  <AccountOptionGroups
+                    methods={paymentMethods.filter((p) => !p.archived && (p.currency || baseCurrency) === cardCurrency)}
+                    accountLabel={accountLabel}
+                    excludeTypes={['CreditCard']}
+                    labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                  />
                 </select>
               </div>
               <div className="field">
@@ -1357,6 +1384,7 @@ export default function Dashboard() {
       {showPay && (
         <PayCardModal
           methods={paymentMethods}
+          currency={selCur}
           onClose={() => setShowPay(false)}
           onDone={async () => { setShowPay(false); await load(); toast.success(t.common.savedOk) }}
         />

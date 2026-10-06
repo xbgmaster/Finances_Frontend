@@ -1108,6 +1108,31 @@ input:focus, select:focus {
   color: var(--tint);
 }
 
+.modal .list-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon meta"
+    "end end";
+  align-items: start;
+}
+.modal .list-item .badge-icon { grid-area: icon; }
+.modal .list-item .meta { grid-area: meta; }
+.modal .list-item-end {
+  grid-area: end;
+  width: 100%;
+  margin-left: 0;
+  justify-content: space-between;
+}
+.modal .list-item .meta .title,
+.modal .list-item .meta .sub {
+  overflow-wrap: anywhere;
+}
+.modal .list-item .amount {
+  white-space: normal;
+  min-width: 0;
+}
+
 .list-item .meta { flex: 1; min-width: 0; }
 .list-item .meta .title { font-weight: 600; }
 .list-item .meta .sub { color: var(--text-muted); font-size: 13px; }
@@ -1790,30 +1815,34 @@ input:focus, select:focus {
 /* ===== Auth pages ===== */
 .auth-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  justify-content: flex-start;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 24px 24px;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .auth-topbar {
-  position: absolute;
-  top: calc(20px + env(safe-area-inset-top, 0px));
-  right: 24px;
+  position: relative;
+  top: auto;
+  right: auto;
+  align-self: flex-end;
+  flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
   align-items: center;
   z-index: 3;
+  max-width: 100%;
 }
 
-@media (max-width: 720px) {
-  .auth-topbar {
-    /* Clear the status bar and punch-hole camera when the WebView reports no safe-area. */
-    top: max(64px, calc(16px + env(safe-area-inset-top, 0px)));
-    right: 16px;
-  }
+.auth-page .auth-card {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 /* Laser background variant (used on the login page) */

@@ -55,7 +55,7 @@ export default function Projections() {
         <p>{t.projections.subtitle}</p>
       </div>
 
-      <div className="subtabs" role="tablist" aria-label={t.projections.title}>
+      <div className="subtabs" role="tablist" aria-label={t.projections.title} data-tour="projections-tabs">
         <button
           type="button"
           role="tab"

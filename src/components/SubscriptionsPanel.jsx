@@ -10,6 +10,7 @@ import { tintVars } from '../utils/color'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 import PageSpinner from './PageSpinner'
+import AccountOptionGroups from './AccountOptionGroups'
 
 const emptyForm = {
   name: '', amount: '', categoryId: '', paymentMethodId: '',
@@ -247,9 +248,12 @@ export default function SubscriptionsPanel() {
                 onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
               >
                 <option value="" disabled>{t.common.select}</option>
-                {paymentMethods.map((p) => (
-                  <option key={p.id} value={p.id}>{pmLabel(p)}</option>
-                ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived)}
+                  accountLabel={accountLabel}
+                  formatOption={pmLabel}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="field">

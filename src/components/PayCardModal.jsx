@@ -3,16 +3,18 @@ import Modal from './Modal'
 import { PaymentMethodsApi } from '../api/client'
 import { formatMoney, localDate as todayIso } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
+import AccountOptionGroups from './AccountOptionGroups'
 
 
 // Modal to pay down a credit card. Money can come from a cash/debit account (reduces its
 // balance) or be cash/money outside saved accounts (only reduces the card debt). Both free up cupo.
-export default function PayCardModal({ methods, preselectedCardId, onClose, onDone }) {
+export default function PayCardModal({ methods, preselectedCardId, currency, onClose, onDone }) {
   const { t, accountLabel } = useI18n()
 
   const cards = useMemo(
-    () => methods.filter((m) => m.type === 'CreditCard' && !m.archived),
-    [methods],
+    () => methods.filter((m) => m.type === 'CreditCard' && !m.archived
+      && (!currency || m.currency === currency || String(m.id) === String(preselectedCardId))),
+    [methods, currency, preselectedCardId],
   )
 
   const [cardId, setCardId] = useState(
@@ -29,6 +31,7 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
   const sources = methods.filter(
     (m) => m.type !== 'CreditCard' && !m.archived && m.currency === cardCurrency,
   )
+  const hasCashAccount = sources.some((m) => m.type === 'Cash')
 
   const fillOwed = () => {
     if (card?.balance == null) return
@@ -36,12 +39,14 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
   }
 
   useEffect(() => {
-    fillOwed()
+    const cash = sources.find((s) => s.type === 'Cash')
+    setForm((f) => ({
+      ...f,
+      amount: card?.balance != null ? String(card.balance) : f.amount,
+      sourceId: cash ? String(cash.id) : '',
+    }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId, card?.balance])
-
-  const sourceTypeLabel = (type) =>
-    type === 'Cash' ? t.cards.typeCash : type === 'Debit' ? t.cards.typeDebit : type
 
   // Show the selected wallet's available balance for client-side feedback.
   const selectedSource = sources.find((s) => String(s.id) === String(form.sourceId))
@@ -116,12 +121,18 @@ export default function PayCardModal({ methods, preselectedCardId, onClose, onDo
         <div className="field">
           <label>{t.cards.payFrom}</label>
           <select value={form.sourceId} onChange={(e) => setForm({ ...form, sourceId: e.target.value })}>
-            <option value="">{t.cards.payExternal}</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>
-                {sourceTypeLabel(s.type)} · {accountLabel(s.name)} · {formatMoney(s.balance, s.currency)}
-              </option>
-            ))}
+            {!hasCashAccount && <option value="">{t.cards.payExternal}</option>}
+            <AccountOptionGroups
+              methods={sources}
+              accountLabel={accountLabel}
+              formatOption={(s) => `${accountLabel(s.name)} · ${formatMoney(s.balance, s.currency)}`}
+              labels={{
+                Debit: t.cards.sectionDebit,
+                CreditCard: t.cards.sectionCreditCard,
+                Cash: t.cards.sectionCash,
+              }}
+              excludeTypes={['CreditCard']}
+            />
           </select>
           <div className="hint" style={{ marginTop: 4 }}>
             {form.sourceId ? t.cards.payFromHint : t.cards.payExternalHint}

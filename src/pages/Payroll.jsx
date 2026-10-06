@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast'
 import { formatMoney, formatDate } from '../utils/format'
 import { COLOR_PALETTE } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
+import AccountOptionGroups from '../components/AccountOptionGroups'
 import { useCurrency } from '../currency/CurrencyContext'
 
 const now = new Date()
@@ -655,12 +656,14 @@ export default function Payroll() {
                 onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
               >
                 <option value="">{t.payroll.noAccount}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived && p.type !== 'CreditCard'
-                    && (p.currency === (form.currency || activeCurrency) || String(p.id) === String(form.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === (form.currency || activeCurrency) || String(p.id) === String(form.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={(p) => `${accountLabel(p.name)} · ${pmTypeLabel(p.type)}`}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             <div className="field">
@@ -902,12 +905,14 @@ export default function Payroll() {
                 onChange={(e) => setIncomeForm({ ...incomeForm, paymentMethodId: e.target.value })}
               >
                 <option value="">{t.common.none}</option>
-                {paymentMethods
-                  .filter((p) => !p.archived && p.type !== 'CreditCard'
-                    && (p.currency === (incomeForm.currency || activeCurrency) || String(p.id) === String(incomeForm.paymentMethodId)))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{accountLabel(p.name)} · {pmTypeLabel(p.type)}</option>
-                  ))}
+                <AccountOptionGroups
+                  methods={paymentMethods.filter((p) => !p.archived
+                    && (p.currency === (incomeForm.currency || activeCurrency) || String(p.id) === String(incomeForm.paymentMethodId)))}
+                  accountLabel={accountLabel}
+                  formatOption={(p) => `${accountLabel(p.name)} · ${pmTypeLabel(p.type)}`}
+                  excludeTypes={['CreditCard']}
+                  labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
+                />
               </select>
             </div>
             {incomeError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{incomeError}</div>}

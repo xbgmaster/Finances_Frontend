@@ -28,7 +28,10 @@ function summarySteps(t) {
     { element: '[data-tour="nav-cards"]',    popover: { title: t.tour.cardsTitle,     description: t.tour.cardsNavBody,    side: 'right', align: 'start' } },
     { element: '[data-tour="nav-expenses"]', popover: { title: t.tour.expensesTitle,  description: t.tour.expensesNavBody, side: 'right', align: 'start' } },
     { element: '[data-tour="nav-credits"]',  popover: { title: t.tour.creditsTitle,   description: t.tour.creditsNavBody,  side: 'right', align: 'start' } },
-    // 2. Page content
+    { element: '[data-tour="nav-budget"]',   popover: { title: t.tour.budgetTitle,    description: t.tour.budgetBody,      side: 'right', align: 'start' } },
+    { element: '[data-tour="nav-projections"]', popover: { title: t.tour.projectionsTitle, description: t.tour.projectionsBody, side: 'right', align: 'start' } },
+    { element: '[data-tour="nav-payroll"]',  popover: { title: t.tour.payrollTitle,   description: t.tour.payrollNavBody,  side: 'right', align: 'start' } },
+    { element: '[data-tour="summary-actions"]', popover: { title: t.tour.summaryActionsTitle, description: t.tour.summaryActionsBody, side: 'bottom', align: 'end' } },
     { element: '[data-tour="summary-kpis"]', popover: { title: t.tour.summaryKpisTitle, description: t.tour.summaryKpisBody, side: 'bottom', align: 'center' } },
     { element: '[data-tour="summary-budgets"]', popover: { title: t.tour.summaryBudgetsTitle, description: t.tour.summaryBudgetsBody, side: 'top', align: 'center' } },
     { element: '[data-tour="summary-activity"]', popover: { title: t.tour.summaryActivityTitle, description: t.tour.summaryActivityBody, side: 'top', align: 'center' } },
@@ -47,6 +50,7 @@ function cardsSteps(t) {
 
 function expensesSteps(t) {
   return [
+    { element: '[data-tour="expenses-tabs"]',       popover: { title: t.tour.expensesTabsTitle,       description: t.tour.expensesTabsBody,       side: 'bottom', align: 'start' } },
     { element: '[data-tour="expenses-filter"]',     popover: { title: t.tour.expensesFilterTitle,     description: t.tour.expensesFilterBody,     side: 'bottom', align: 'start' } },
     { element: '[data-tour="expenses-calendar"]',   popover: { title: t.tour.expensesCalendarTitle,   description: t.tour.expensesCalendarBody,   side: 'top',    align: 'center' } },
     { element: '[data-tour="expenses-categories"]', popover: { title: t.tour.expensesCategoriesTitle, description: t.tour.expensesCategoriesBody, side: 'top',    align: 'center' } },
@@ -73,6 +77,7 @@ function budgetSteps(t) {
 function projectionsSteps(t) {
   return [
     { element: '[data-tour="projections-section"]', popover: { title: t.tour.projectionsTitle, description: t.tour.projectionsPageBody, side: 'bottom', align: 'center' } },
+    { element: '[data-tour="projections-tabs"]', popover: { title: t.tour.projectionsTabsTitle, description: t.tour.projectionsTabsBody, side: 'bottom', align: 'start' } },
     ...tailSteps(t),
   ]
 }
@@ -94,6 +99,7 @@ function navFallbackSteps(t) {
     { element: '[data-tour="nav-credits"]',       popover: { title: t.tour.creditsTitle,     description: t.tour.creditsNavBody,   side: 'right', align: 'start' } },
     { element: '[data-tour="nav-budget"]',        popover: { title: t.tour.budgetTitle,      description: t.tour.budgetBody,       side: 'right', align: 'start' } },
     { element: '[data-tour="nav-projections"]',   popover: { title: t.tour.projectionsTitle, description: t.tour.projectionsBody,  side: 'right', align: 'start' } },
+    { element: '[data-tour="nav-payroll"]',       popover: { title: t.tour.payrollTitle,     description: t.tour.payrollNavBody,   side: 'right', align: 'start' } },
     ...tailSteps(t),
   ]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CreditsApi } from '../api/client'
+import { CreditsApi, PaymentMethodsApi } from '../api/client'
+import AccountOptionGroups from '../components/AccountOptionGroups'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -13,15 +14,16 @@ import {
 import { formatMoney, formatDate, localDate as today } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
-const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' }
+const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm', paymentMethodId: '' }
 
 export default function CreditDetail() {
   const { id } = useParams()
-  const { t } = useI18n()
+  const { t, accountLabel } = useI18n()
   const toast = useToast()
   const [summary, setSummary] = useState(null)
   const [schedule, setSchedule] = useState(null)
   const [payments, setPayments] = useState([])
+  const [methods, setMethods] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Payment modal handles both "add" (editing === null) and "edit" (editing = payment).
@@ -33,14 +35,16 @@ export default function CreditDetail() {
 
   const load = async () => {
     setLoading(true)
-    const [sum, sched, pays] = await Promise.all([
+    const [sum, sched, pays, pms] = await Promise.all([
       CreditsApi.summary(id),
       CreditsApi.schedule(id),
       CreditsApi.payments(id),
+      PaymentMethodsApi.list(),
     ])
     setSummary(sum)
     setSchedule(sched)
     setPayments(pays)
+    setMethods(pms)
     setLoading(false)
   }
 
@@ -63,6 +67,7 @@ export default function CreditDetail() {
       note: p.note ?? '',
       type: p.type || 'Installment',
       effect: p.effect || summary?.prepaymentEffect || 'ReduceTerm',
+      paymentMethodId: p.paymentMethodId != null ? String(p.paymentMethodId) : '',
     })
     setModalOpen(true)
   }
@@ -81,6 +86,7 @@ export default function CreditDetail() {
         note: form.note.trim() || null,
         type: form.type,
         effect: isPrepayment ? form.effect : null,
+        paymentMethodId: form.paymentMethodId ? Number(form.paymentMethodId) : null,
       }
       if (editing) await CreditsApi.updatePayment(id, editing.id, payload)
       else await CreditsApi.addPayment(id, payload)
@@ -251,6 +257,7 @@ export default function CreditDetail() {
                 </div>
                 <div className="sub">
                   {formatDate(p.date)}
+                  {p.paymentMethodName ? ` · ${accountLabel(p.paymentMethodName)}` : ''}
                   {p.note ? ` · ${p.note}` : ''}
                 </div>
               </div>
@@ -371,6 +378,26 @@ export default function CreditDetail() {
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
               />
+            </div>
+            <div className="field">
+              <label>{t.common.paymentMethod}</label>
+              <select
+                value={form.paymentMethodId}
+                onChange={(e) => setForm({ ...form, paymentMethodId: e.target.value })}
+              >
+                {!methods.some((m) => !m.archived && m.type === 'Cash' && (m.currency || cur) === cur) && (
+                  <option value="">{t.cards.payExternal}</option>
+                )}
+                <AccountOptionGroups
+                  methods={methods.filter((m) => !m.archived && (m.currency || cur) === cur)}
+                  accountLabel={accountLabel}
+                  labels={{
+                    Debit: t.cards.sectionDebit,
+                    CreditCard: t.cards.sectionCreditCard,
+                    Cash: t.cards.sectionCash,
+                  }}
+                />
+              </select>
             </div>
             <div className="field">
               <label>{t.credits.paymentNote}</label>
