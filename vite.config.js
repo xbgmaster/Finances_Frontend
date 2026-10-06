@@ -10,13 +10,13 @@ export default defineConfig({
       '/api': {
         //target: 'http://localhost:5143',
         //target: 'https://finances-backend-7njx.onrender.com',
-        target: 'https://tishe.tishe.workers.dev',
+        target: 'https://tishe-api.tishe.workers.dev',
         changeOrigin: true,
       },
       '/uploads': {
         //target: 'http://localhost:5143',
         //target: 'https://finances-backend-7njx.onrender.com',
-        target: 'https://tishe.tishe.workers.dev',
+        target: 'https://tishe-api.tishe.workers.dev',
         changeOrigin: true,
       },
     },
