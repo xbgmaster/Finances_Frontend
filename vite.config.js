@@ -9,12 +9,14 @@ export default defineConfig({
     proxy: {
       '/api': {
         //target: 'http://localhost:5143',
-        target: 'https://finances-backend-7njx.onrender.com',
+        //target: 'https://finances-backend-7njx.onrender.com',
+        target: 'https://tishe.tishe.workers.dev',
         changeOrigin: true,
       },
       '/uploads': {
         //target: 'http://localhost:5143',
-        target: 'https://finances-backend-7njx.onrender.com',
+        //target: 'https://finances-backend-7njx.onrender.com',
+        target: 'https://tishe.tishe.workers.dev',
         changeOrigin: true,
       },
     },
