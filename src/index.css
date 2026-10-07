@@ -668,6 +668,42 @@ button {
 }
 
 .btn:hover { filter: brightness(1.06); }
+.btn:disabled,
+.btn.secondary:disabled {
+  background: #1c2824;
+  color: #7e8b85;
+  border: 1px solid #141c19;
+  cursor: not-allowed;
+  filter: none;
+  opacity: 1;
+}
+html[data-theme="light"] .btn:disabled,
+html[data-theme="light"] .btn.secondary:disabled {
+  background: #c5cfc9;
+  color: #5e6964;
+  border-color: #b3beb8;
+}
+.tip-wrap { position: relative; display: inline-flex; }
+.tip {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+.tip-wrap:hover .tip,
+.tip-wrap:focus-within .tip { display: block; }
 .btn.secondary { background: var(--card-hover); color: var(--text); border: 1px solid var(--border); }
 .btn.danger {
   background: rgba(239, 68, 68, 0.14);

@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import ReceiptInput from '../components/ReceiptInput'
 import PayCardModal from '../components/PayCardModal'
 import AccountOptionGroups from '../components/AccountOptionGroups'
+import AmountInput from '../components/AmountInput'
 import { useToast } from '../components/Toast'
 import PageSpinner from '../components/PageSpinner'
 import { Wallet, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowLeftRight, AlertTriangle, Clock } from 'lucide-react'
@@ -640,19 +641,19 @@ export default function Dashboard() {
         {(() => {
           const canPayCard = paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived && p.currency === selCur)
           return (
-            <button
-              className="btn secondary"
-              disabled={!canPayCard}
-              title={canPayCard ? undefined : t.cards.noCardsToPay}
-              onClick={() => canPayCard && setShowPay(true)}
-            >
-              {t.cards.payAction}
-            </button>
+            <span className="tip-wrap">
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={!canPayCard}
+                onClick={() => canPayCard && setShowPay(true)}
+              >
+                {t.cards.payAction}
+              </button>
+              {!canPayCard && <span className="tip" role="tooltip">{t.cards.noCardsToPay}</span>}
+            </span>
           )
         })()}
-        {!paymentMethods.some((p) => p.type === 'CreditCard' && !p.archived && p.currency === selCur) && (
-          <span className="hint" style={{ alignSelf: 'center' }}>{t.cards.noCardsToPay}</span>
-        )}
         <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
         <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
         <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
@@ -994,10 +995,11 @@ export default function Dashboard() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.common.amount}</label>
-                <input
-                  type="number" step="0.01" min="0" autoFocus required
+                <AmountInput
+                  currency={incomeForm.currency || activeCurrency}
+                  autoFocus required
                   value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  onChange={(v) => setIncomeForm({ ...incomeForm, amount: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -1062,10 +1064,11 @@ export default function Dashboard() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.common.amount}</label>
-                <input
-                  type="number" step="0.01" min="0" autoFocus required
+                <AmountInput
+                  currency={expenseForm.currency || activeCurrency}
+                  autoFocus required
                   value={expenseForm.amount}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  onChange={(v) => setExpenseForm({ ...expenseForm, amount: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -1179,10 +1182,11 @@ export default function Dashboard() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.dashboard.youSend}</label>
-                <input
-                  type="number" step="0.01" min="0" autoFocus required
+                <AmountInput
+                  currency={exchangeForm.fromCurrency || activeCurrency}
+                  autoFocus required
                   value={exchangeForm.fromAmount}
-                  onChange={(e) => setExchangeForm({ ...exchangeForm, fromAmount: e.target.value })}
+                  onChange={(v) => setExchangeForm({ ...exchangeForm, fromAmount: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -1322,10 +1326,11 @@ export default function Dashboard() {
               <div className="field-row">
                 <div className="field" style={{ flex: 1 }}>
                   <label>{t.common.amount}</label>
-                  <input
-                    type="number" step="0.01" min="0" required autoFocus
+                  <AmountInput
+                    currency={cardCurrency}
+                    required autoFocus
                     value={cardPaymentForm.amount}
-                    onChange={(e) => setCardPaymentForm({ ...cardPaymentForm, amount: e.target.value })}
+                    onChange={(v) => setCardPaymentForm({ ...cardPaymentForm, amount: v })}
                     placeholder="0.00"
                   />
                 </div>

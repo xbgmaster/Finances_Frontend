@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CreditsApi, PaymentMethodsApi } from '../api/client'
+import AmountInput from '../components/AmountInput'
 import AccountOptionGroups from '../components/AccountOptionGroups'
 import StatCard from '../components/StatCard'
 import Modal from '../components/Modal'
@@ -11,7 +12,7 @@ import {
   CheckCircle2, Target, PiggyBank, Hourglass, CalendarDays, Receipt,
   TrendingUp, Landmark, Zap, Banknote, AlertTriangle, Clock,
 } from 'lucide-react'
-import { formatMoney, formatDate, localDate as today } from '../utils/format'
+import { formatMoney, formatAmount, formatDate, localDate as today } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 
 const emptyPayment = { amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm', paymentMethodId: '' }
@@ -359,11 +360,12 @@ export default function CreditDetail() {
               <label>
                 {t.credits.paymentAmount}{cur ? ` (${cur})` : ''}
               </label>
-              <input
-                type="number" step="0.01" min="0" autoFocus required
+              <AmountInput
+                currency={cur}
+                autoFocus required
                 value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder={formatMoney(summary.monthlyInstallment, cur)}
+                onChange={(v) => setForm({ ...form, amount: v })}
+                placeholder={formatAmount(summary.monthlyInstallment, cur)}
               />
               {form.type === 'Installment' && (
                 <div className="hint" style={{ marginTop: 6 }}>

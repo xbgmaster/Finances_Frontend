@@ -5,10 +5,11 @@ import { CreditsApi } from '../api/client'
 import Modal from '../components/Modal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
-import { formatMoney, formatDate, getBaseCurrency, localDate as today } from '../utils/format'
+import { formatMoney, formatAmount, formatDate, getBaseCurrency, localDate as today } from '../utils/format'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import AmountInput from '../components/AmountInput'
 import PageSpinner from '../components/PageSpinner'
 
 const currentDay = () => String(new Date().getDate())
@@ -386,10 +387,11 @@ export default function Credits() {
             <div className="row" style={{ gap: 12 }}>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.principal}</label>
-                <input
-                  type="number" step="0.01" min="0" required
+                <AmountInput
+                  currency={form.currency || activeCurrency}
+                  required
                   value={form.principal}
-                  onChange={(e) => setForm({ ...form, principal: e.target.value })}
+                  onChange={(v) => setForm({ ...form, principal: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -466,10 +468,10 @@ export default function Credits() {
               </div>
               <div className="field" style={{ flex: 1 }}>
                 <label>{t.credits.monthlyFixedFee}</label>
-                <input
-                  type="number" step="0.01" min="0"
+                <AmountInput
+                  currency={form.currency || activeCurrency}
                   value={form.monthlyFixedFee}
-                  onChange={(e) => setForm({ ...form, monthlyFixedFee: e.target.value })}
+                  onChange={(v) => setForm({ ...form, monthlyFixedFee: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -510,11 +512,12 @@ export default function Credits() {
             )}
             <div className="field">
               <label>{t.credits.paymentAmount}</label>
-              <input
-                type="number" step="0.01" min="0" autoFocus required
+              <AmountInput
+                currency={payFor.currency || activeCurrency}
+                autoFocus required
                 value={payment.amount}
-                onChange={(e) => setPayment({ ...payment, amount: e.target.value })}
-                placeholder={formatMoney(payFor.monthlyInstallment, payFor.currency)}
+                onChange={(v) => setPayment({ ...payment, amount: v })}
+                placeholder={formatAmount(payFor.monthlyInstallment, payFor.currency)}
               />
               {payment.type === 'Installment' && (
                 <div className="hint" style={{ marginTop: 6 }}>

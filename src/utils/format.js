@@ -16,12 +16,46 @@ export const setBaseCurrency = (code) => {
 export const getBaseCurrency = () => baseCurrency
 
 // Formatea un monto. Si no se pasa 'currency', usa la moneda base del usuario.
-export const formatMoney = (value, currency) =>
-  new Intl.NumberFormat(currentLocale, {
-    style: 'currency',
-    currency: currency || baseCurrency,
+const AMOUNT_LOCALE = {
+  CAD: 'en-CA', USD: 'en-US', COP: 'es-CO', CLP: 'es-CL',
+  EUR: 'de-DE', GBP: 'en-GB', MXN: 'es-MX', ARS: 'es-AR', BRL: 'pt-BR',
+}
+
+export const amountLocale = (currency) => AMOUNT_LOCALE[currency] || AMOUNT_LOCALE[baseCurrency] || 'en-CA'
+
+export const formatAmount = (value, currency) => {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return ''
+  return new Intl.NumberFormat(amountLocale(currency), {
     minimumFractionDigits: 2,
-  }).format(Number(value || 0))
+    maximumFractionDigits: 2,
+  }).format(n)
+}
+
+export const parseAmount = (text, currency) => {
+  if (text == null || String(text).trim() === '') return NaN
+  const parts = new Intl.NumberFormat(amountLocale(currency)).formatToParts(12345.6)
+  const group = parts.find((p) => p.type === 'group')?.value || ','
+  const decimal = parts.find((p) => p.type === 'decimal')?.value || '.'
+  let s = String(text).trim().replace(/\s/g, '')
+  if (group) s = s.split(group).join('')
+  if (decimal !== '.') s = s.replace(decimal, '.')
+  const n = Number(s)
+  return Number.isFinite(n) ? n : NaN
+}
+
+export const formatMoney = (value, currency) => {
+  const code = currency || baseCurrency
+  try {
+    return new Intl.NumberFormat(amountLocale(code), {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 2,
+    }).format(Number(value || 0))
+  } catch {
+    return formatAmount(value, code)
+  }
+}
 
 /**
  * Returns today's date as "YYYY-MM-DD" in the device's LOCAL timezone.

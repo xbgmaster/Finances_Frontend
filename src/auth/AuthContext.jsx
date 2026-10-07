@@ -44,6 +44,8 @@ export function AuthProvider({ children }) {
     saveSession(result)
     setToken(result.token)
     setUser(result.user)
+    localStorage.removeItem('finances.currency')
+    window.dispatchEvent(new Event('finances:currency-reset'))
   }
 
   const login = async (email, password) => {
@@ -69,6 +71,7 @@ export function AuthProvider({ children }) {
     const rt = getStoredRefreshToken()
     if (rt) AuthApi.logout(rt).catch(() => {})
     clearSession()
+    localStorage.removeItem('finances.currency')
     setToken(null)
     setUser(null)
   }

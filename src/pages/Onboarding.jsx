@@ -9,6 +9,7 @@ import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 import CountrySelect from '../components/CountrySelect'
 import { CURRENCIES } from '../utils/currencies'
+import AmountInput from '../components/AmountInput'
 import { findCountry } from '../utils/countries'
 
 export default function Onboarding() {
@@ -102,8 +103,8 @@ export default function Onboarding() {
           </div>
           <div className="field">
             <label>{t.onboarding.monthlyIncomeTarget}</label>
-            <input type="number" step="0.01" min="0" value={form.monthlyIncomeTarget}
-              onChange={(e) => setForm({ ...form, monthlyIncomeTarget: e.target.value })} placeholder="0.00" />
+            <AmountInput currency={form.currency} value={form.monthlyIncomeTarget}
+              onChange={(v) => setForm({ ...form, monthlyIncomeTarget: v })} placeholder="0.00" />
           </div>
           <button type="submit" className="btn block" disabled={loading}>
             {loading ? t.common.saving : t.onboarding.finish}

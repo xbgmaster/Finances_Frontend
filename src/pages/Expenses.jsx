@@ -9,6 +9,7 @@ import ExpenseCalendar from '../components/ExpenseCalendar'
 import PageSpinner from '../components/PageSpinner'
 import SubscriptionsPanel from '../components/SubscriptionsPanel'
 import AccountOptionGroups from '../components/AccountOptionGroups'
+import AmountInput from '../components/AmountInput'
 import { useToast } from '../components/Toast'
 import { TrendingUp, TrendingDown, Scale, ArrowLeftRight, CalendarDays, Repeat } from 'lucide-react'
 import { formatMoney, formatDate, localDate } from '../utils/format'
@@ -909,10 +910,11 @@ export default function Expenses() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.common.amount}</label>
-                <input
-                  type="number" step="0.01" min="0" autoFocus required
+                <AmountInput
+                  currency={form.currency || activeCurrency}
+                  autoFocus required
                   value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  onChange={(v) => setForm({ ...form, amount: v })}
                   placeholder="0.00"
                 />
               </div>
@@ -1024,10 +1026,11 @@ export default function Expenses() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.common.amount}</label>
-                <input
-                  type="number" step="0.01" min="0" autoFocus required
+                <AmountInput
+                  currency={incomeForm.currency || activeCurrency}
+                  autoFocus required
                   value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  onChange={(v) => setIncomeForm({ ...incomeForm, amount: v })}
                   placeholder="0.00"
                 />
               </div>

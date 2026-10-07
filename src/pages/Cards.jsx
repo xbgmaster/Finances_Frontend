@@ -10,6 +10,7 @@ import { formatMoney, formatDate } from '../utils/format'
 import { pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
+import AmountInput from '../components/AmountInput'
 
 const TYPES = ['Debit', 'Cash', 'CreditCard']
 
@@ -224,7 +225,7 @@ function MethodCard({
       </div>
 
       <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
-        {isCard && <button className="btn" onClick={() => onPay(m.id)}>{t.cards.payAction}</button>}
+        {isCard && <button type="button" className="btn" onClick={() => onPay(m.id)}>{t.cards.payAction}</button>}
         <button className="btn secondary" onClick={() => onDetails(m.id)}>{t.cards.details}</button>
         <button className="btn secondary" onClick={() => onEdit(m)}>{t.common.edit}</button>
         <button
@@ -473,11 +474,10 @@ export default function Cards() {
               <>
                 <div className="field">
                   <label>{t.cards.creditLimit} ({form.currency || activeCurrency})</label>
-                  <input
-                    type="number" step="0.01" min="0"
+                  <AmountInput
+                    currency={form.currency || activeCurrency}
                     value={form.creditLimit}
-                    onChange={(e) => setForm({ ...form, creditLimit: e.target.value })}
-                    onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
+                    onChange={(v) => setForm({ ...form, creditLimit: v })}
                     placeholder="0.00"
                   />
                 </div>

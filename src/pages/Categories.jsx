@@ -9,6 +9,7 @@ import { formatMoney } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 import PageSpinner from '../components/PageSpinner'
+import AmountInput from '../components/AmountInput'
 
 const emptyForm = { name: '', icon: 'tag', color: '#0f5c4d', monthlyBudget: '' }
 
@@ -210,10 +211,10 @@ export default function Categories() {
 
             <div className="field">
               <label>{t.categories.monthlyBudget} ({activeCurrency})</label>
-              <input
-                type="number" step="0.01" min="0"
+              <AmountInput
+                currency={activeCurrency}
                 value={form.monthlyBudget}
-                onChange={(e) => setForm({ ...form, monthlyBudget: e.target.value })}
+                onChange={(v) => setForm({ ...form, monthlyBudget: v })}
                 placeholder="0.00"
               />
               <div className="hint" style={{ marginTop: 6 }}>{t.categories.budgetCurrencyHint.replace('{cur}', activeCurrency)}</div>

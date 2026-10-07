@@ -29,6 +29,16 @@ export function CurrencyProvider({ children }) {
     setCurrencyState(code)
   }
 
+  // Login clears the saved lens so the next session opens on the profile currency.
+  useEffect(() => {
+    const reset = () => {
+      localStorage.removeItem(STORAGE_KEY)
+      setCurrencyState(baseCurrency)
+    }
+    window.addEventListener('finances:currency-reset', reset)
+    return () => window.removeEventListener('finances:currency-reset', reset)
+  }, [baseCurrency])
+
   const value = useMemo(
     () => ({ currency, setCurrency, baseCurrency }),
     [currency, baseCurrency],

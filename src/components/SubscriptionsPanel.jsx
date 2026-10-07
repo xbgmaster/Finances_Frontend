@@ -11,6 +11,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 import PageSpinner from './PageSpinner'
 import AccountOptionGroups from './AccountOptionGroups'
+import AmountInput from './AmountInput'
 
 const emptyForm = {
   name: '', amount: '', categoryId: '', paymentMethodId: '',
@@ -216,10 +217,11 @@ export default function SubscriptionsPanel() {
             <div className="field-row">
               <div className="field">
                 <label>{t.common.amount}</label>
-                <input
-                  type="number" step="0.01" min="0.01" required
+                <AmountInput
+                  currency={activeCurrency}
+                  required
                   value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  onChange={(v) => setForm({ ...form, amount: v })}
                 />
               </div>
               <div className="field">

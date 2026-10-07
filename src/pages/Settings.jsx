@@ -7,6 +7,7 @@ import { CURRENCIES } from '../utils/currencies'
 import { findCountry } from '../utils/countries'
 import CountrySelect from '../components/CountrySelect'
 import PageSpinner from '../components/PageSpinner'
+import AmountInput from '../components/AmountInput'
 
 export default function Settings() {
   const { t } = useI18n()
@@ -121,10 +122,10 @@ export default function Settings() {
 
           <div className="field">
             <label>{t.settings.monthlyIncomeTarget}</label>
-            <input
-              type="number" step="0.01" min="0"
+            <AmountInput
+              currency={form.currency}
               value={form.monthlyIncomeTarget}
-              onChange={(e) => setForm({ ...form, monthlyIncomeTarget: e.target.value })}
+              onChange={(v) => setForm({ ...form, monthlyIncomeTarget: v })}
               placeholder="0.00"
             />
           </div>

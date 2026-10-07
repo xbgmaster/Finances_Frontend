@@ -11,6 +11,7 @@ import { formatMoney, formatDate } from '../utils/format'
 import { COLOR_PALETTE } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import AccountOptionGroups from '../components/AccountOptionGroups'
+import AmountInput from '../components/AmountInput'
 import { useCurrency } from '../currency/CurrencyContext'
 
 const now = new Date()
@@ -576,17 +577,19 @@ export default function Payroll() {
               <div className="field" style={{ flex: 2 }}>
                 <label>{form.payType === 'Hourly' ? t.payroll.hourlyRate : t.common.amount}</label>
                 {form.payType === 'Hourly' ? (
-                  <input
-                    type="number" step="0.01" min="0" required
+                  <AmountInput
+                    currency={form.currency || activeCurrency}
+                    required
                     value={form.hourlyRate}
-                    onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+                    onChange={(v) => setForm({ ...form, hourlyRate: v })}
                     placeholder="0.00"
                   />
                 ) : (
-                  <input
-                    type="number" step="0.01" min="0" required
+                  <AmountInput
+                    currency={form.currency || activeCurrency}
+                    required
                     value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    onChange={(v) => setForm({ ...form, amount: v })}
                     placeholder="0.00"
                   />
                 )}
@@ -762,10 +765,10 @@ export default function Payroll() {
                 </div>
                 <div className="field">
                   <label>{t.payroll.hourlyRate}</label>
-                  <input
-                    type="number" step="0.01" min="0"
+                  <AmountInput
+                    currency={selectedShiftJob?.currency || activeCurrency}
                     value={shiftForm.hourlyRate}
-                    onChange={(e) => setShiftForm({ ...shiftForm, hourlyRate: e.target.value })}
+                    onChange={(v) => setShiftForm({ ...shiftForm, hourlyRate: v })}
                     placeholder="0.00"
                   />
                 </div>
@@ -785,10 +788,11 @@ export default function Payroll() {
                 </div>
                 <div className="field" style={{ flex: 1 }}>
                   <label>{t.common.amount}</label>
-                  <input
-                    type="number" step="0.01" min="0" required autoFocus
+                  <AmountInput
+                    currency={selectedShiftJob?.currency || activeCurrency}
+                    required autoFocus
                     value={shiftForm.amount}
-                    onChange={(e) => setShiftForm({ ...shiftForm, amount: e.target.value })}
+                    onChange={(v) => setShiftForm({ ...shiftForm, amount: v })}
                     placeholder="0.00"
                   />
                 </div>
@@ -852,10 +856,11 @@ export default function Payroll() {
                   </div>
                   <div className="field" style={{ flex: 1 }}>
                     <label>{t.payroll.hourlyRate}</label>
-                    <input
-                      type="number" step="0.01" min="0" required
+                    <AmountInput
+                      currency={incomeForm.currency || activeCurrency}
+                      required
                       value={incomeForm.hourlyRate}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, hourlyRate: e.target.value })}
+                      onChange={(v) => setIncomeForm({ ...incomeForm, hourlyRate: v })}
                       placeholder="0.00"
                     />
                   </div>
@@ -868,10 +873,11 @@ export default function Payroll() {
               <div className="field-row">
                 <div className="field" style={{ flex: 1 }}>
                   <label>{t.common.amount}</label>
-                  <input
-                    type="number" step="0.01" min="0" required autoFocus
+                  <AmountInput
+                    currency={incomeForm.currency || activeCurrency}
+                    required autoFocus
                     value={incomeForm.amount}
-                    onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                    onChange={(v) => setIncomeForm({ ...incomeForm, amount: v })}
                     placeholder="0.00"
                   />
                 </div>

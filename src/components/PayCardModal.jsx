@@ -4,6 +4,7 @@ import { PaymentMethodsApi } from '../api/client'
 import { formatMoney, localDate as todayIso } from '../utils/format'
 import { useI18n } from '../i18n/I18nContext'
 import AccountOptionGroups from './AccountOptionGroups'
+import AmountInput from './AmountInput'
 
 
 // Modal to pay down a credit card. Money can come from a cash/debit account (reduces its
@@ -110,10 +111,11 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
 
         <div className="field">
           <label>{t.common.amount} {cardCurrency ? `(${cardCurrency})` : ''}</label>
-          <input
-            type="number" step="0.01" min="0" autoFocus required
+          <AmountInput
+            currency={cardCurrency}
+            autoFocus required
             value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            onChange={(v) => setForm({ ...form, amount: v })}
             placeholder="0.00"
           />
         </div>
