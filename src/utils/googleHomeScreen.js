@@ -12,7 +12,7 @@ export function isHomeScreenApp() {
 export function startGoogleHomeScreenSignIn() {
   const nonce = crypto.randomUUID()
   localStorage.setItem(NONCE_KEY, nonce)
-  const redirectUri = `${window.location.origin}/`
+  const redirectUri = window.location.origin
   const params = new URLSearchParams({
     client_id: WEB_CLIENT_ID,
     redirect_uri: redirectUri,
