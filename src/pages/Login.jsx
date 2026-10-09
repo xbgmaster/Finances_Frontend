@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -7,6 +7,7 @@ import ThemeSwitcher from '../components/ThemeSwitcher'
 import BrandLogo from '../components/BrandLogo'
 import AuthLaserBackground from '../components/AuthLaserBackground'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import { takeGoogleRedirect } from '../utils/googleHomeScreen'
 
 export default function Login() {
   const { t } = useI18n()
@@ -35,6 +36,18 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const pending = takeGoogleRedirect()
+    if (!pending) return
+    if (pending.error || !pending.idToken) {
+      setError(t.auth.googleFailed)
+      return
+    }
+    signInWithGoogle(pending.idToken)
+    // Only on the first paint, after Google sends the browser back.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signInWithGoogle = async (idToken) => {
     setError('')

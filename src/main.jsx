@@ -8,7 +8,10 @@ import { CurrencyProvider } from './currency/CurrencyContext.jsx'
 import { ToastProvider } from './components/Toast.jsx'
 import { ThemeProvider } from './theme/ThemeContext.jsx'
 import { initNativeShell } from './native.js'
+import { stashGoogleRedirect } from './utils/googleHomeScreen.js'
 import './index.css'
+
+stashGoogleRedirect()
 
 const Router = import.meta.env.VITE_NATIVE === 'true' ? HashRouter : BrowserRouter
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useI18n } from '../i18n/I18nContext'
+import { isHomeScreenApp, startGoogleHomeScreenSignIn } from '../utils/googleHomeScreen'
 
 const GIS = 'https://accounts.google.com/gsi/client'
 const WEB_CLIENT_ID = '487523170626-r9hgc3ocogoiuthbv9tbdinnhln7n23p.apps.googleusercontent.com'
@@ -84,6 +85,10 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
 
   const open = async () => {
     setNativeError('')
+    if (!isNativeApp() && isHomeScreenApp()) {
+      startGoogleHomeScreenSignIn()
+      return
+    }
     if (isNativeApp()) {
       try {
         const { GoogleAuth } = await import('@southdevs/capacitor-google-auth')
@@ -120,7 +125,7 @@ export default function GoogleSignInButton({ onCredential, disabled }) {
               <GoogleMark />
               <span>{t.auth.continueGoogle}</span>
             </button>
-            {!isNativeApp() && <div ref={host} className="google-btn-overlay" aria-hidden="true" />}
+            {!isNativeApp() && !isHomeScreenApp() && <div ref={host} className="google-btn-overlay" aria-hidden="true" />}
           </div>
           {nativeError && <div className="auth-error">{nativeError}</div>}
         </>

@@ -62,7 +62,7 @@ export default function Dashboard() {
     amount: '', description: '', categoryId: '', date: '', currency: '',
     paymentMethodId: '', receipt: null, existingReceiptUrl: null, removeReceipt: false,
   })
-  const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', rate: '', date: '', note: '', fromPaymentMethodId: '', toPaymentMethodId: '' })
+  const [exchangeForm, setExchangeForm] = useState({ fromCurrency: '', fromAmount: '', toCurrency: '', toAmount: '', rate: '', date: '', note: '', fromPaymentMethodId: '', toPaymentMethodId: '' })
 
   const years = useMemo(() => {
     const y = now.getFullYear()
@@ -242,7 +242,7 @@ export default function Dashboard() {
     const from = activeCurrency
     const to = CURRENCIES.find((c) => c !== from) || from
     setExchangeForm({
-      fromCurrency: from, fromAmount: '', toCurrency: to, rate: '', date: localDate(), note: '',
+      fromCurrency: from, fromAmount: '', toCurrency: to, toAmount: '', rate: '', date: localDate(), note: '',
       fromPaymentMethodId: bestPm(paymentMethods, from, { excludeCredit: true }),
       toPaymentMethodId: bestPm(paymentMethods, to, { excludeCredit: true }),
     })
@@ -256,6 +256,7 @@ export default function Dashboard() {
       fromCurrency: x.fromCurrency,
       fromAmount: String(x.fromAmount ?? ''),
       toCurrency: x.toCurrency,
+      toAmount: String(x.toAmount ?? ''),
       rate: String(x.rate ?? ''),
       date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
       note: x.note || '',
@@ -265,19 +266,44 @@ export default function Dashboard() {
     setModal('exchange')
   }
 
-  // Destination amount is derived: what you send × the rate (value of 1 source unit).
-  const exchangeReceive = () => {
+  const moneyText = (n) => (Number.isFinite(n) ? String(Math.round(n * 100) / 100) : '')
+  const rateText = (n) => (Number.isFinite(n) && n > 0 ? String(Math.round(n * 1e6) / 1e6) : '')
+
+  // Two of the three numbers determine the third.
+  // Send + receive → rate. Receive + rate → send. Send + rate → receive.
+  const applyExchange = (field, value) => {
+    setExchangeForm((f) => {
+      const next = { ...f, [field]: value }
+      const from = parseFloat(field === 'fromAmount' ? value : f.fromAmount)
+      const to = parseFloat(field === 'toAmount' ? value : f.toAmount)
+      const rate = parseFloat(field === 'rate' ? value : f.rate)
+      if (field === 'fromAmount') {
+        if (from > 0 && to > 0) next.rate = rateText(to / from)
+        else if (from > 0 && rate > 0) next.toAmount = moneyText(from * rate)
+      } else if (field === 'toAmount') {
+        if (from > 0 && to > 0) next.rate = rateText(to / from)
+        else if (to > 0 && rate > 0) next.fromAmount = moneyText(to / rate)
+      } else if (field === 'rate') {
+        if (from > 0 && rate > 0) next.toAmount = moneyText(from * rate)
+        else if (to > 0 && rate > 0) next.fromAmount = moneyText(to / rate)
+      }
+      return next
+    })
+  }
+
+  const exchangeReady = () => {
     const from = parseFloat(exchangeForm.fromAmount)
+    const to = parseFloat(exchangeForm.toAmount)
     const rate = parseFloat(exchangeForm.rate)
-    return from > 0 && rate > 0 ? Math.round(from * rate * 100) / 100 : 0
+    return from > 0 && to > 0 && rate > 0
   }
 
   const addExchange = async (e) => {
     e.preventDefault()
     const fromAmount = parseFloat(exchangeForm.fromAmount)
     const rate = parseFloat(exchangeForm.rate)
-    const toAmount = exchangeReceive()
-    if (!fromAmount || fromAmount <= 0 || !rate || rate <= 0 || toAmount <= 0) return
+    const toAmount = parseFloat(exchangeForm.toAmount)
+    if (!fromAmount || fromAmount <= 0 || !rate || rate <= 0 || !toAmount || toAmount <= 0) return
     if (exchangeForm.fromCurrency === exchangeForm.toCurrency) return
     setSaving(true)
     try {
@@ -1186,7 +1212,7 @@ export default function Dashboard() {
                   currency={exchangeForm.fromCurrency || activeCurrency}
                   autoFocus required
                   value={exchangeForm.fromAmount}
-                  onChange={(v) => setExchangeForm({ ...exchangeForm, fromAmount: v })}
+                  onChange={(v) => applyExchange('fromAmount', v)}
                   placeholder="0.00"
                 />
               </div>
@@ -1220,7 +1246,7 @@ export default function Dashboard() {
                 <input
                   type="number" step="any" min="0" required
                   value={exchangeForm.rate}
-                  onChange={(e) => setExchangeForm({ ...exchangeForm, rate: e.target.value })}
+                  onChange={(e) => applyExchange('rate', e.target.value)}
                   placeholder="0.00"
                 />
                 <span className="rate-cur">{exchangeForm.toCurrency}</span>
@@ -1230,11 +1256,10 @@ export default function Dashboard() {
             <div className="field-row">
               <div className="field" style={{ flex: 2 }}>
                 <label>{t.dashboard.youReceive}</label>
-                <input
-                  type="number"
-                  value={exchangeReceive() || ''}
-                  readOnly
-                  tabIndex={-1}
+                <AmountInput
+                  currency={exchangeForm.toCurrency}
+                  value={exchangeForm.toAmount}
+                  onChange={(v) => applyExchange('toAmount', v)}
                   placeholder="0.00"
                 />
               </div>
@@ -1273,7 +1298,7 @@ export default function Dashboard() {
             {exchangeForm.fromCurrency === exchangeForm.toCurrency && (
               <div className="field-hint" style={{ color: 'var(--danger)' }}>{t.dashboard.exchangeSameCurrency}</div>
             )}
-            {exchangeReceive() > 0 && exchangeForm.fromCurrency !== exchangeForm.toCurrency && (
+            {exchangeReady() && exchangeForm.fromCurrency !== exchangeForm.toCurrency && (
               <div className="exchange-summary">
                 <span className="xs-leg neg">
                   −{formatMoney(parseFloat(exchangeForm.fromAmount) || 0, exchangeForm.fromCurrency)}
@@ -1281,7 +1306,7 @@ export default function Dashboard() {
                 </span>
                 <span className="xs-arrow">→</span>
                 <span className="xs-leg pos">
-                  +{formatMoney(exchangeReceive(), exchangeForm.toCurrency)}
+                  +{formatMoney(parseFloat(exchangeForm.toAmount) || 0, exchangeForm.toCurrency)}
                   <em>{exchangeForm.toCurrency}</em>
                 </span>
               </div>
@@ -1308,7 +1333,7 @@ export default function Dashboard() {
               <button
                 type="submit"
                 className="btn"
-                disabled={saving || exchangeForm.fromCurrency === exchangeForm.toCurrency || exchangeReceive() <= 0}
+                disabled={saving || exchangeForm.fromCurrency === exchangeForm.toCurrency || !exchangeReady()}
               >
                 {saving ? t.common.saving : t.dashboard.exchange}
               </button>
