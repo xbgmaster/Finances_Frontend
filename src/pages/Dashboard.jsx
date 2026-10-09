@@ -1244,11 +1244,21 @@ export default function Dashboard() {
               <div className="rate-row">
                 <span className="rate-eq">1 {exchangeForm.fromCurrency} =</span>
                 <input
-                  type="number" step="any" min="0" required
-                  value={exchangeForm.rate}
-                  onChange={(e) => applyExchange('rate', e.target.value)}
-                  placeholder="0.00"
-                />
+                type="number" 
+                step="0.01" 
+                min="0" 
+                required
+                value={exchangeForm.rate}
+                onChange={(e) => applyExchange('rate', e.target.value)}
+                onBlur={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) {
+                    applyExchange('rate', val.toFixed(2));
+                  }
+                }}
+                placeholder="0.00"
+                inputmode="decimal"
+              />
                 <span className="rate-cur">{exchangeForm.toCurrency}</span>
               </div>
               <div className="hint" style={{ marginTop: 6 }}>{t.dashboard.rateHint}</div>
