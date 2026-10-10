@@ -1190,6 +1190,8 @@ input:focus, select:focus {
   position: fixed;
   inset: 0;
   background: rgba(26, 43, 51, 0.38);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1203,6 +1205,7 @@ input:focus, select:focus {
 
 .modal {
   background: var(--card);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 26px;
@@ -1217,6 +1220,12 @@ input:focus, select:focus {
   /* touch-action lets iOS Safari know this element is the scroll target. */
   touch-action: pan-y;
   overscroll-behavior: contain;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+  font-size: 16px;
 }
 
 .modal-head {
@@ -2111,6 +2120,24 @@ html[data-theme="dark"] .google-signin-btn:hover { filter: brightness(1.06); }
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+
+.bh-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.bh-table th,
+.bh-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 8px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.bh-table th.num,
+.bh-table td.num {
+  width: 4.6rem;
 }
 
 .data-table th {

@@ -423,8 +423,9 @@ export default function Cards() {
 
       {payCardId && (
         <PayCardModal
-          methods={methods}
+          methods={visibleMethods}
           preselectedCardId={payCardId}
+          currency={activeCurrency}
           onClose={() => setPayCardId(null)}
           onDone={async () => { setPayCardId(null); await load(); toast.success(t.common.savedOk) }}
         />

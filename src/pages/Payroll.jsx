@@ -742,7 +742,7 @@ export default function Payroll() {
               )}
             </div>
 
-            {isHourlySelected ? (
+            {selectedShiftJob && (isHourlySelected ? (
               <>
                 <div className="field-row">
                   <div className="field" style={{ flex: 1 }}>
@@ -797,9 +797,9 @@ export default function Payroll() {
                   />
                 </div>
               </div>
-            )}
+            ))}
 
-            <div className="field">
+            {selectedShiftJob && <div className="field">
               <label>{t.common.description}</label>
               <input
                 type="text"
@@ -807,11 +807,11 @@ export default function Payroll() {
                 onChange={(e) => setShiftForm({ ...shiftForm, description: e.target.value })}
                 placeholder={t.dashboard.incomePlaceholder}
               />
-            </div>
+            </div>}
             {shiftError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{shiftError}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowShift(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={savingShift}>{savingShift ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn" disabled={savingShift || !selectedShiftJob}>{savingShift ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>

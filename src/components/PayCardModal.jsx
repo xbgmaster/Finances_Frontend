@@ -11,11 +11,12 @@ import AmountInput from './AmountInput'
 // balance) or be cash/money outside saved accounts (only reduces the card debt). Both free up cupo.
 export default function PayCardModal({ methods, preselectedCardId, currency, onClose, onDone }) {
   const { t, accountLabel } = useI18n()
+  const list = Array.isArray(methods) ? methods : []
 
   const cards = useMemo(
-    () => methods.filter((m) => m.type === 'CreditCard' && !m.archived
+    () => list.filter((m) => m && m.type === 'CreditCard' && !m.archived
       && (!currency || m.currency === currency || String(m.id) === String(preselectedCardId))),
-    [methods, currency, preselectedCardId],
+    [list, currency, preselectedCardId],
   )
 
   const [cardId, setCardId] = useState(
@@ -29,8 +30,8 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
   const cardCurrency = card?.currency
 
   // Only cash/debit accounts in the same currency can fund the payment.
-  const sources = methods.filter(
-    (m) => m.type !== 'CreditCard' && !m.archived && m.currency === cardCurrency,
+  const sources = list.filter(
+    (m) => m && m.type !== 'CreditCard' && !m.archived && m.currency === cardCurrency,
   )
   const hasCashAccount = sources.some((m) => m.type === 'Cash')
 
@@ -113,7 +114,7 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
           <label>{t.common.amount} {cardCurrency ? `(${cardCurrency})` : ''}</label>
           <AmountInput
             currency={cardCurrency}
-            autoFocus required
+            required
             value={form.amount}
             onChange={(v) => setForm({ ...form, amount: v })}
             placeholder="0.00"
