@@ -127,29 +127,57 @@ function getSteps(t, route = '/') {
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
+const narrowScreen = () => window.matchMedia('(max-width: 1000px)').matches
+
+function setTourMenu(open) {
+  window.dispatchEvent(new CustomEvent('tishe:tour-menu', { detail: { open } }))
+}
+
 export function startTour(t, route) {
   const currentRoute = route ?? window.location.pathname
-  const steps = getSteps(t, currentRoute)
-  if (steps.length === 0) return
+  const narrow = narrowScreen()
+  // Nav steps live in the drawer. On a phone that drawer is off-screen until opened,
+  // so the highlight has nothing to point at.
+  if (narrow) setTourMenu(true)
 
-  const d = driver({
-    steps,
-    animate: true,
-    smoothScroll: true,
-    overlayOpacity: 0.48,
-    stagePadding: 6,
-    stageRadius: 10,
-    showProgress: true,
-    progressText: '{{current}} / {{total}}',
-    nextBtnText: t.tour.next,
-    prevBtnText: t.tour.prev,
-    doneBtnText: t.tour.done,
-    popoverClass: 'tishe-popover',
-    // Mark done after the tour finishes (works for both "done" and "skip").
-    onDestroyed: () => {
-      localStorage.setItem(DONE_KEY, '1')
-      localStorage.removeItem(PENDING_KEY)
-    },
-  })
-  d.drive()
+  const begin = () => {
+    const steps = getSteps(t, currentRoute)
+    if (steps.length === 0) {
+      if (narrow) setTourMenu(false)
+      return
+    }
+
+    let menuOpenForTour = narrow
+    const d = driver({
+      steps,
+      animate: true,
+      smoothScroll: true,
+      overlayOpacity: 0.48,
+      stagePadding: 6,
+      stageRadius: 10,
+      showProgress: true,
+      progressText: '{{current}} / {{total}}',
+      nextBtnText: t.tour.next,
+      prevBtnText: t.tour.prev,
+      doneBtnText: t.tour.done,
+      popoverClass: 'tishe-popover',
+      onHighlightStarted: (element) => {
+        if (!narrowScreen()) return
+        const inMenu = !!element?.closest?.('.sidebar')
+        if (inMenu === menuOpenForTour) return
+        menuOpenForTour = inMenu
+        setTourMenu(inMenu)
+        setTimeout(() => d.refresh(), 320)
+      },
+      onDestroyed: () => {
+        setTourMenu(false)
+        localStorage.setItem(DONE_KEY, '1')
+        localStorage.removeItem(PENDING_KEY)
+      },
+    })
+    d.drive()
+  }
+
+  if (narrow) setTimeout(begin, 320)
+  else begin()
 }

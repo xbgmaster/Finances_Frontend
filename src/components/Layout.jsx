@@ -19,6 +19,25 @@ import { startTour, isTourPending, markTourPending as _mark } from '../tour/useT
 // Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
 const MoltenMetal = lazy(() => import('./MoltenMetal'))
 
+class PageErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+  render() {
+    if (!this.state.error) return this.props.children
+    return (
+      <div className="card" style={{ marginTop: 12 }}>
+        <p>{this.state.error?.message || 'Error'}</p>
+        <button type="button" className="btn" onClick={() => this.setState({ error: null })}>OK</button>
+      </div>
+    )
+  }
+}
+
 const POLL_MS = 5 * 60 * 1000
 
 export default function Layout() {
@@ -93,6 +112,12 @@ export default function Layout() {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
+
+  useEffect(() => {
+    const onTourMenu = (e) => setMenuOpen(!!e.detail?.open)
+    window.addEventListener('tishe:tour-menu', onTourMenu)
+    return () => window.removeEventListener('tishe:tour-menu', onTourMenu)
+  }, [])
 
   const links = [
     { to: '/', label: t.nav.summary, icon: <LayoutDashboard size={18} />, end: true, tour: 'nav-summary' },
@@ -248,7 +273,7 @@ export default function Layout() {
             type="button"
             className="tour-help-btn"
             data-tour="help-btn"
-            onClick={() => { setMenuOpen(false); setTimeout(() => startTour(t, location.pathname), 50) }}
+            onClick={() => startTour(t, location.pathname)}
           >
             <HelpCircle size={16} /> {t.tour.helpTitle}
           </button>
@@ -385,7 +410,9 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <Outlet />
+        <PageErrorBoundary>
+          <Outlet />
+        </PageErrorBoundary>
       </main>
       </div>
     </>

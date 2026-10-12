@@ -225,7 +225,15 @@ function MethodCard({
       </div>
 
       <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
-        {isCard && <button type="button" className="btn" onClick={() => onPay(m.id)}>{t.cards.payAction}</button>}
+        {isCard && (
+          <button
+            type="button"
+            className="btn"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPay(m.id) }}
+          >
+            {t.cards.payAction}
+          </button>
+        )}
         <button className="btn secondary" onClick={() => onDetails(m.id)}>{t.cards.details}</button>
         <button className="btn secondary" onClick={() => onEdit(m)}>{t.common.edit}</button>
         <button

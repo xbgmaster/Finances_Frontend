@@ -42,6 +42,7 @@ export function AuthProvider({ children }) {
 
   const persist = (result) => {
     saveSession(result)
+    lastActivityRef.current = Date.now()
     setToken(result.token)
     setUser(result.user)
     localStorage.removeItem('finances.currency')
@@ -81,9 +82,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token) return
 
+    // The login screen can sit open longer than the idle limit. Starting the
+    // session counts as activity, otherwise the first check signs the user out.
+    lastActivityRef.current = Date.now()
+
     const markActive = () => { lastActivityRef.current = Date.now() }
+    // Capture so clicks inside a modal (which stop bubbling) still count.
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
-    events.forEach((e) => window.addEventListener(e, markActive, { passive: true }))
+    events.forEach((e) => window.addEventListener(e, markActive, { passive: true, capture: true }))
 
     const tick = async () => {
       // 1) Inactive for too long -> sign out and let the route guard send to /login.
@@ -92,12 +98,14 @@ export function AuthProvider({ children }) {
         return
       }
       // 2) Still active: keep the access token fresh before it expires.
+      //    A network blip must not sign the user out; only a rejected refresh does.
       if (getStoredRefreshToken() && getAccessExpiry() - Date.now() < REFRESH_BEFORE_MS) {
         try {
           const data = await refreshAccessToken()
           setToken(data.token)
-        } catch {
-          logout()
+        } catch (err) {
+          const status = err?.response?.status
+          if (status === 401 || status === 400) logout()
         }
       }
     }
@@ -111,7 +119,7 @@ export function AuthProvider({ children }) {
     window.addEventListener('finances:refreshed', onRefreshed)
 
     return () => {
-      events.forEach((e) => window.removeEventListener(e, markActive))
+      events.forEach((e) => window.removeEventListener(e, markActive, { capture: true }))
       clearInterval(intervalId)
       window.removeEventListener('finances:logout', onLogout)
       window.removeEventListener('finances:refreshed', onRefreshed)

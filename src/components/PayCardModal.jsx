@@ -22,11 +22,7 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
   const [cardId, setCardId] = useState(
     preselectedCardId ? String(preselectedCardId) : String(cards[0]?.id ?? ''),
   )
-  const [form, setForm] = useState({ amount: '', sourceId: '', date: todayIso(), note: '' })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const card = cards.find((c) => String(c.id) === String(cardId))
+  const card = cards.find((c) => String(c.id) === String(cardId)) || cards[0]
   const cardCurrency = card?.currency
 
   // Only cash/debit accounts in the same currency can fund the payment.
@@ -34,6 +30,16 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
     (m) => m && m.type !== 'CreditCard' && !m.archived && m.currency === cardCurrency,
   )
   const hasCashAccount = sources.some((m) => m.type === 'Cash')
+  const cashId = sources.find((s) => s.type === 'Cash')?.id
+
+  const [form, setForm] = useState({
+    amount: card?.balance != null ? String(card.balance) : '',
+    sourceId: cashId != null ? String(cashId) : '',
+    date: todayIso(),
+    note: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const fillOwed = () => {
     if (card?.balance == null) return
@@ -41,14 +47,13 @@ export default function PayCardModal({ methods, preselectedCardId, currency, onC
   }
 
   useEffect(() => {
-    const cash = sources.find((s) => s.type === 'Cash')
-    setForm((f) => ({
-      ...f,
-      amount: card?.balance != null ? String(card.balance) : f.amount,
-      sourceId: cash ? String(cash.id) : '',
-    }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardId, card?.balance])
+    setForm((f) => {
+      const amount = card?.balance != null ? String(card.balance) : f.amount
+      const sourceId = cashId != null ? String(cashId) : ''
+      if (f.amount === amount && f.sourceId === sourceId) return f
+      return { ...f, amount, sourceId }
+    })
+  }, [cardId, card?.balance, cashId])
 
   // Show the selected wallet's available balance for client-side feedback.
   const selectedSource = sources.find((s) => String(s.id) === String(form.sourceId))
