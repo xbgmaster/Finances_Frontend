@@ -11,6 +11,7 @@ import { pmTypeIcon } from '../utils/icons'
 import { useI18n } from '../i18n/I18nContext'
 import { useCurrency } from '../currency/CurrencyContext'
 import AmountInput from '../components/AmountInput'
+import PayCardModal from '../components/PayCardModal'
 
 const TYPES = ['Debit', 'Cash', 'CreditCard']
 
