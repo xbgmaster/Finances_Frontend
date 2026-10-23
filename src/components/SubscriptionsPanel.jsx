@@ -34,8 +34,10 @@ export default function SubscriptionsPanel() {
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     try { await ExpenseSchedulesApi.postDue() } catch { /* non-critical */ }
     const [list, cats, pms] = await Promise.all([
       ExpenseSchedulesApi.list().catch(() => []),
@@ -46,6 +48,7 @@ export default function SubscriptionsPanel() {
     setCategories(cats)
     setPaymentMethods(pms.filter((p) => !p.archived && p.currency === activeCurrency))
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -123,7 +126,7 @@ export default function SubscriptionsPanel() {
       if (editingId) await ExpenseSchedulesApi.update(editingId, payload)
       else await ExpenseSchedulesApi.create(payload)
       setShowModal(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.detail || err?.response?.data?.message || t.expenses.saveError)
@@ -135,7 +138,7 @@ export default function SubscriptionsPanel() {
   const remove = async (id) => {
     try {
       await ExpenseSchedulesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -151,7 +154,7 @@ export default function SubscriptionsPanel() {
     <div>
       <div className="row" style={{ marginBottom: 16 }}>
         <p className="hint" style={{ margin: 0, flex: 1 }}>{t.subscriptions.hint}</p>
-        <button className="btn" onClick={openCreate}>{t.subscriptions.add}</button>
+        <button className="btn expense" onClick={openCreate}>{t.subscriptions.add}</button>
       </div>
 
       {items.length === 0 ? (
@@ -311,7 +314,7 @@ export default function SubscriptionsPanel() {
             {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowModal(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn expense" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>

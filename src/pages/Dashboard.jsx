@@ -71,8 +71,10 @@ export default function Dashboard() {
 
   const isViewingCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth() + 1
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     const [b, inc, exp, cats, mon, alerts, exch, pms] = await Promise.all([
       BalanceApi.get(),
       IncomesApi.list(),
@@ -99,6 +101,7 @@ export default function Dashboard() {
     )
     setCardPayments(payLists.flat())
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   // Full reload when currency changes (activity + live balance).
@@ -320,7 +323,7 @@ export default function Dashboard() {
       if (editingExchangeId) await ExchangesApi.update(editingExchangeId, payload)
       else await ExchangesApi.create(payload)
       setModal(null)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.saveError)
@@ -332,7 +335,7 @@ export default function Dashboard() {
   const deleteExchange = async (id) => {
     try {
       await ExchangesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -360,7 +363,7 @@ export default function Dashboard() {
       if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
       else await IncomesApi.create(payload)
       setModal(null)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.saveError)
@@ -372,7 +375,7 @@ export default function Dashboard() {
   const deleteCardPayment = async (cardId, paymentId) => {
     try {
       await PaymentMethodsApi.removePayment(cardId, paymentId)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -405,7 +408,7 @@ export default function Dashboard() {
         sourcePaymentMethodId: cardPaymentForm.sourcePaymentMethodId ? Number(cardPaymentForm.sourcePaymentMethodId) : undefined,
       })
       setModal(null)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.saveError)
@@ -439,7 +442,7 @@ export default function Dashboard() {
         await ExpensesApi.create(payload)
       }
       setModal(null)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setExpenseError(err?.response?.data?.message || t.expenses.saveError)
@@ -451,7 +454,7 @@ export default function Dashboard() {
   const deleteIncome = async (id) => {
     try {
       await IncomesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -461,7 +464,7 @@ export default function Dashboard() {
   const deleteExpense = async (id) => {
     try {
       await ExpensesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -681,8 +684,8 @@ export default function Dashboard() {
           )
         })()}
         <button className="btn secondary" onClick={openExchange}>{t.dashboard.exchange}</button>
-        <button className="btn secondary" onClick={openExpense}>{t.dashboard.addExpense}</button>
-        <button className="btn" onClick={openIncome}>{t.dashboard.addIncome}</button>
+        <button className="btn expense" onClick={openExpense}>{t.dashboard.addExpense}</button>
+        <button className="btn income" onClick={openIncome}>{t.dashboard.addIncome}</button>
       </div>
 
       <div className="grid grid-3" data-tour="summary-kpis">
@@ -1073,7 +1076,7 @@ export default function Dashboard() {
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving || !incomeForm.paymentMethodId}>
+              <button type="submit" className="btn income" disabled={saving || !incomeForm.paymentMethodId}>
                 {saving ? t.common.saving : t.common.save}
               </button>
             </div>
@@ -1193,7 +1196,7 @@ export default function Dashboard() {
             )}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModal(null)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn expense" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>
@@ -1426,7 +1429,7 @@ export default function Dashboard() {
           methods={paymentMethods}
           currency={selCur}
           onClose={() => setShowPay(false)}
-          onDone={async () => { setShowPay(false); await load(); toast.success(t.common.savedOk) }}
+          onDone={async () => { setShowPay(false); await load(true); toast.success(t.common.savedOk) }}
         />
       )}
 

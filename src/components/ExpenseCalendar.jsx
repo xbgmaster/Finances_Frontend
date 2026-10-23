@@ -166,14 +166,14 @@ export default function ExpenseCalendar({
             <div className="cal-day-add">
               <button
                 type="button"
-                className="btn secondary"
+                className="btn income"
                 onClick={() => { const ds = dateStrFor(selectedDay); setSelectedDay(null); onAddIncome?.(ds) }}
               >
                 {t.dashboard.addIncome}
               </button>
               <button
                 type="button"
-                className="btn"
+                className="btn expense"
                 onClick={() => { const ds = dateStrFor(selectedDay); setSelectedDay(null); onAddExpense?.(ds) }}
               >
                 {t.dashboard.addExpense}

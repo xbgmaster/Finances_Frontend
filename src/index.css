@@ -705,6 +705,10 @@ html[data-theme="light"] .btn.secondary:disabled {
 .tip-wrap:hover .tip,
 .tip-wrap:focus-within .tip { display: block; }
 .btn.secondary { background: var(--card-hover); color: var(--text); border: 1px solid var(--border); }
+.btn.income { background: #1b7a5c; color: #fff; }
+.btn.expense { background: #c2412d; color: #fff; }
+.btn.income:hover,
+.btn.expense:hover { filter: brightness(1.08); }
 .btn.danger {
   background: rgba(239, 68, 68, 0.14);
   color: var(--danger);

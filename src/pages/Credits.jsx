@@ -53,10 +53,13 @@ export default function Credits() {
   const [confirm, setConfirm] = useState(null)
   const [payment, setPayment] = useState({ amount: '', date: today(), note: '', type: 'Installment', effect: 'ReduceTerm' })
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     setCredits(await CreditsApi.list({ currency: activeCurrency }))
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -117,7 +120,7 @@ export default function Credits() {
       if (editingId) await CreditsApi.update(editingId, payload)
       else await CreditsApi.create(payload)
       setShowCreate(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.common.saveError)
@@ -147,7 +150,7 @@ export default function Credits() {
         effect: isPrepayment ? payment.effect : null,
       })
       setPayFor(null)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.common.saveError)
@@ -159,7 +162,7 @@ export default function Credits() {
   const remove = async (credit) => {
     try {
       await CreditsApi.remove(credit.id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.detail || t.credits.deleteError)
@@ -282,7 +285,7 @@ export default function Credits() {
                   <Link className="btn secondary" to={`/credits/${c.id}`}>{t.credits.details}</Link>
                   <button className="btn secondary" onClick={() => openEdit(c)}>{t.common.edit}</button>
                   {!paidOff && (
-                    <button className="btn" onClick={() => openPayment(c)}>{t.credits.addPayment}</button>
+                    <button className="btn expense" onClick={() => openPayment(c)}>{t.credits.addPayment}</button>
                   )}
                 </div>
                 <div className="credit-actions-delete">
@@ -544,7 +547,7 @@ export default function Credits() {
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setPayFor(null)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={paying}>{paying ? t.common.saving : t.credits.registerPayment}</button>
+              <button type="submit" className="btn expense" disabled={paying}>{paying ? t.common.saving : t.credits.registerPayment}</button>
             </div>
           </form>
         </Modal>

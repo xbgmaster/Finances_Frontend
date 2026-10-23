@@ -34,8 +34,10 @@ export default function CreditDetail() {
   const [form, setForm] = useState(emptyPayment)
   const [confirm, setConfirm] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     const [sum, sched, pays, pms] = await Promise.all([
       CreditsApi.summary(id),
       CreditsApi.schedule(id),
@@ -47,6 +49,7 @@ export default function CreditDetail() {
     setPayments(pays)
     setMethods(pms)
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -92,7 +95,7 @@ export default function CreditDetail() {
       if (editing) await CreditsApi.updatePayment(id, editing.id, payload)
       else await CreditsApi.addPayment(id, payload)
       setModalOpen(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.common.saveError)
@@ -104,7 +107,7 @@ export default function CreditDetail() {
   const removePayment = async (p) => {
     try {
       await CreditsApi.removePayment(id, p.id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -168,7 +171,7 @@ export default function CreditDetail() {
             {' · '}{t.credits.alerts.dueDayLabel} {summary.paymentDueDay}
           </p>
         </div>
-        <button className="btn" onClick={openAdd}>{t.credits.addPayment}</button>
+        <button className="btn expense" onClick={openAdd}>{t.credits.addPayment}</button>
       </div>
 
       {dueBanner()}
@@ -412,7 +415,7 @@ export default function CreditDetail() {
             </div>
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>
+              <button type="submit" className="btn expense" disabled={saving}>
                 {saving ? t.common.saving : (editing ? t.credits.saveChanges : t.credits.registerPayment)}
               </button>
             </div>

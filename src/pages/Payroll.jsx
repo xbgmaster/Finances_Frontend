@@ -83,7 +83,13 @@ export default function Payroll() {
     setOccOverrides(ov)
   }
 
-  const refresh = async () => { await loadCore(); await loadShifts(year, month) }
+  const refresh = async () => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    await loadCore()
+    await loadShifts(year, month)
+    if (scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
+  }
 
   useEffect(() => {
     (async () => { await loadCore(); setLoading(false) })()
@@ -415,9 +421,9 @@ export default function Payroll() {
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
           {activeJobs.length > 0 && (
-            <button className="btn secondary" onClick={() => openAddPayment()}>{t.payroll.addPayment}</button>
+            <button className="btn income" onClick={() => openAddPayment()}>{t.payroll.addPayment}</button>
           )}
-          <button className="btn" data-tour="payroll-add" onClick={openCreate}>{t.payroll.addJob}</button>
+          <button className="btn income" data-tour="payroll-add" onClick={openCreate}>{t.payroll.addJob}</button>
         </div>
       </div>
 
@@ -501,7 +507,7 @@ export default function Payroll() {
                 )}
                 <div className="row job-actions" style={{ marginTop: 12, justifyContent: 'flex-end', gap: 8 }}>
                   {s.active && (
-                    <button className="btn secondary" onClick={() => openAddPayment(null, s.id)}>
+                    <button className="btn income" onClick={() => openAddPayment(null, s.id)}>
                       <Plus size={16} /> {t.payroll.addPayment}
                     </button>
                   )}
@@ -704,7 +710,7 @@ export default function Payroll() {
             {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowModal(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn income" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>
@@ -811,7 +817,7 @@ export default function Payroll() {
             {shiftError && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{shiftError}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowShift(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={savingShift || !selectedShiftJob}>{savingShift ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn income" disabled={savingShift || !selectedShiftJob}>{savingShift ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>
@@ -932,7 +938,7 @@ export default function Payroll() {
               </button>
               <div style={{ flex: 1 }} />
               <button type="button" className="btn secondary" onClick={() => setShowIncome(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={savingIncome}>{savingIncome ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn income" disabled={savingIncome}>{savingIncome ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>

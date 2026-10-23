@@ -281,7 +281,7 @@ export default function IncomeCalendar({
             {onAddPayment && hasActiveJob && (
               <div className="cal-day-add">
                 <button
-                  className="btn"
+                  className="btn income"
                   onClick={() => { const day = selectedDay; setSelectedDay(null); onAddPayment(day) }}
                 >
                   <Plus size={16} /> {t.payroll.addPayment}

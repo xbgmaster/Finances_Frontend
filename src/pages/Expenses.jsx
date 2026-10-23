@@ -71,8 +71,10 @@ export default function Expenses() {
 
   // Only period + currency trigger a backend load. Filtering by account / category / text
   // and paging are all derived from these results in the browser (no request, no spinner).
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     try { await ExpenseSchedulesApi.postDue() } catch { /* non-critical */ }
     const [cats, sum, monthAll, monthInc, exch, pms, sch] = await Promise.all([
       CategoriesApi.list(),
@@ -94,6 +96,7 @@ export default function Expenses() {
     setPaymentMethods(pms)
     setSchedules(sch)
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -231,7 +234,7 @@ export default function Expenses() {
       if (editingIncomeId) await IncomesApi.update(editingIncomeId, payload)
       else await IncomesApi.create(payload)
       setShowIncomeModal(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setIncomeError(err?.response?.data?.message || t.expenses.saveError)
@@ -243,7 +246,7 @@ export default function Expenses() {
   const removeIncome = async (id) => {
     try {
       await IncomesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -272,7 +275,7 @@ export default function Expenses() {
         await ExpensesApi.create(payload)
       }
       setShowModal(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.expenses.saveError)
@@ -284,7 +287,7 @@ export default function Expenses() {
   const remove = async (id) => {
     try {
       await ExpensesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -294,7 +297,7 @@ export default function Expenses() {
   const removeExchange = async (id) => {
     try {
       await ExchangesApi.remove(id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.expenses.deleteError)
@@ -485,7 +488,7 @@ export default function Expenses() {
                 labels={{ Debit: t.cards.sectionDebit, CreditCard: t.cards.sectionCreditCard, Cash: t.cards.sectionCash }}
               />
             </select>
-            <button className="btn" onClick={openCreate}>{t.dashboard.addExpense}</button>
+            <button className="btn expense" onClick={openCreate}>{t.dashboard.addExpense}</button>
           </div>
         )}
       </div>
@@ -1011,7 +1014,7 @@ export default function Expenses() {
             {error && <div className="insight" style={{ borderColor: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
             <div className="row">
               <button type="button" className="btn secondary" onClick={() => setShowModal(false)}>{t.common.cancel}</button>
-              <button type="submit" className="btn" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
+              <button type="submit" className="btn expense" disabled={saving}>{saving ? t.common.saving : t.common.save}</button>
             </div>
           </form>
         </Modal>
@@ -1092,7 +1095,7 @@ export default function Expenses() {
               ) : <span />}
               <div className="row" style={{ margin: 0 }}>
                 <button type="button" className="btn secondary" onClick={() => setShowIncomeModal(false)}>{t.common.cancel}</button>
-                <button type="submit" className="btn" disabled={savingIncome}>{savingIncome ? t.common.saving : t.common.save}</button>
+                <button type="submit" className="btn income" disabled={savingIncome}>{savingIncome ? t.common.saving : t.common.save}</button>
               </div>
             </div>
           </form>

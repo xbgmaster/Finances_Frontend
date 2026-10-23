@@ -264,8 +264,10 @@ export default function Cards() {
   const [confirm, setConfirm] = useState(null)
   const [payCardId, setPayCardId] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     try {
       const list = await PaymentMethodsApi.list({ includeArchived: true })
       setMethods(list)
@@ -279,6 +281,7 @@ export default function Cards() {
       setListError(t.cards.deleteError)
     }
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -333,7 +336,7 @@ export default function Cards() {
       if (editing) await PaymentMethodsApi.update(editing.id, payload)
       else await PaymentMethodsApi.create(payload)
       setShowModal(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.cards.saveError)
@@ -343,7 +346,7 @@ export default function Cards() {
   const remove = async (m) => {
     try {
       await PaymentMethodsApi.remove(m.id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.cards.deleteError)
@@ -354,7 +357,7 @@ export default function Cards() {
   const toggleFavorite = async (m) => {
     try {
       await PaymentMethodsApi.setFavorite(m.id, !m.isFavorite)
-      await load()
+      await load(true)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.cards.saveError)
     }
@@ -436,7 +439,7 @@ export default function Cards() {
           preselectedCardId={payCardId}
           currency={activeCurrency}
           onClose={() => setPayCardId(null)}
-          onDone={async () => { setPayCardId(null); await load(); toast.success(t.common.savedOk) }}
+          onDone={async () => { setPayCardId(null); await load(true); toast.success(t.common.savedOk) }}
         />
       )}
 

@@ -27,8 +27,10 @@ export default function CardDetail() {
   const [showPay, setShowPay] = useState(false)
   const [confirm, setConfirm] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     setError('')
     try {
       const [m, ch, inc, exch, pays, all] = await Promise.all([
@@ -59,11 +61,12 @@ export default function CardDetail() {
       setError(t.cards.loadError)
     }
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   const removePayment = async (paymentId) => {
     await PaymentMethodsApi.removePayment(id, paymentId)
-    await load()
+    await load(true)
   }
 
   useEffect(() => {
@@ -279,7 +282,7 @@ export default function CardDetail() {
           methods={methods}
           preselectedCardId={method.id}
           onClose={() => setShowPay(false)}
-          onDone={async () => { setShowPay(false); await load() }}
+          onDone={async () => { setShowPay(false); await load(true) }}
         />
       )}
 

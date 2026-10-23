@@ -27,10 +27,13 @@ export default function Categories() {
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    const scroller = document.querySelector('.content')
+    const scrollTop = scroller?.scrollTop ?? 0
+    if (!silent) setLoading(true)
     setCategories(await CategoriesApi.list())
     setLoading(false)
+    if (silent && scroller) requestAnimationFrame(() => { scroller.scrollTop = scrollTop })
   }
 
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function Categories() {
       if (editing) await CategoriesApi.update(editing.id, payload)
       else await CategoriesApi.create(payload)
       setShowModal(false)
-      await load()
+      await load(true)
       toast.success(t.common.savedOk)
     } catch (err) {
       setError(err?.response?.data?.message || t.common.saveError)
@@ -85,7 +88,7 @@ export default function Categories() {
   const remove = async (c) => {
     try {
       await CategoriesApi.remove(c.id)
-      await load()
+      await load(true)
       toast.success(t.common.deletedOk)
     } catch (err) {
       toast.error(err?.response?.data?.message || t.categories.deleteError)
