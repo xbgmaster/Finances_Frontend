@@ -15,7 +15,7 @@ const emptyForm = { name: '', icon: 'tag', color: '#0f5c4d', monthlyBudget: '' }
 
 export default function Categories() {
   const { t, categoryLabel } = useI18n()
-  const { currency: activeCurrency } = useCurrency()
+  const { currency: activeCurrency, baseCurrency } = useCurrency()
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
@@ -55,7 +55,14 @@ export default function Categories() {
     setShowModal(true)
   }
 
-  const budgetOf = (c) => c.budgets?.[activeCurrency] ?? null
+  const budgetOf = (c) => {
+    const map = c.budgets || {}
+    const key = Object.keys(map).find((k) => k.toUpperCase() === activeCurrency.toUpperCase())
+    if (key != null) return map[key]
+    if (activeCurrency.toUpperCase() === (baseCurrency || '').toUpperCase() && c.monthlyBudget != null)
+      return c.monthlyBudget
+    return null
+  }
 
   const openEdit = (c) => {
     setEditing(c)

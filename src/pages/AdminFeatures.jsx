@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { SlidersHorizontal, ShieldCheck, Star, User } from 'lucide-react'
+import { SlidersHorizontal, ShieldCheck, Star, User, ArrowLeft, ArrowRight, Info } from 'lucide-react'
 import { AdminApi } from '../api/client'
 import { useToast } from '../components/Toast'
 import PageSpinner from '../components/PageSpinner'
@@ -75,7 +75,6 @@ export default function AdminFeatures() {
     setRoleVisible(map)
     setSelectedRole(role)
     setSearch('')
-    setExpandedId(null)
   }
 
   // Apply role-level config to EVERY user in the role.
@@ -89,7 +88,7 @@ export default function AdminFeatures() {
       setUsers((prev) => prev.map((u) =>
         (u.role || 'User') === selectedRole ? { ...u, disabledFeatures: overrides } : u))
       toast.success(t.features.appliedToAll)
-    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.expenses.saveError)
+    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.features.saveError)
     } finally { setApplyingAll(false) }
   }
 
@@ -97,10 +96,9 @@ export default function AdminFeatures() {
     setChangingRole(true)
     try {
       const updated = await AdminApi.setUserRole(u.id, newRole)
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: updated.role, disabledFeatures: [] } : x))
-      setExpandedId(null)
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: updated?.role || newRole, disabledFeatures: [] } : x))
       toast.success(t.features.roleSaved)
-    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.expenses.saveError)
+    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.features.saveError)
     } finally { setChangingRole(false) }
   }
 
@@ -152,8 +150,8 @@ export default function AdminFeatures() {
       setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: updated.role } : x))
       setPromoteSearch('')
       setPromoteOpen(false)
-      toast.success(`${u.fullName || u.email} â†’ Admin`)
-    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.expenses.saveError)
+      toast.success(`${u.fullName || u.email} -> Admin`)
+    } catch (err) { toast.error(err?.response?.data?.detail || err?.response?.data?.message || t.features.saveError)
     } finally { setChangingRole(false) }
   }
 
@@ -162,7 +160,7 @@ export default function AdminFeatures() {
       {/* Header */}
       <div className="page-header row" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn secondary" onClick={() => setSelectedRole(null)}>â† {t.features.allRoles}</button>
+          <button className="btn secondary" onClick={() => setSelectedRole(null)}><ArrowLeft size={16} /> {t.features.allRoles}</button>
           <span className="badge-icon" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
           <h1 style={{ margin: 0 }}>{selectedRole}</h1>
           <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>{counts[selectedRole]} {t.features.usersCount}</span>
@@ -231,7 +229,7 @@ export default function AdminFeatures() {
           </div>
 
           <div className="insight" style={{ marginBottom: 14, fontSize: 13 }}>
-            â„¹ï¸ {t.features.alwaysOn}
+            <Info size={16} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} /> {t.features.alwaysOn}
           </div>
 
           <div className="list">
@@ -245,7 +243,7 @@ export default function AdminFeatures() {
                     <div className="title">{t.nav[f.navKey]}</div>
                     <div className="sub">
                       {roleDef ? t.features.defaultOnRole : t.features.defaultOffRole}
-                      {modified && <span style={{ color: '#b8943e', marginLeft: 8 }}>âœŽ {t.features.overridden}</span>}
+                      {modified && <span style={{ color: '#b8943e', marginLeft: 8 }}>{t.features.overridden}</span>}
                     </div>
                   </div>
                   <div className="list-item-end">
@@ -298,7 +296,7 @@ export default function AdminFeatures() {
                         disabled={changingRole}
                         onClick={() => changeUserRole(u, r)}
                       >
-                        â†’ {r}
+                        <ArrowRight size={12} /> {r}
                       </button>
                     ))}
                   </div>

@@ -14,6 +14,7 @@ import CurrencySwitcher from './CurrencySwitcher'
 import ThemeSwitcher from './ThemeSwitcher'
 import BrandLogo from './BrandLogo'
 import { useTheme } from '../theme/ThemeContext'
+import { useCurrency } from '../currency/CurrencyContext'
 import { startTour, isTourPending, markTourPending as _mark } from '../tour/useTour'
 
 // Heavy WebGL/ogl effect: load it only once the authenticated app shell renders.
@@ -44,6 +45,7 @@ export default function Layout() {
   const { t } = useI18n()
   const { theme } = useTheme()
   const { user, isAdmin, canAccess, logout } = useAuth()
+  const { setCurrency } = useCurrency()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -155,9 +157,16 @@ export default function Layout() {
     }
   }, [count])
 
-  const openCredit = (id) => {
+  const openCredit = (alert) => {
+    if (alert?.currency) setCurrency(alert.currency)
     setBellOpen(false)
-    navigate(`/credits/${id}`)
+    navigate(`/credits/${alert.creditId}`)
+  }
+
+  const openCardAlert = (alert) => {
+    if (alert?.currency) setCurrency(alert.currency)
+    setBellOpen(false)
+    navigate('/cards')
   }
 
   const itemSub = (a) => {
@@ -336,7 +345,7 @@ export default function Layout() {
                     <>
                       <div className="bell-list">
                         {alerts.items.map((a) => (
-                          <button key={a.creditId} className="bell-item" onClick={() => openCredit(a.creditId)}>
+                          <button key={a.creditId} className="bell-item" onClick={() => openCredit(a)}>
                             <span className={`bell-dot ${a.alertLevel === 'Overdue' ? 'over' : 'soon'}`} />
                             <span className="bell-item-body">
                               <span className="bell-item-title">{a.name}</span>
@@ -345,7 +354,7 @@ export default function Layout() {
                           </button>
                         ))}
                         {(alerts.cardAlerts ?? []).map((c, i) => (
-                          <button key={`ca-${i}`} className="bell-item" onClick={() => { setBellOpen(false); navigate('/cards') }}>
+                          <button key={`ca-${i}`} className="bell-item" onClick={() => openCardAlert(c)}>
                             <span className={`bell-dot ${c.alertType === 'OverLimit' ? 'over' : 'soon'}`} />
                             <span className="bell-item-body">
                               <span className="bell-item-title">{c.name}</span>

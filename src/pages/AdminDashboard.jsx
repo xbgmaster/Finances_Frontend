@@ -103,6 +103,11 @@ export default function AdminDashboard() {
   const setSearch = (search) => setFilters((f) => ({ ...f, search, page: 1 }))
   const setRole = (role) => setFilters((f) => ({ ...f, role, page: 1 }))
   const setStatus = (status) => setFilters((f) => ({ ...f, status, page: 1 }))
+  const toggleCard = (next) => setFilters((f) => {
+    const same = f.role === (next.role || '') && f.status === (next.status || '')
+    return { ...f, role: same ? '' : (next.role || ''), status: same ? '' : (next.status || ''), page: 1 }
+  })
+  const cardOn = (role, status) => filters.role === role && filters.status === status
   const setPage = (page) => setFilters((f) => ({ ...f, page }))
   const toggleStatus = (status) => setStatus(filters.status === status ? '' : status)
 
@@ -116,12 +121,18 @@ export default function AdminDashboard() {
       {stats && (
         <>
           <div className="grid grid-4">
-            <StatCard label={t.admin.totalUsers} value={stats.totalUsers} icon={<Users size={20} />} color="#0f5c4d" isMoney={false} />
-            <button type="button" className="stat-as-btn" onClick={() => toggleStatus('Active')}>
+            <button type="button" className="stat-as-btn" onClick={() => setFilters((f) => ({ ...f, role: '', status: '', page: 1 }))}>
+              <StatCard label={t.admin.totalUsers} value={stats.totalUsers} icon={<Users size={20} />} color="#0f5c4d" isMoney={false} />
+            </button>
+            <button type="button" className={`stat-as-btn ${cardOn('', 'Active') ? 'on' : ''}`} onClick={() => toggleCard({ status: 'Active' })}>
               <StatCard label={t.admin.activeUsers} value={stats.activeUsers} icon={<UserCheck size={20} />} color="#10b981" isMoney={false} hint={t.admin.activeUsersHint} />
             </button>
-            <StatCard label={t.admin.newThisMonth} value={stats.newUsersThisMonth} icon={<UserPlus size={20} />} color="#f59e0b" isMoney={false} />
-            <StatCard label={t.admin.admins} value={stats.adminUsers} icon={<ShieldCheck size={20} />} color="#7a2e2e" isMoney={false} />
+            <button type="button" className={`stat-as-btn ${cardOn('', 'New') ? 'on' : ''}`} onClick={() => toggleCard({ status: 'New' })}>
+              <StatCard label={t.admin.newThisMonth} value={stats.newUsersThisMonth} icon={<UserPlus size={20} />} color="#f59e0b" isMoney={false} />
+            </button>
+            <button type="button" className={`stat-as-btn ${cardOn('Admin', '') ? 'on' : ''}`} onClick={() => toggleCard({ role: 'Admin' })}>
+              <StatCard label={t.admin.admins} value={stats.adminUsers} icon={<ShieldCheck size={20} />} color="#7a2e2e" isMoney={false} />
+            </button>
           </div>
 
           <div className="grid grid-4" style={{ marginTop: 20 }}>
@@ -171,11 +182,13 @@ export default function AdminDashboard() {
           <select value={filters.role} onChange={(e) => setRole(e.target.value)}>
             <option value="">{t.admin.allRoles}</option>
             <option value="Admin">{t.admin.roleAdmin}</option>
+            <option value="Premium">{t.admin.rolePremium}</option>
             <option value="User">{t.admin.roleUser}</option>
           </select>
           <select value={filters.status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">{t.admin.allStatus}</option>
             <option value="Active">{t.admin.statusActive}</option>
+            <option value="New">{t.admin.newThisMonth}</option>
             <option value="Inactive">{t.admin.statusInactive}</option>
             <option value="Never">{t.admin.statusNever}</option>
             <option value="Pending">{t.admin.statusPending}</option>
@@ -218,7 +231,7 @@ export default function AdminDashboard() {
                   </td>
                   <td>
                     <span className={`pill ${u.role === 'Admin' ? 'pill-admin' : 'pill-user'}`}>
-                      {u.role === 'Admin' ? t.admin.roleAdmin : t.admin.roleUser}
+                      {u.role === 'Admin' ? t.admin.roleAdmin : u.role === 'Premium' ? t.admin.rolePremium : t.admin.roleUser}
                     </span>
                   </td>
                   <td>

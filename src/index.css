@@ -2181,6 +2181,7 @@ html[data-theme="dark"] .google-signin-btn:hover { filter: brightness(1.06); }
 }
 .stat-as-btn .card { height: 100%; }
 .stat-as-btn:hover .card { background: var(--card-hover); }
+.stat-as-btn.on .card { outline: 2px solid var(--primary); }
 
 .lang-switch {
   display: inline-flex;
