@@ -747,9 +747,24 @@ html[data-theme="light"] .btn.secondary:disabled {
   display: flex;
   flex-direction: column;
 }
+.field {
+  min-width: 0;
+  max-width: 100%;
+}
 .field input,
 .field select,
 .field textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.modal,
+.modal form {
+  min-width: 0;
+  max-width: 100%;
+}
+.modal input[type="date"] {
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;

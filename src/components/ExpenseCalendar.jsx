@@ -67,7 +67,11 @@ export default function ExpenseCalendar({
     for (const s of active) {
       for (const day of chargeDaysFor(s)) {
         const posted = (expByDay[day] || []).some((e) => e.expenseScheduleId === s.id)
-        if (!posted) (map[day] ||= []).push(s)
+        const now = new Date()
+        const chargeDate = new Date(year, month - 1, day)
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        // A past charge that was deleted must not come back as pending.
+        if (!posted && chargeDate >= startOfToday) (map[day] ||= []).push(s)
       }
     }
     return map
