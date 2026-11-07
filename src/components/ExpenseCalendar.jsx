@@ -66,12 +66,22 @@ export default function ExpenseCalendar({
     const active = (schedules || []).filter((s) => s.active && (s.currency || currency) === currency)
     for (const s of active) {
       for (const day of chargeDaysFor(s)) {
-        const posted = (expByDay[day] || []).some((e) => e.expenseScheduleId === s.id)
+        const days = chargeDaysFor(s)
+        const linked = Object.values(expByDay).flat().filter((e) => e.expenseScheduleId === s.id)
+        const covered = linked.some((e) => {
+          const expenseDay = new Date(e.date).getDate()
+          const nearest = days.reduce((best, d) =>
+            Math.abs(d - expenseDay) < Math.abs(best - expenseDay) ? d : best, days[0])
+          return nearest === day
+        })
+        const marker = s.lastPostedPeriod || ''
+        const chargeKey = `${year}${pad(month)}${pad(day)}`
+        const settled = marker.length === 8 && marker >= chargeKey
         const now = new Date()
         const chargeDate = new Date(year, month - 1, day)
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        // A past charge that was deleted must not come back as pending.
-        if (!posted && chargeDate >= startOfToday) (map[day] ||= []).push(s)
+        // Moved or deleted charges stay gone. Only a future unpaid charge stays pending.
+        if (!covered && !settled && chargeDate >= startOfToday) (map[day] ||= []).push(s)
       }
     }
     return map

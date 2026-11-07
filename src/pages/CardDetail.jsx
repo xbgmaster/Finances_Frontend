@@ -139,6 +139,11 @@ export default function CardDetail() {
     if (mv.kind === 'expense' && mv.creditId) { navigate(`/credits/${mv.creditId}`); return }
     // Card payments live in Summary's activity (that's where they're edited); the rest in Expenses.
     if (mv.kind === 'cardpayment') { navigate('/', { state: { edit: { kind: 'cardpayment', id: mv.id } } }); return }
+    // Incomes are edited in Summary's recent activity. Expenses stay on the expenses page.
+    if (mv.kind === 'income') {
+      navigate('/', { state: { edit: { kind: 'income', id: mv.id, currency: mv.currency } } })
+      return
+    }
     navigate('/expenses', { state: { edit: { kind: mv.kind, id: mv.id, date: mv.date, currency: mv.currency } } })
   }
 

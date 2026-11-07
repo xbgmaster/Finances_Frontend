@@ -24,7 +24,7 @@ const now = new Date()
 
 export default function Dashboard() {
   const { t, categoryLabel, accountLabel } = useI18n()
-  const { currency: activeCurrency } = useCurrency()
+  const { currency: activeCurrency, setCurrency } = useCurrency()
   const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -127,6 +127,7 @@ export default function Dashboard() {
   useEffect(() => {
     const edit = location.state?.edit
     if (!edit) return
+    if (edit.currency && edit.currency !== activeCurrency) setCurrency(edit.currency)
     setPendingEdit(edit)
     navigate(location.pathname, { replace: true, state: null }) // don't re-trigger on back/refresh
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,9 +138,12 @@ export default function Dashboard() {
     if (pendingEdit.kind === 'cardpayment') {
       const p = cardPayments.find((x) => String(x.id) === String(pendingEdit.id))
       if (p) { openEditCardPayment(p); setPendingEdit(null) }
+    } else if (pendingEdit.kind === 'income') {
+      const i = incomes.find((x) => String(x.id) === String(pendingEdit.id))
+      if (i) { openEditIncome(i); setPendingEdit(null) }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingEdit, loading, cardPayments])
+  }, [pendingEdit, loading, cardPayments, incomes])
 
   // Reset to the first page whenever the search/filters change.
   useEffect(() => {
